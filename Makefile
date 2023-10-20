@@ -12,16 +12,14 @@ OUT_NAME := temqo
 
 
 # default rule
-default: makedir build exec
+default: build exec
 
 
 
-.PHONY: exec
-exec:
-    @$(OUT_NAME)
+exec: 
+	./$(OUT_NAME)
 
-.PHONY: build
-build: 
-    @ $(CXX) $(TARGET_FILE) $(DEPENDENCIES) $(CXXFLAGS) -o $(OUT_NAME)
+build:     
+	@ $(CXX) $(TARGET_FILE) $(DEPENDENCIES) $(CXXFLAGS) -o $(OUT_NAME)
 
 
