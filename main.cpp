@@ -102,7 +102,7 @@ struct MOUSE_INPUT {
 
 bool is_key(int input) noexcept{
     auto ptr = reinterpret_cast<char*>(&input);
-    if(ptr[0] != '\x1b' || ptr[1] != '\x5b' || ptr[3] > '\x44' || ptr[3] < '\41'){
+    if(ptr[0] != '\x1b' || ptr[1] != '\x5b' || ptr[3] > '\x44' || ptr[3] < '\x41'){
         return false;
     }
     return true;
@@ -219,6 +219,9 @@ int main(int argc, char const *argv[])
         }
         else if( is_key(ch)){
             custom = "key: ";
+        }
+        else {
+            custom = "idk";
         }
         
         
