@@ -38,7 +38,7 @@ void resize(int sig){
     HEIGHT = w.ws_row;
 }
 
-#define mv(x,y) std::cout << "\e["<< x << ";"<< y<<"H" << std::flush;
+#define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
 #define clear() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
@@ -114,7 +114,7 @@ int getch(){
         ch+=c<<16;
         return ch;
     }
-    
+
     unsigned int btn = 0, x = 0, y = 0;
     btn = std::cin.get();
     x = std::cin.get()-'\x20';
@@ -150,11 +150,16 @@ int main(int argc, char const *argv[])
     init();
     while (true) {
         int ch = getch();
-        mv(0,0);
-        clear_row();
-        
+        mv(1,1);
+        clear();
+
         auto mouse = parse_mouse(ch);
         printf("%schar(%i)(0x%08x)(mouse: %s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, mouse.valid ? ("x: " + std::to_string(mouse.x) + " y: " + std::to_string(mouse.y) + " btn: " + mouse_btn_to_string(mouse.btn)).c_str() : "false",attr_reset, ch);
+        
+        std::cout << std::flush;
+        mv(1,2);
+        printf("Hello\nWorld");
+
         std::cout << std::flush;
         //std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
