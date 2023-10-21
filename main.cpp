@@ -65,7 +65,7 @@ int main(int argc, char const *argv[])
         int ch = getch();
         mv(0,0);
         clear_row();
-        printf("char(%i)(0x%x): %c", ch,ch,ch);
+        printf("char(%i)(0x%08x): %c", ch,ch,ch);
         //mv(0,0);
         if(ch == 6939){
             break;
