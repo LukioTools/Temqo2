@@ -57,6 +57,17 @@ void resize(int sig){
 #define enable_mouse(type) ("\e[?"+std::to_string(type)+"h")
 #define disable_mouse(type) ("\e[?"+std::to_string(type)+"l")
 
+
+//'\x41'
+#define KEY_UP     0x00415b1b
+//'\x42'
+#define KEY_DOWN   0x00425b1b
+//'\x43'
+#define KEY_RIGHT  0x00435b1b
+//'\x44'
+#define KEY_LEFT   0x00445b1b
+
+
 enum MOUSE_BTN : unsigned char{
     UNDEFINED = 0,
     LEFT = '\x1f',
@@ -64,16 +75,7 @@ enum MOUSE_BTN : unsigned char{
     RIGHT = '\x21',
 };
 
-
-struct MOUSE_INPUT {
-    u_char x = 0;
-    u_char y = 0;
-    MOUSE_BTN btn = MOUSE_BTN::UNDEFINED;
-    u_char valid = 1;
-
-    
-};
-std::string mouse_btn_to_string(MOUSE_BTN btn){
+inline std::string to_str(MOUSE_BTN btn) noexcept{
     switch (btn) {
         case LEFT:
             return "LEFT";
@@ -86,7 +88,28 @@ std::string mouse_btn_to_string(MOUSE_BTN btn){
     }
 }
 
-MOUSE_INPUT parse_mouse(int input){
+struct MOUSE_INPUT {
+    u_char x = 0;
+    u_char y = 0;
+    MOUSE_BTN btn = MOUSE_BTN::UNDEFINED;
+    u_char valid = 1;
+};
+
+
+
+#define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')
+
+bool is_key(int input) noexcept{
+    auto ptr = reinterpret_cast<char*>(&input);
+    if(ptr[0] != '\x1b' || ptr[1] != '\x5b' || ptr[3] > '\x44' || ptr[3] < '\41'){
+        return false;
+    }
+    return true;
+}
+
+
+
+MOUSE_INPUT parse_mouse(int input) noexcept{
     auto ptr = reinterpret_cast<unsigned char*>(&input);
     char checksum = static_cast<char>(ptr[0]);
     MOUSE_BTN btn = static_cast<MOUSE_BTN>(ptr[1]);
@@ -153,8 +176,17 @@ int main(int argc, char const *argv[])
         mv(1,1);
         clear();
 
-        auto mouse = parse_mouse(ch);
-        printf("%schar(%i)(0x%08x)(mouse: %s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, mouse.valid ? ("x: " + std::to_string(mouse.x) + " y: " + std::to_string(mouse.y) + " btn: " + mouse_btn_to_string(mouse.btn)).c_str() : "false",attr_reset, ch);
+        std::string custom = "";
+        if(is_mouse(ch)){
+            auto mouse = parse_mouse(ch);
+            custom = "mouse: (x: " + std::to_string(mouse.x) + " y: " + std::to_string(mouse.y) + " btn: "  + to_str(mouse.btn) + ") ";
+        }
+        else if( is_key(ch)){
+            custom = "key: ";
+        }
+        
+        
+        printf("%schar(%i)(0x%08x)(%s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, custom.c_str(),attr_reset, ch);
         
         std::cout << std::flush;
         mv(1,2);
