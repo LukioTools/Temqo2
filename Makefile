@@ -7,8 +7,8 @@ DEPENDENCIES :=
 
 
 # compile macros
-TARGET_FILE := main.cpp # FILL: target name
-OUT_NAME := temqo
+TARGET_FILE := mouse.cpp # FILL: target name
+OUT_NAME := mouse
 
 
 # default rule

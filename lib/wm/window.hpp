@@ -1,11 +1,12 @@
 #include <sys/types.h>
+#include "globals.hpp"
 #if !defined(C_WINDOWS)
 #define C_WINDOWS
 
-
 namespace wm
 {
-    unsigned int WIDTH = 0, HEIGHT = 0;
+
+    
     enum DisplayMode : u_char{   
         UNDEFINED,
         ABSOLUTE,
@@ -13,14 +14,29 @@ namespace wm
         PERCENT,
     };
 
+    struct Pos{
+        u_short x = 0;
+        u_short y = 0;
+    };
 
+        //when a resieze events are called, shall it do refresh
     class Window
     {
     private:
-        DisplayMode mode = ABSOLUTE;
-        u_char width = 0;
+        Pos pos = {0,0};
+        u_short width = 0;
+        u_short height = 0;
+        DisplayMode mode = DisplayMode::UNDEFINED;
     public:
-        Window(DisplayMode m, u_char w): mode(m), width(w) {}
+        void refresh(Pos p, u_char h){
+            pos = p;
+            height = h;
+        }
+        Window & operator=(const Window&) = delete;
+        Window(const Window&) = delete;
+
+        Window(DisplayMode m, Pos p, u_char h, u_char w): mode(m), pos(p), height(h), width(w) {}
+        Window(DisplayMode m, u_short x, u_short y, u_char h, u_char w): mode(m), pos({.x=x, .y=y}), height(h), width(w) {}
         ~Window() {}
     };
 } // namespace wm

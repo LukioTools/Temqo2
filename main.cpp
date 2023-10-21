@@ -55,8 +55,8 @@ void resize(int sig){
 
 #define attr_reset "\e[0m"
 
-#define enable_mouse(type) ("\e[?"+std::to_string(type)+"h")
-#define disable_mouse(type) ("\e[?"+std::to_string(type)+"l")
+#define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
+#define disable_mouse(type) ("\e[?"+    std::to_string(type)    +"l")
 
 
 //'\x41'

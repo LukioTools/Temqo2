@@ -4,6 +4,7 @@
 #if !defined(C_ROW)
 #define C_ROW
 #include "window.hpp"
+#include "globals.hpp"
 
 namespace wm
 {
@@ -19,6 +20,16 @@ namespace wm
     {
     private:
         u_short height = 0;
+        u_short height_offset = 0;
+
+        //all absolute values
+        unsigned int window_absolute = 0;
+        //all percent values (in percents)
+        unsigned int window_percent = 0;
+        //all relative values
+        unsigned int window_relative = 0;
+
+
         DisplayMode mode = DisplayMode::ABSOLUTE;
         void initializer(){
             switch (mode)
@@ -74,8 +85,46 @@ namespace wm
             if(!row_relative){return 0;}
             return std::floor(static_cast<double>(h)/static_cast<double>(row_relative)) * HEIGHT - size_absolute(row_absolute) - size_percent(row_percent);
         }
-    public:
+        
+        void window_initializer(u_short w, DisplayMode dm){
+            switch (mode)
+            {
+            case DisplayMode::PERCENT:
+                if(w > 100){
+                    w = 100;
+                }
+                window_percent += w;
+                break;
+            case DisplayMode::RELATIVE:
+                window_relative += w;
+                break;
+            case DisplayMode::ABSOLUTE:
+                window_absolute += w;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void window_deinitializer(u_short w, DisplayMode dm){
+            switch (mode)
+            {
+            case DisplayMode::PERCENT:
+                window_percent -= w;
+                break;
+            case DisplayMode::RELATIVE:
+                window_relative -= w;
+                break;
+            case DisplayMode::ABSOLUTE:
+                window_absolute -= w;
+                break;
+            default:
+                break;
+            }
+        }
+        
         std::vector<Window*> windows;
+    public:
         uint size(){
             switch (mode)
             {
@@ -99,6 +148,13 @@ namespace wm
             height = h;
             mode = m;
             initializer();
+        }
+        
+        Window* append(u_short w, DisplayMode dm = DisplayMode::ABSOLUTE){
+            window_initializer(w, dm);
+            auto ptr = new Window(dm, 0,height_offset,size(), w);
+            windows.push_back(ptr);
+            return ptr;
         }
         Row(u_short h, DisplayMode m): height(h), mode(m) {
             initializer();
