@@ -97,21 +97,29 @@ MOUSE_INPUT parse_mouse(int input){
 
 int getch(){
     int ch = std::cin.get();
-    if(ch == '\x1b'){//escape
-        int c = std::cin.get();
-        ch+=c<<8;
-        if(c=='\x5b'){ //cursor 0x004x5b1b x = 1-4 (up, down, left, right)
-            c = std::cin.get();
-            ch+=c<<16;
-            if(c == '\x4d'){//mouse event
-                unsigned int btn = 0, x = 0, y = 0;
-                btn = std::cin.get();
-                x = std::cin.get()-'\x20';
-                y = std::cin.get()-'\x20';
-                ch = '\xFF' + (btn<<8) + (x << 16) + (y << 24);
-            }
-        }
+    if(ch != '\x1b'){//escape
+        return ch;
     }
+
+    int c = std::cin.get();
+    ch+=c<<8;
+
+    if(c !='\x5b'){ //cursor 0x004x5b1b x = 1-4 (up, down, left, right)
+        return ch;
+    }
+
+    c = std::cin.get();
+    
+    if(c != '\x4d'){//mouse event
+        ch+=c<<16;
+        return ch;
+    }
+    unsigned int btn = 0, x = 0, y = 0;
+    btn = std::cin.get();
+    x = std::cin.get()-'\x20';
+    y = std::cin.get()-'\x20';
+    ch = '\xFF' + (btn<<8) + (x << 16) + (y << 24);
+            
     return ch;
 }
 
@@ -147,7 +155,7 @@ int main(int argc, char const *argv[])
         auto mouse = parse_mouse(ch);
         printf("%schar(%i)(0x%08x)(mouse: %s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, mouse.valid ? ("x: " + std::to_string(mouse.x) + " y: " + std::to_string(mouse.y) + " btn: " + mouse_btn_to_string(mouse.btn)).c_str() : "false",attr_reset, ch);
         std::cout << std::flush;
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         //mv(0,0);
         if(ch == 6939){
