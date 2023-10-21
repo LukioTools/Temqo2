@@ -1,3 +1,4 @@
+#include <atomic>
 #include <cstdio>
 #include <iostream>
 #include <termios.h>
@@ -20,18 +21,33 @@ void resize(int sig){
     HEIGHT = w.ws_row;
 }
 
+#define mv(x,y) std::cout << "\e["<< x << ";"<< y<<"H" << std::flush;
+#define clear() std::cout << "\e[2J" << std::flush;
+#define clear_row() std::cout << "\e[2K" << std::flush;
+#define clear_curs_eol() std::cout << "\e[0K" << std::flush;
 
 int getch(){
-    return std::cin.get();
+    int ch = std::cin.get();
+    if(ch == 27){//escape
+        int c = std::cin.get();
+        ch+=c<<8;
+        if(c=='\x5b'){ //cursor 0x004x5b1b x = 1-4 (up, down, left, right)
+            c = std::cin.get();
+            ch+=c<<16;
+        }
+    }
+    return ch;
 }
 
 int init(){
     signal(SIGWINCH, resize);
     tcgetattr(STDIN_FILENO, &oldt);
+    clear();
     resize(SIGWINCH);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    
     return 0;
 }
 
@@ -45,8 +61,16 @@ int deinit(){
 int main(int argc, char const *argv[])
 {
     init();
-    int ch = getch();
-    printf("char(%i): %c", ch,ch);
+    while (true) {
+        int ch = getch();
+        mv(0,0);
+        clear_row();
+        printf("char(%i)(0x%08x): %c", ch,ch,ch);
+        //mv(0,0);
+        if(ch == 6939){
+            break;
+        }
+    }
 
 
     deinit();
