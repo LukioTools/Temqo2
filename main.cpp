@@ -10,6 +10,7 @@
 #include <thread>
 #include <sys/ioctl.h>
 
+#include "lib/wm/row.hpp"
 
 #define SET_X10_MOUSE               9
 #define SET_VT200_MOUSE             1000
@@ -27,7 +28,7 @@
 #define SET_PIXEL_POSITION_MOUSE    1016
 
 struct termios oldt, newt;
-int WIDTH = -1, HEIGHT = -1;
+unsigned int WIDTH = 0, HEIGHT = 0;
 
 
 void resize(int sig){
@@ -39,7 +40,7 @@ void resize(int sig){
 }
 
 #define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
-#define clear() std::cout << "\e[2J" << std::flush;
+#define clear() std::cout << "\ec" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
 
@@ -146,6 +147,40 @@ int getch(){
             
     return ch;
 }
+enum SPLICE_TYPE{
+    BEGIN_CUT,
+    END_CUT,
+    END_DOTS,
+    BEGIN_DOTS,
+};
+
+inline void wprintln(wm::Window* window = nullptr, std::string str = "", SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS){
+    if(window == nullptr){
+        while (auto idx = str.find_first_of('\n') != std::string::npos) {
+            str.erase(idx);
+        }
+        if(str.length() > WIDTH){
+            switch (st) {
+                case BEGIN_DOTS:
+                    str = str.substr(str.length() - WIDTH, str.length());
+                    str.replace(0,3,"...");
+                    break;
+                case END_DOTS:
+                    str = str.substr(0, WIDTH-3); //(-3 to make space for dots)
+                    str.append("...");
+                    break;
+                case BEGIN_CUT:
+                    str = str.substr(str.length() - WIDTH, str.length());
+                    break;
+                case END_CUT:
+                default:
+                    str = str.substr(0, WIDTH);
+                    break;
+            }
+        }
+        std::cout << str << std::flush;
+    }
+}
 
 int init(){
     signal(SIGWINCH, resize);
@@ -190,10 +225,15 @@ int main(int argc, char const *argv[])
         
         std::cout << std::flush;
         mv(1,2);
-        printf("Hello\nWorld");
+
+        std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
+        printf("Hello\nWorld width:%u, len:%zu", WIDTH, tst_str.length());
 
         std::cout << std::flush;
         //std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        mv(1,4);
+        wprintln(nullptr, tst_str, 
+        SPLICE_TYPE::END_CUT);
 
         //mv(0,0);
         if(ch == 6939){
