@@ -114,6 +114,7 @@ int getch(){
         ch+=c<<16;
         return ch;
     }
+    
     unsigned int btn = 0, x = 0, y = 0;
     btn = std::cin.get();
     x = std::cin.get()-'\x20';
