@@ -148,12 +148,13 @@ int getch(){
     return ch;
 }
 enum SPLICE_TYPE{
-    BEGIN_CUT,
     END_CUT,
     END_DOTS,
+    BEGIN_CUT,
     BEGIN_DOTS,
 };
 
+/*prints a line whilst clipping exess*/
 inline void wprintln(wm::Window* window = nullptr, std::string str = "", SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS){
     if(window == nullptr){
         while (auto idx = str.find_first_of('\n') != std::string::npos) {
