@@ -27,6 +27,8 @@
 #define SET_URXVT_EXT_MODE_MOUSE    1015
 #define SET_PIXEL_POSITION_MOUSE    1016
 
+#define USE_MOUSE SET_ANY_EVENT_MOUSE
+
 struct termios oldt, newt;
 unsigned int WIDTH = 0, HEIGHT = 0;
 
@@ -39,8 +41,12 @@ void resize(int sig){
     HEIGHT = w.ws_row;
 }
 
+#define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
+#define disable_mouse(type) ("\e[?"+    std::to_string(type)    +"l")
+
+
 #define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
-#define clear() std::cout << "\ec" << std::flush;
+#define clear() std::cout << "\ec" << enable_mouse(USE_MOUSE)<< std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
 
@@ -55,8 +61,6 @@ void resize(int sig){
 
 #define attr_reset "\e[0m"
 
-#define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
-#define disable_mouse(type) ("\e[?"+    std::to_string(type)    +"l")
 
 
 //'\x41'
@@ -68,24 +72,35 @@ void resize(int sig){
 //'\x44'
 #define KEY_LEFT   0x00445b1b
 
-
+///!!NOT GUARANTEED!!///
 enum MOUSE_BTN : unsigned char{
     UNDEFINED = 0,
+    NONE = '\x42',
     LEFT = '\x1f',
     MIDDLE = '\x20',
     RIGHT = '\x21',
+    SCRL_UP = '\x5F',
+    SCRL_DOWN = '\x60',
 };
 
 inline std::string to_str(MOUSE_BTN btn) noexcept{
     switch (btn) {
+        case NONE:
+            return "NONE";
         case LEFT:
             return "LEFT";
         case MIDDLE:
             return "MIDDLE";
         case RIGHT:
             return "RIGHT";
-        default:
+        case SCRL_UP:
+            return "SCRL_UP";
+        case SCRL_DOWN:
+            return "SCRL_DOWN";
+        case UNDEFINED:
             return "UNDEFINED";
+        default:
+            return "UNKNOWN";
     }
 }
 
