@@ -24,6 +24,9 @@ namespace wm
         u_short w = 0; 
         u_short h = 0;
 
+        u_char padding_updown = 0;
+        u_char padding_sides = 0;
+
 
         Window & operator=(const Window&) = delete;
         Window(const Window&) = delete;
