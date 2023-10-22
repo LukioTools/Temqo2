@@ -189,6 +189,10 @@ struct MOUSE_INPUT {
 
 #define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')
 
+
+void box(wm::Window* window, wchar_t ch = L'€'){
+}
+
 bool is_key(int input) noexcept{
     auto ptr = reinterpret_cast<char*>(&input);
     if(ptr[0] != '\x1b' || ptr[1] != '\x5b' || ptr[3] > '\x44' || ptr[3] < '\x41'){
@@ -278,6 +282,8 @@ inline void wprintln(wm::Window* window = nullptr, std::string str = "", SPLICE_
 }
 
 int init(){
+    std::locale::global(std::locale("en_US.UTF-8"));
+
     use_attr(alt_buffer << enable_mouse(SET_X10_MOUSE))
     signal(SIGWINCH, resize);
     tcgetattr(STDIN_FILENO, &oldt);
@@ -337,11 +343,15 @@ int main(int argc, char const *argv[])
         else {
             custom = "idk";
         }
-        
+
         
         printf("%schar(%i)(0x%08x)(%s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, custom.c_str(),attr_reset, ch);
         
         std::cout << std::flush;
+
+        mv(1,5);
+
+        std::cout << "H€llo World";
         
 
         //mv(0,0);
