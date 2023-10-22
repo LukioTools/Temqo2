@@ -1,5 +1,7 @@
 #include <atomic>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <termios.h>
@@ -9,6 +11,7 @@
 #include <condition_variable> // std::condition_variable
 #include <thread>
 #include <sys/ioctl.h>
+#include <sstream>
 
 #include "lib/wm/row.hpp"
 
@@ -63,6 +66,7 @@ void resize(int sig){
 #define cursor_right(n) ("\e["+std::to_string(n)+"C")
 #define cursor_left(n)  ("\e["+std::to_string(n)+"D")
 #define cursor_up_scrl "\eM"
+
 #define cursor_save "\e7"
 #define cursor_load "\e8"
 #define cursor_save_sco "\e[s"
@@ -189,8 +193,64 @@ struct MOUSE_INPUT {
 
 #define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')
 
+typedef const char* chtype;
 
-void box(wm::Window* window, wchar_t ch = L'€'){
+std::string str_repeat(chtype c, int n) {
+    std::ostringstream os;
+    for(int i = 0; i < n; i++)
+        os << c;
+    return os.str();
+}
+
+int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "└", chtype lb = "┘", chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│"){
+    if(!window){
+        return -1;
+    }
+    auto x = window->x;
+    auto y = window->y;
+    auto w = window->w;
+    auto h = window->h;
+
+    if(!x || !y || !w || !h){
+        return -2;
+    }
+    if(w < 2 || h < 3){
+        return 1;
+    }
+    std::string buffer;
+
+    //print top
+    {
+        buffer+=rt;
+        buffer+=str_repeat(t, w-2);
+        buffer+=lt;
+
+        mv(x, y);
+        std::cout << buffer;
+    }
+    //print bottom
+    buffer = "";
+    {
+        buffer+=rb;
+        buffer+=str_repeat(b, w-2);
+        buffer+=lb;
+
+        mv(x, y+h);
+        std::cout << buffer;
+    }
+    //l
+    buffer = l;
+    std::string right = r;
+    for (size_t i = 1; i < h-1; i++)
+    {
+        mv(x, y+i);
+        std::cout << buffer;
+        mv(x+w, y+i);
+        std::cout << right;
+    }
+    
+
+    return 0;
 }
 
 bool is_key(int input) noexcept{
@@ -282,7 +342,8 @@ inline void wprintln(wm::Window* window = nullptr, std::string str = "", SPLICE_
 }
 
 int init(){
-    std::locale::global(std::locale("en_US.UTF-8"));
+    
+    //std::locale::global(std::locale("en_US.UTF-8"));
 
     use_attr(alt_buffer << enable_mouse(SET_X10_MOUSE))
     signal(SIGWINCH, resize);
@@ -304,13 +365,13 @@ int deinit(){
 
 void display(){
     clear();
-    mv(1,2);
+    mv(3,3);
 
     std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
     printf("Hello\nWorld width:%u, len:%zu", WIDTH, tst_str.length());
     std::cout << std::flush;
     //std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    mv(1,4);
+    mv(3,5);
     wprintln(nullptr, tst_str, SPLICE_TYPE::END_CUT);
 }
 
@@ -325,7 +386,7 @@ int main(int argc, char const *argv[])
         if(ch == RESIZE_EVENT){
             display();
         }
-        mv(1,1);
+        mv(3,2);
         clear_row();
 
         std::string custom = "";
@@ -349,10 +410,10 @@ int main(int argc, char const *argv[])
         
         std::cout << std::flush;
 
-        mv(1,5);
+        mv(3,6);
 
-        std::cout << "H€llo World";
-        
+        auto w= new wm::Window(1,1,WIDTH, HEIGHT);
+        box(w);
 
         //mv(0,0);
         if(ch == 6939){
