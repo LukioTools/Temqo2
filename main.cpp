@@ -80,35 +80,39 @@ void resize(int sig){
 enum MOUSE_BTN : unsigned char{
     UNDEFINED = 0,
     NONE = '\x42',
+    RELEASE = '\x22',
     LEFT = '\x1f',
     MIDDLE = '\x20',
     RIGHT = '\x21',
     SCRL_UP = '\x5F',
     SCRL_DOWN = '\x60',
+    LEFT_HILIGHT = '\x3f',
+    MIDDLE_HILIGHT = '\x40',
+    RIGHT_HILIGHT = '\x41',
 };
 
+#define CASE_STR(clause) \
+case clause:\
+    return #clause;
 inline std::string to_str(MOUSE_BTN btn) noexcept{
     switch (btn) {
-        case NONE:
-            return "NONE";
-        case LEFT:
-            return "LEFT";
-        case MIDDLE:
-            return "MIDDLE";
-        case RIGHT:
-            return "RIGHT";
-        case SCRL_UP:
-            return "SCRL_UP";
-        case SCRL_DOWN:
-            return "SCRL_DOWN";
-        case UNDEFINED:
-            return "UNDEFINED";
+        CASE_STR(UNDEFINED);
+        CASE_STR(NONE);
+        CASE_STR(RELEASE);
+        CASE_STR(LEFT);
+        CASE_STR(MIDDLE);
+        CASE_STR(RIGHT);
+        CASE_STR(SCRL_UP);
+        CASE_STR(SCRL_DOWN);
+        CASE_STR(LEFT_HILIGHT);
+        CASE_STR(MIDDLE_HILIGHT);
+        CASE_STR(RIGHT_HILIGHT);
         default:
             return "UNKNOWN";
     }
 }
 typedef int event; 
-inline std::string to_str(event inp){
+inline std::string to_str_event(event inp){
     switch (inp) {
         case RESIZE_EVENT:
             return "RESIZE";
@@ -237,11 +241,8 @@ int deinit(){
     return 0;
 }
 
-
-
-int main(int argc, char const *argv[])
-{
-    init();
+void display(){
+    clear();
     mv(1,2);
 
     std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
@@ -250,10 +251,19 @@ int main(int argc, char const *argv[])
     //std::this_thread::sleep_for(std::chrono::milliseconds(200));
     mv(1,4);
     wprintln(nullptr, tst_str, SPLICE_TYPE::END_CUT);
+}
+
+int main(int argc, char const *argv[])
+{
+    init();
+    display();
 
 
     while (true) {
         int ch = getch();
+        if(ch == RESIZE_EVENT){
+            display();
+        }
         mv(1,1);
         clear_row();
 
@@ -263,15 +273,15 @@ int main(int argc, char const *argv[])
             custom = "mouse: (x: " + std::to_string(mouse.x) + " y: " + std::to_string(mouse.y) + " btn: "  + to_str(mouse.btn) + ") ";
         }
         else if( is_key(ch)){
-            custom = "key: ";
+            custom = "key: " + std::to_string(ch);
         }
         else if( is_event(ch)){
-            custom = "event: " + to_str(ch);
+            
+            custom = "event: " + to_str_event(static_cast<event>(ch));
         }
         else {
             custom = "idk";
         }
-        
         
         printf("%schar(%i)(0x%08x)(%s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, custom.c_str(),attr_reset, ch);
         
