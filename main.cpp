@@ -338,6 +338,7 @@ int main(int argc, char const *argv[])
             custom = "idk";
         }
         
+        
         printf("%schar(%i)(0x%08x)(%s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, custom.c_str(),attr_reset, ch);
         
         std::cout << std::flush;
