@@ -31,7 +31,9 @@
 
 struct termios oldt, newt;
 unsigned int WIDTH = 0, HEIGHT = 0;
-
+#define EVENT_BASE 0x0000EEEE
+#define RESIZE_EVENT (0x00010000 + EVENT_BASE)
+std::atomic_bool resize_event;
 
 void resize(int sig){
     if(sig != SIGWINCH) {return;}
@@ -39,6 +41,7 @@ void resize(int sig){
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     WIDTH = w.ws_col;
     HEIGHT = w.ws_row;
+    resize_event = true;
 }
 
 #define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
@@ -47,6 +50,7 @@ void resize(int sig){
 
 #define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
 #define clear() std::cout << "\ec" << enable_mouse(USE_MOUSE)<< std::flush;
+#define clear_scr() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
 
@@ -103,6 +107,15 @@ inline std::string to_str(MOUSE_BTN btn) noexcept{
             return "UNKNOWN";
     }
 }
+typedef int event; 
+inline std::string to_str(event inp){
+    switch (inp) {
+        case RESIZE_EVENT:
+            return "RESIZE";
+        default:
+            return "UNKNOWN_EVENT";
+    }
+}
 
 struct MOUSE_INPUT {
     u_char x = 0;
@@ -111,6 +124,8 @@ struct MOUSE_INPUT {
     u_char valid = 1;
 };
 
+
+#define is_event(input_integer) (reinterpret_cast<u_short*>(&input_integer)[0] == EVENT_BASE)
 
 
 #define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')
@@ -135,6 +150,11 @@ MOUSE_INPUT parse_mouse(int input) noexcept{
 }
 
 int getch(){
+    if(resize_event){
+        resize_event = false;
+        return RESIZE_EVENT;
+    }
+
     int ch = std::cin.get();
     if(ch != '\x1b'){//escape
         return ch;
@@ -222,10 +242,20 @@ int deinit(){
 int main(int argc, char const *argv[])
 {
     init();
+    mv(1,2);
+
+    std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
+    printf("Hello\nWorld width:%u, len:%zu", WIDTH, tst_str.length());
+    std::cout << std::flush;
+    //std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    mv(1,4);
+    wprintln(nullptr, tst_str, SPLICE_TYPE::END_CUT);
+
+
     while (true) {
         int ch = getch();
         mv(1,1);
-        clear();
+        clear_row();
 
         std::string custom = "";
         if(is_mouse(ch)){
@@ -235,6 +265,9 @@ int main(int argc, char const *argv[])
         else if( is_key(ch)){
             custom = "key: ";
         }
+        else if( is_event(ch)){
+            custom = "event: " + to_str(ch);
+        }
         else {
             custom = "idk";
         }
@@ -243,16 +276,7 @@ int main(int argc, char const *argv[])
         printf("%schar(%i)(0x%08x)(%s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, custom.c_str(),attr_reset, ch);
         
         std::cout << std::flush;
-        mv(1,2);
-
-        std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
-        printf("Hello\nWorld width:%u, len:%zu", WIDTH, tst_str.length());
-
-        std::cout << std::flush;
-        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        mv(1,4);
-        wprintln(nullptr, tst_str, 
-        SPLICE_TYPE::END_CUT);
+        
 
         //mv(0,0);
         if(ch == 6939){
