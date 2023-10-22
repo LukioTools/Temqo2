@@ -14,30 +14,24 @@ namespace wm
         PERCENT,
     };
 
-    struct Pos{
+
+
+        //Simple position holder
+    struct Window
+    {
         u_short x = 0;
         u_short y = 0;
-    };
+        u_short w = 0; 
+        u_short h = 0;
 
-        //when a resieze events are called, shall it do refresh
-    class Window
-    {
-    private:
-        Pos pos = {0,0};
-        u_short width = 0;
-        u_short height = 0;
-        DisplayMode mode = DisplayMode::UNDEFINED;
-    public:
-        void refresh(Pos p, u_char h){
-            pos = p;
-            height = h;
-        }
+
         Window & operator=(const Window&) = delete;
         Window(const Window&) = delete;
 
-        Window(DisplayMode m, Pos p, u_char h, u_char w): mode(m), pos(p), height(h), width(w) {}
-        Window(DisplayMode m, u_short x, u_short y, u_char h, u_char w): mode(m), pos({.x=x, .y=y}), height(h), width(w) {}
+        Window(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
         ~Window() {}
     };
 } // namespace wm
+
+ 
 #endif // C_WINDOWS

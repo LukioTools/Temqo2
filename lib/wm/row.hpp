@@ -152,7 +152,7 @@ namespace wm
         
         Window* append(u_short w, DisplayMode dm = DisplayMode::ABSOLUTE){
             window_initializer(w, dm);
-            auto ptr = new Window(dm, 0,height_offset,size(), w);
+            auto ptr = new Window(0, height_offset, w, size());
             windows.push_back(ptr);
             return ptr;
         }
@@ -161,6 +161,37 @@ namespace wm
         }
         ~Row() {}
     };
+
+
+    class Row2
+    {
+    private:
+        std::vector<Window*> windows;
+    public:
+        u_short h = 0;
+        u_short y = 0;
+        Window* append(u_short w){
+            auto ret = new Window(0,0, w, h);
+            windows.push_back(ret);
+            return ret;
+        }
+
+        void refresh(u_short _h, u_short _y){
+            h = _h;
+            y = _y;
+            u_char x = 0;
+            for (auto wind : windows) {
+                wind->h = h;
+                wind->y = y;
+                wind->x = x;
+                x += wind->w;
+            }
+        };
+
+        Row2(u_short _h, u_short _y) : h(_h), y(_y) {}
+        ~Row2() {}
+    };
+
 } // namespace wm
 
 
