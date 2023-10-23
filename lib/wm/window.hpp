@@ -60,6 +60,12 @@ namespace wm
         u_short h = 0;
 
         Space(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
+        void refresh(u_short _x, u_short _y, u_short _w, u_short _h){
+            x = _x;
+            y = _y;
+            w = _w;
+            h = _h;
+        }
 
         Space operator+(Padding pad){
             return Space(x + pad.r, y + pad.t, w-pad.l-pad.r-1, h-pad.b-pad.t-1);

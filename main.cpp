@@ -392,9 +392,10 @@ int main(int argc, char const *argv[])
     while (true) {
         int ch = getch();
         clear_scr();
-        //if(ch == RESIZE_EVENT){
+        if(ch == RESIZE_EVENT){
         //    display();
-        //}
+            space->refresh(1, 2, WIDTH,HEIGHT-2);
+        }
         /*
         mv(3,2);
         clear_row();
