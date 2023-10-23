@@ -251,7 +251,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     {
         mv(x, y+i);
         std::cout << buffer;
-        mv(x+w, y+i);
+        mv(x+w-1, y+i);
         std::cout << right;
     }
     
@@ -394,7 +394,7 @@ int main(int argc, char const *argv[])
         clear_scr();
         if(ch == RESIZE_EVENT){
         //    display();
-            space->refresh(1, 2, WIDTH,HEIGHT-2);
+            space->refresh(2, 2, WIDTH-3,HEIGHT-2);
         }
         /*
         mv(3,2);
@@ -438,6 +438,8 @@ int main(int argc, char const *argv[])
             //std::cout << cursor;
         }
         
+        mv(1, HEIGHT)
+        std::cout << WIDTH <<":"<<HEIGHT;
 
         //mv(0,0);
         if(ch == 6939){
