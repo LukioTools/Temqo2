@@ -47,6 +47,10 @@ namespace wm
             l = _l;
             r = _r;
         }
+        friend std::ostream& operator<<(std::ostream& os, const Padding& dt) {
+            os <<"t:" << (int) dt.t <<" b:" << (int) dt.b << " l:" << (int) dt.l << " r:" << (int) dt.r;
+            return os;
+        };
     };
 
     struct Space{
@@ -58,14 +62,14 @@ namespace wm
         Space(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
 
         Space operator+(Padding pad){
-            return Space(x + pad.r, y + pad.t, w-pad.l, h-pad.b);
+            return Space(x + pad.r, y + pad.t, w-pad.l-(2*pad.r), h-pad.b-(2*pad.t));
         }
         friend std::ostream& operator<<(std::ostream& os, const Space& dt) {
             os <<"x:" << dt.x <<" y:" << dt.y << " w:" << dt.w << " h:" << dt.h;
             return os;
         };
         bool exists(){
-            return x == 0 || y == 0 || w == 0 || h == 0;
+            return !(x == 0 || y == 0 || w == 0 || h == 0);
         }
     };
 
@@ -79,7 +83,14 @@ namespace wm
         //bool flag;
         //u_short _;
 
-        Space WriteableSpace(){
+        Space AbsoluteSpace() noexcept{
+            if(!space){
+                return {0,0,0,0};
+            }
+            return *space;
+        }
+
+        Space WriteableSpace() noexcept{
             if(!space){
                 return {0,0,0,0};
             }

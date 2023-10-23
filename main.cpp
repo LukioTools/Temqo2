@@ -181,8 +181,8 @@ inline std::string to_str_event(event inp){
 }
 
 struct MOUSE_INPUT {
-    u_char x = 0;
-    u_char y = 0;
+    u_short x = 0;
+    u_short y = 0;
     MOUSE_BTN btn = MOUSE_BTN::UNDEFINED;
     u_char valid = 1;
 };
@@ -205,6 +205,12 @@ std::string str_repeat(chtype c, int n) {
 int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "└", chtype lb = "┘", chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│"){
     if(!window){
         return -1;
+    }
+    wm::Space wspace = window->WriteableSpace();
+    if(!wspace.exists()){
+        mv(2, 2);
+        std::cout << wspace;
+        return -3;
     }
     auto x = window->space->x;
     auto y = window->space->y;
@@ -238,7 +244,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
         mv(x, y+h);
         std::cout << buffer;
     }
-    //l
+    //left and right
     buffer = l;
     std::string right = r;
     for (size_t i = 1; i < h-1; i++)
@@ -416,8 +422,33 @@ int main(int argc, char const *argv[])
         */ 
 
         auto space = new wm::Space(1,1,WIDTH,HEIGHT);
-        auto w= new wm::Window(wm::ABSOLUTE, space);
+        auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
         box(w);
+        std::cout.flush();
+        auto spc = w->WriteableSpace();
+        mv(spc.x,spc.y);
+        std::cout << spc;
+        mv(spc.x,spc.y+1);
+        std::cout << *space;
+        mv(spc.x,spc.y+2);
+        std::cout << w->padding;
+        mv(spc.x,spc.y+3);
+        std::cout << "WIDTH: " << WIDTH << " HEIGHT: " << HEIGHT << std::flush;
+
+        mv(spc.x,spc.y)
+        std::cout << 'X';
+        mv(spc.x+spc.w,spc.y+spc.h)
+        std::cout << 'X';
+        mv(spc.x,spc.y)
+
+        if(is_mouse(ch)){
+            auto mouse_input = parse_mouse(ch);
+            mv(spc.x,spc.y+4);
+            std::cout << "mx:"<< (int) mouse_input.x << " my: "<< (int) mouse_input.y << std::flush;
+            
+            mv((int) mouse_input.x, (int) mouse_input.y);
+        }
+        
 
         //mv(0,0);
         if(ch == 6939){
