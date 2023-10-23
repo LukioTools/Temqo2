@@ -206,10 +206,10 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     if(!window){
         return -1;
     }
-    auto x = window->space.x;
-    auto y = window->space.y;
-    auto w = window->space.w;
-    auto h = window->space.h;
+    auto x = window->space->x;
+    auto y = window->space->y;
+    auto w = window->space->w;
+    auto h = window->space->h;
 
     if(!x || !y || !w || !h){
         return -2;
@@ -378,14 +378,16 @@ void display(){
 int main(int argc, char const *argv[])
 {
     init();
-    display();
+    //display();
 
 
     while (true) {
         int ch = getch();
-        if(ch == RESIZE_EVENT){
-            display();
-        }
+        clear_scr();
+        //if(ch == RESIZE_EVENT){
+        //    display();
+        //}
+        /*
         mv(3,2);
         clear_row();
 
@@ -411,8 +413,10 @@ int main(int argc, char const *argv[])
         std::cout << std::flush;
 
         mv(3,6);
+        */ 
 
-        auto w= new wm::Window(wm::ABSOLUTE,1,1,WIDTH, HEIGHT);
+        auto space = new wm::Space(1,1,WIDTH,HEIGHT);
+        auto w= new wm::Window(wm::ABSOLUTE, space);
         box(w);
 
         //mv(0,0);

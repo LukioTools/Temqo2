@@ -9,7 +9,7 @@
 
 namespace wm
 {
-
+    
     
     enum DisplayMode : u_char{   
         UNDEFINED,
@@ -64,25 +64,33 @@ namespace wm
             os <<"x:" << dt.x <<" y:" << dt.y << " w:" << dt.w << " h:" << dt.h;
             return os;
         };
+        bool exists(){
+            return x == 0 || y == 0 || w == 0 || h == 0;
+        }
     };
 
 
         //Simple position holder
     struct Window
     {
-        Space space;
+        Space* space;
         Padding padding;
         DisplayMode dm;
+        //bool flag;
+        //u_short _;
 
         Space WriteableSpace(){
-            return space+padding;
+            if(!space){
+                return {0,0,0,0};
+            }
+            return *space+padding;
         }
 
 
         Window & operator=(const Window&) = delete;
         Window(const Window&) = delete;
 
-        Window(DisplayMode d,u_short _x, u_short _y, u_short _w, u_short _h): dm(d), space(_x,  _y,  _w,  _h) {}
+        Window(DisplayMode d, Space* ptr, Padding p = {}): dm(d), space(ptr), padding(p) {}
         ~Window() {}
     };
 
