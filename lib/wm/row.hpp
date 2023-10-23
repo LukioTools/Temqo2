@@ -16,6 +16,7 @@ namespace wm
     unsigned int row_relative = 0;
 
 
+/*
     class Row
     {
     private:
@@ -167,18 +168,27 @@ namespace wm
     {
     private:
         std::vector<Window*> windows;
+        Space space;
     public:
-        u_short h = 0;
-        u_short y = 0;
-        Window* append(u_short w){
-            auto ret = new Window(0,0, w, h);
+        Padding padding;
+
+        void setSpace( u_short y, u_short h){
+            space.h = h;
+            space.y = y;
+        }
+
+        Space getSpace(){
+            return Space( 1, space.y, WIDTH, space.h);
+        }
+        Window* append(DisplayMode dm = DisplayMode::ABSOLUTE, u_short w){
+            auto ret = new Window(dm, 0, space.y, w, space.h);
             windows.push_back(ret);
             return ret;
         }
 
         void refresh(u_short _h, u_short _y){
-            h = _h;
-            y = _y;
+            space. = _h;
+            space. = _y;
             u_char x = 0;
             for (auto wind : windows) {
                 wind->h = h;
@@ -190,6 +200,22 @@ namespace wm
 
         Row2(u_short _h, u_short _y) : h(_h), y(_y) {}
         ~Row2() {}
+    };
+*/
+    /**
+     * eee
+    */
+    class Row3
+    {
+    private:
+        DynamicHolder<Window*> dynamo;
+    public:
+        Padding pad;
+        DisplayMode d;
+        Space space;
+        
+        Row3(DisplayMode dm, u_short y, u_short h): d(dm), space(1,y,HEIGHT,h) {}
+        ~Row3() {}
     };
 
 } // namespace wm
