@@ -62,7 +62,7 @@ namespace wm
         Space(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
 
         Space operator+(Padding pad){
-            return Space(x + pad.r, y + pad.t, w-pad.l-(2*pad.r), h-pad.b-(2*pad.t));
+            return Space(x + pad.r, y + pad.t, w-pad.l-pad.r-1, h-pad.b-pad.t-1);
         }
         friend std::ostream& operator<<(std::ostream& os, const Space& dt) {
             os <<"x:" << dt.x <<" y:" << dt.y << " w:" << dt.w << " h:" << dt.h;

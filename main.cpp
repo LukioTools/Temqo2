@@ -422,7 +422,7 @@ int main(int argc, char const *argv[])
         */ 
 
         auto space = new wm::Space(1,1,WIDTH,HEIGHT);
-        auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
+        auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,3,3});
         box(w);
         std::cout.flush();
         auto spc = w->WriteableSpace();
