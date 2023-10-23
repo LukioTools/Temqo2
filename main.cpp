@@ -206,10 +206,10 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     if(!window){
         return -1;
     }
-    auto x = window->x;
-    auto y = window->y;
-    auto w = window->w;
-    auto h = window->h;
+    auto x = window->space.x;
+    auto y = window->space.y;
+    auto w = window->space.w;
+    auto h = window->space.h;
 
     if(!x || !y || !w || !h){
         return -2;
@@ -412,7 +412,7 @@ int main(int argc, char const *argv[])
 
         mv(3,6);
 
-        auto w= new wm::Window(1,1,WIDTH, HEIGHT);
+        auto w= new wm::Window(wm::ABSOLUTE,1,1,WIDTH, HEIGHT);
         box(w);
 
         //mv(0,0);
