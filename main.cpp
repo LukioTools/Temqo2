@@ -206,7 +206,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     if(!window){
         return -1;
     }
-    wm::Space wspace = window->WriteableSpace();
+    wm::Space wspace = window->AbsoluteSpace();
     if(!wspace.exists()){
         mv(2, 2);
         std::cout << wspace;
@@ -241,7 +241,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
         buffer+=str_repeat(b, w-2);
         buffer+=lb;
 
-        mv(x, y+h);
+        mv(x, y+h-1);
         std::cout << buffer;
     }
     //left and right
@@ -365,7 +365,7 @@ int init(){
 
 int deinit(){
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    use_attr(disable_mouse(SET_X10_MOUSE) << norm_buffer);
+    use_attr(disable_mouse(SET_X10_MOUSE) << norm_buffer << cursor_visible);
     return 0;
 }
 
@@ -380,12 +380,14 @@ void display(){
     mv(3,5);
     wprintln(nullptr, tst_str, SPLICE_TYPE::END_CUT);
 }
-
+const char* cursor = "^";
 int main(int argc, char const *argv[])
 {
     init();
     //display();
-
+    auto space = new wm::Space(1,2,WIDTH,HEIGHT-2);
+    auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
+    //use_attr(cursor_invisible);
 
     while (true) {
         int ch = getch();
@@ -421,32 +423,18 @@ int main(int argc, char const *argv[])
         mv(3,6);
         */ 
 
-        auto space = new wm::Space(1,1,WIDTH,HEIGHT);
-        auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,3,3});
+        
         box(w);
         std::cout.flush();
-        auto spc = w->WriteableSpace();
-        mv(spc.x,spc.y);
-        std::cout << spc;
-        mv(spc.x,spc.y+1);
-        std::cout << *space;
-        mv(spc.x,spc.y+2);
-        std::cout << w->padding;
-        mv(spc.x,spc.y+3);
-        std::cout << "WIDTH: " << WIDTH << " HEIGHT: " << HEIGHT << std::flush;
+        //auto spc = w->WriteableSpace();
 
-        mv(spc.x,spc.y)
-        std::cout << 'X';
-        mv(spc.x+spc.w,spc.y+spc.h)
-        std::cout << 'X';
-        mv(spc.x,spc.y)
 
         if(is_mouse(ch)){
             auto mouse_input = parse_mouse(ch);
-            mv(spc.x,spc.y+4);
+            mv(0,0);
             std::cout << "mx:"<< (int) mouse_input.x << " my: "<< (int) mouse_input.y << std::flush;
-            
             mv((int) mouse_input.x, (int) mouse_input.y);
+            //std::cout << cursor;
         }
         
 
@@ -455,8 +443,8 @@ int main(int argc, char const *argv[])
             break;
         }
     }
-
-
+    delete w;
+    delete space;
     deinit();
     return 0;
 }
