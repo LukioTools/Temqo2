@@ -52,7 +52,7 @@ void resize(int sig){
 
 
 #define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
-#define clear() std::cout << "\ec" << enable_mouse(USE_MOUSE)<< std::flush;
+#define clear() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
 #define clear_scr() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
@@ -103,6 +103,13 @@ void resize(int sig){
 #define strike_reset "\e[29m"
 //seperate graphix modes with an semicolon (;) (presumeably to the current cursor location, untested)
 #define set_mode_for_cell(mode) ("\e[1;34;"+mode+"m")
+
+#define set_title_attr(title) ("\033]2;" + title + "\007")
+#define set_title_static_attr(title) ("\033]2;" title "\007")
+
+#define set_title(title) printf("\033]0;%s\007", title);
+#define set_title_static(title) printf("\033]0;"#title"\007");
+
 
 ///Common Private Modes
 /*
@@ -351,7 +358,7 @@ int init(){
     
     //std::locale::global(std::locale("en_US.UTF-8"));
 
-    use_attr(alt_buffer << enable_mouse(SET_X10_MOUSE))
+    use_attr(alt_buffer << enable_mouse(USE_MOUSE))
     signal(SIGWINCH, resize);
     tcgetattr(STDIN_FILENO, &oldt);
     clear();
@@ -365,7 +372,7 @@ int init(){
 
 int deinit(){
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    use_attr(disable_mouse(SET_X10_MOUSE) << norm_buffer << cursor_visible);
+    use_attr(disable_mouse(USE_MOUSE) << norm_buffer << cursor_visible);
     return 0;
 }
 
@@ -389,7 +396,9 @@ int main(int argc, char const *argv[])
     auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
+
     while (true) {
+        std::cout << set_title_static_attr("Hello World")    << std::flush;
         int ch = getch();
         clear_scr();
         if(ch == RESIZE_EVENT){
@@ -426,7 +435,6 @@ int main(int argc, char const *argv[])
 
         
         box(w);
-        std::cout.flush();
         //auto spc = w->WriteableSpace();
 
 
