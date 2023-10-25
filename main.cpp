@@ -527,7 +527,6 @@ int main(int argc, char const *argv[])
             inp+=(char) ch;
             std::cout <<  attr_reset color_fg(50, 50, 60) <<"char: " << attr_reset << bold<<(char) ch << bold_reset;
         }
-        std::cout << attr_reset  color_bg(199,0,199);
         mv(wspace.x+3, wspace.y);
         wprintln(w, inp);
         std::cout << attr_reset;
