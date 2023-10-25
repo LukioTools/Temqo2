@@ -144,17 +144,25 @@ ESC[?1049l 	        disables the alternative buffer
 
 ///!!NOT GUARANTEED!!///
 enum MOUSE_BTN : unsigned char{
-    UNDEFINED = 0,
-    NONE = '\x42',
-    RELEASE = '\x22',
-    LEFT = '\x1f',
-    MIDDLE = '\x20',
-    RIGHT = '\x21',
-    SCRL_UP = '\x5F',
-    SCRL_DOWN = '\x60',
-    LEFT_HILIGHT = '\x3f',
-    MIDDLE_HILIGHT = '\x40',
-    RIGHT_HILIGHT = '\x41',
+    M_UNDEFINED = 0,
+    M_NONE = '\x42',
+    M_RELEASE = '\x22',
+    M_LEFT = '\x1f',
+    M_MIDDLE = '\x20',
+    M_RIGHT = '\x21',
+    M_SCRL_UP = '\x5F',
+    M_SCRL_DOWN = '\x60',
+    M_LEFT_HILIGHT = '\x3f',
+    M_MIDDLE_HILIGHT = '\x40',
+    M_RIGHT_HILIGHT = '\x41',
+};
+
+enum KEY : u_char{
+    K_UNDEFINED = 0,
+    K_UP, 
+    K_DOWN, 
+    K_LEFT,
+    K_RIGHT, 
 };
 
 #define CASE_STR(clause) \
@@ -162,21 +170,34 @@ case clause:\
     return #clause;
 inline std::string to_str(MOUSE_BTN btn) noexcept{
     switch (btn) {
-        CASE_STR(UNDEFINED);
-        CASE_STR(NONE);
-        CASE_STR(RELEASE);
-        CASE_STR(LEFT);
-        CASE_STR(MIDDLE);
-        CASE_STR(RIGHT);
-        CASE_STR(SCRL_UP);
-        CASE_STR(SCRL_DOWN);
-        CASE_STR(LEFT_HILIGHT);
-        CASE_STR(MIDDLE_HILIGHT);
-        CASE_STR(RIGHT_HILIGHT);
+        CASE_STR(M_UNDEFINED);
+        CASE_STR(M_NONE);
+        CASE_STR(M_RELEASE);
+        CASE_STR(M_LEFT);
+        CASE_STR(M_MIDDLE);
+        CASE_STR(M_RIGHT);
+        CASE_STR(M_SCRL_UP);
+        CASE_STR(M_SCRL_DOWN);
+        CASE_STR(M_LEFT_HILIGHT);
+        CASE_STR(M_MIDDLE_HILIGHT);
+        CASE_STR(M_RIGHT_HILIGHT);
         default:
             return "UNKNOWN";
     }
 }
+inline std::string to_str(KEY key){
+    switch (key)
+    {
+    CASE_STR(K_UNDEFINED);
+    CASE_STR(K_UP);
+    CASE_STR(K_DOWN);
+    CASE_STR(K_LEFT);
+    CASE_STR(K_RIGHT);
+    default:
+        return "UNKNOWN";
+    }
+}
+
 typedef int event; 
 inline std::string to_str_event(event inp){
     switch (inp) {
@@ -190,7 +211,7 @@ inline std::string to_str_event(event inp){
 struct MOUSE_INPUT {
     u_short x = 0;
     u_short y = 0;
-    MOUSE_BTN btn = MOUSE_BTN::UNDEFINED;
+    MOUSE_BTN btn = MOUSE_BTN::M_UNDEFINED;
     u_char valid = 1;
 };
 
@@ -251,27 +272,47 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
         mv(x, y+h-1);
         std::cout << buffer;
     }
-    //left and right
+    //M_LEFT and M_RIGHT
     buffer = l;
-    std::string right = r;
+    std::string M_RIGHT = r;
     for (size_t i = 1; i < h-1; i++)
     {
         mv(x, y+i);
         std::cout << buffer;
         mv(x+w-1, y+i);
-        std::cout << right;
+        std::cout << M_RIGHT;
     }
     
 
     return 0;
 }
 
-bool is_key(int input) noexcept{
+
+
+KEY is_key(int input) noexcept{
     auto ptr = reinterpret_cast<char*>(&input);
-    if(ptr[0] != '\x1b' || ptr[1] != '\x5b' || ptr[3] > '\x44' || ptr[3] < '\x41'){
-        return false;
+    if(ptr[0] != '\x1b' || ptr[1] != '\x5b'|| ptr[2] > '\x44' || ptr[2] < '\x41'){
+        return K_UNDEFINED;
     }
-    return true;
+    switch (ptr[2])
+    {
+    case '\x41':
+        return K_UP;
+        break;
+    case '\x42':
+        return K_DOWN;
+        break;
+    case '\x43':
+        return K_RIGHT;
+        break;
+    case '\x44':
+        return K_LEFT;
+        break;
+    
+    default:
+        return K_UNDEFINED;
+        break;
+    }
 }
 
 
@@ -299,7 +340,7 @@ int getch(){
     int c = std::cin.get();
     ch+=c<<8;
 
-    if(c !='\x5b'){ //cursor 0x004x5b1b x = 1-4 (up, down, left, right)
+    if(c !='\x5b'){ //cursor 0x004x5b1b x = 1-4 (up, down, M_LEFT, M_RIGHT)
         return ch;
     }
 
@@ -437,13 +478,19 @@ int main(int argc, char const *argv[])
         box(w);
         //auto spc = w->WriteableSpace();
 
-
+        use_attr(cursor_home);
         if(is_mouse(ch)){
             auto mouse_input = parse_mouse(ch);
-            mv(0,0);
             std::cout << "mx:"<< (int) mouse_input.x << " my: "<< (int) mouse_input.y << std::flush;
             mv((int) mouse_input.x, (int) mouse_input.y);
             //std::cout << cursor;
+        }
+        else if(KEY key = is_key(ch)){
+            std::cout<< "key: " << (int) key << to_str(key);
+        }
+        else{
+            mv(1,1);
+            std::cout<< "char: " << (char) ch;
         }
         
         mv(1, HEIGHT)
