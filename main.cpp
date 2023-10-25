@@ -230,7 +230,7 @@ std::string str_repeat(chtype c, int n) {
     return os.str();
 }
 
-int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "└", chtype lb = "┘", chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│"){
+int box(wm::Window* window, chtype lt = "┌", chtype rt = "┐",chtype lb = "└", chtype rb = "┘", chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│"){
     if(!window){
         return -1;
     }
@@ -252,36 +252,48 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     if(w < 2 || h < 3){
         return 1;
     }
-    std::string buffer;
 
-    //print top
-    {
-        buffer+=rt;
-        buffer+=str_repeat(t, w-1); 
+    if(t){
+        std::string buffer;
+        //print top
         buffer+=lt;
-
+        buffer+=str_repeat(t, w-1); 
+        buffer+=rt;
         mv(x, y);
         std::cout << buffer;
+        buffer = "";
     }
-    //print bottom
-    buffer = "";
-    {
-        buffer+=rb;
-        buffer+=str_repeat(b, w-1);
+    else{
+        mv(x, y);
+        std::cout << lt;
+        mv(x+w, y);
+        std::cout << rt;
+    }
+        
+    if(b){
+        std::string buffer;
+        //print bottom
         buffer+=lb;
+        buffer+=str_repeat(b, w-1);
+        buffer+=rb;
 
         mv(x, y+h-1);
         std::cout << buffer;
     }
+    else
+    {
+        mv(x, y+h-1);
+        std::cout << lb;
+        mv(x+w, y+h-1);
+        std::cout << rb;
+    }
     //M_LEFT and M_RIGHT
-    buffer = l;
-    std::string M_RIGHT = r;
     for (size_t i = 1; i < h-1; i++)
     {
         mv(x, y+i);
-        std::cout << buffer;
+        std::cout << l;
         mv(x+w, y+i);
-        std::cout << M_RIGHT;
+        std::cout << r;
     }
     
 
