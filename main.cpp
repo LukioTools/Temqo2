@@ -229,7 +229,7 @@ std::string str_repeat(chtype c, int n) {
         os << c;
     return os.str();
 }
-
+//you can put t, b, l, r to nullptr so that the sides will not be printe
 int box(wm::Window* window, chtype lt = "┌", chtype rt = "┐",chtype lb = "└", chtype rb = "┘", chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│"){
     if(!window){
         return -1;
