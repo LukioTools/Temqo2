@@ -448,7 +448,7 @@ int main(int argc, char const *argv[])
         }
 
 
-        std::cout << color_fg(180,180,180);
+        std::cout << color_fg(180,180,220);
         box(w);
         auto wspace = w->WriteableSpace();
 
