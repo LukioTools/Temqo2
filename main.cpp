@@ -296,22 +296,11 @@ KEY is_key(int input) noexcept{
     }
     switch (ptr[2])
     {
-    case '\x41':
-        return K_UP;
-        break;
-    case '\x42':
-        return K_DOWN;
-        break;
-    case '\x43':
-        return K_RIGHT;
-        break;
-    case '\x44':
-        return K_LEFT;
-        break;
-    
-    default:
-        return K_UNDEFINED;
-        break;
+    case '\x41':    return K_UP;
+    case '\x42':    return K_DOWN;
+    case '\x43':    return K_RIGHT;
+    case '\x44':    return K_LEFT;
+    default:        return K_UNDEFINED;
     }
 }
 
