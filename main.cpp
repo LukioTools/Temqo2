@@ -66,6 +66,8 @@ void resize(int sig){
 #define cursor_right(n) ("\e["+std::to_string(n)+"C")
 #define cursor_left(n)  ("\e["+std::to_string(n)+"D")
 #define cursor_up_scrl "\eM"
+//ESC[#G 	                moves cursor to column #
+#define cursor_to_column(n) ("\e[" + std::to_string(n) + "G")
 
 #define cursor_save "\e7"
 #define cursor_load "\e8"
@@ -302,6 +304,9 @@ int box(wm::Window* window, chtype lt = "┌", chtype rt = "┐",chtype lb = "�
 
 
 
+
+
+
 KEY is_key(int input) noexcept{
     auto ptr = reinterpret_cast<char*>(&input);
     if(ptr[0] != '\x1b' || ptr[1] != '\x5b'|| ptr[2] > '\x44' || ptr[2] < '\x41'){
@@ -365,9 +370,60 @@ enum SPLICE_TYPE{
     BEGIN_CUT,
     BEGIN_DOTS,
 };
-
+typedef std::string(*wprintln_splicer)(wm::Window* window, std::string str, SPLICE_TYPE st);
 /*prints a line whilst clipping exess*/
-inline void wprintln(wm::Window* window = nullptr, std::string str = "", SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS){
+inline int wprintln(wm::Window* window, std::string str, SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS, wprintln_splicer csplicer = nullptr){
+    
+    if(!window)
+        return -1;
+    
+    ///remove newlines, since they anyoing
+    while (std::size_t idx = str.find_first_of('\n')) {
+        if( idx == std::string::npos){
+            break;
+        }
+        try{str.erase(idx);}
+        catch(...){
+            std::cout << "ioutof range";
+            return -1;
+        }
+    }
+    
+    auto wspace = window->WriteableSpace();
+    
+    //trunctuate if it was larger than suposed to be
+    if(str.length() > wspace.w){
+        switch (st) {
+            case BEGIN_DOTS:
+                str = str.substr(str.length() - wspace.w, str.length());
+                str.replace(0,3,"...");
+                break;
+            case END_DOTS:
+                str = str.substr(0, wspace.w-3); //(-3 to make space for dots)
+                str.append("...");
+                break;
+            case BEGIN_CUT:
+                str = str.substr(str.length() - wspace.w, str.length());
+                break;
+            case END_CUT:
+            default:
+                if(csplicer){
+                    str = csplicer(window, str, st);
+                }
+                if(str.length() > wspace.w){ //just in case cap that bitch
+                    str = str.substr(0, wspace.w);
+                }
+                break;
+        }
+    }
+    else{
+        str.append(wspace.w-str.length(),' ');
+    }
+
+    std::cout << cursor_to_column(wspace.x) << str;
+
+    return 0;
+    /*
     if(window == nullptr){
         while (auto idx = str.find_first_of('\n') != std::string::npos) {
             str.erase(idx);
@@ -393,6 +449,8 @@ inline void wprintln(wm::Window* window = nullptr, std::string str = "", SPLICE_
         }
         std::cout << str << std::flush;
     }
+    */
+
 }
 
 int init(){
@@ -434,10 +492,10 @@ int main(int argc, char const *argv[])
     init();
     //display();
     auto space = new wm::Space(1,2,WIDTH-1,HEIGHT-2);
-    auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
+    auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,0,2});
     //use_attr(cursor_invisible);
 
-
+    std::string inp;
     while (true) {
         std::cout << set_title_static_attr("Hello World")    << std::flush;
         int ch = getch();
@@ -466,9 +524,13 @@ int main(int argc, char const *argv[])
             std::cout<< attr_reset color_fg(50, 50, 60) << "event: " << attr_reset bold<< to_str_event(static_cast<event>(ch)) << bold_reset;
         }
         else{
+            inp+=(char) ch;
             std::cout <<  attr_reset color_fg(50, 50, 60) <<"char: " << attr_reset << bold<<(char) ch << bold_reset;
         }
-        
+        std::cout << attr_reset  color_bg(199,0,199);
+        mv(wspace.x+3, wspace.y);
+        wprintln(w, inp);
+        std::cout << attr_reset;
         mv(1, HEIGHT)
         std::cout << WIDTH <<":"<<HEIGHT;
 
