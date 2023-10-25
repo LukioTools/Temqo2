@@ -73,8 +73,8 @@ void resize(int sig){
 #define cursor_load_sco "\e[u"
 
 //use charachter width
-#define color_fg(r,g,b) std::cout << "\e[38;2;"<< r << ';'<< g << ';' << b << 'm'
-#define color_bg(r,g,b) std::cout << "\e[48;2;"<< r << ';'<< g << ';' << b << 'm'
+#define color_fg(r,g,b) "\e[38;2;"<< r << ';'<< g << ';' << b << 'm'
+#define color_bg(r,g,b) "\e[48;2;"<< r << ';'<< g << ';' << b << 'm'
 
 #define color_fg_str(r,g,b) ("\e[38;2;" + std::to_string(r) + ';' + std::to_string(g) + ';' + std::to_string(b) + 'm')
 #define color_bg_str(r,g,b) ("\e[48;2;" + std::to_string(r) + ';' + std::to_string(g) + ';' + std::to_string(b) + 'm')
@@ -131,7 +131,7 @@ ESC[?1049l 	        disables the alternative buffer
 #define alt_buffer "\e[?1049h"
 #define norm_buffer "\e[?1049l"
 
-#define use_attr(attr) std::cout << attr << std::flush;
+#define use_attr(attr) std::cout << attr;
 
 //'\x41'
 #define KEY_UP     0x00415b1b
@@ -240,6 +240,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
         std::cout << wspace;
         return -3;
     }
+    
     auto x = window->space->x;
     auto y = window->space->y;
     auto w = window->space->w;
@@ -256,7 +257,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     //print top
     {
         buffer+=rt;
-        buffer+=str_repeat(t, w-2);
+        buffer+=str_repeat(t, w-1); 
         buffer+=lt;
 
         mv(x, y);
@@ -266,7 +267,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     buffer = "";
     {
         buffer+=rb;
-        buffer+=str_repeat(b, w-2);
+        buffer+=str_repeat(b, w-1);
         buffer+=lb;
 
         mv(x, y+h-1);
@@ -279,7 +280,7 @@ int box(wm::Window* window, chtype rt = "┌", chtype lt = "┐",chtype rb = "�
     {
         mv(x, y+i);
         std::cout << buffer;
-        mv(x+w-1, y+i);
+        mv(x+w, y+i);
         std::cout << M_RIGHT;
     }
     
@@ -303,8 +304,6 @@ KEY is_key(int input) noexcept{
     default:        return K_UNDEFINED;
     }
 }
-
-
 
 MOUSE_INPUT parse_mouse(int input) noexcept{
     auto ptr = reinterpret_cast<unsigned char*>(&input);
@@ -422,7 +421,7 @@ int main(int argc, char const *argv[])
 {
     init();
     //display();
-    auto space = new wm::Space(1,2,WIDTH,HEIGHT-2);
+    auto space = new wm::Space(1,2,WIDTH-1,HEIGHT-2);
     auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
@@ -433,53 +432,29 @@ int main(int argc, char const *argv[])
         clear_scr();
         if(ch == RESIZE_EVENT){
         //    display();
-            space->refresh(2, 2, WIDTH-3,HEIGHT-2);
-        }
-        /*
-        mv(3,2);
-        clear_row();
-
-        std::string custom = "";
-        if(is_mouse(ch)){
-            auto mouse = parse_mouse(ch);
-            custom = "mouse: (x: " + std::to_string(mouse.x) + " y: " + std::to_string(mouse.y) + " btn: "  + to_str(mouse.btn) + ") ";
-        }
-        else if( is_key(ch)){
-            custom = "key: " + std::to_string(ch);
-        }
-        else if( is_event(ch)){
-            
-            custom = "event: " + to_str_event(static_cast<event>(ch));
-        }
-        else {
-            custom = "idk";
+            space->refresh(1,2,WIDTH-1,HEIGHT-2);
         }
 
-        
-        printf("%schar(%i)(0x%08x)(%s):%s %c", color_fg_str(50,255,50).c_str(), ch,ch, custom.c_str(),attr_reset, ch);
-        
-        std::cout << std::flush;
 
-        mv(3,6);
-        */ 
-
-        
+        std::cout << color_fg(180,180,180);
         box(w);
-        //auto spc = w->WriteableSpace();
+        auto wspace = w->WriteableSpace();
 
         use_attr(cursor_home);
         if(is_mouse(ch)){
             auto mouse_input = parse_mouse(ch);
-            std::cout << "mx:"<< (int) mouse_input.x << " my: "<< (int) mouse_input.y << std::flush;
+            std::cout << attr_reset color_fg(50, 50, 60) << "mx:"<< attr_reset bold <<(int) mouse_input.x << attr_reset color_fg(50, 50, 60) << " my: " << attr_reset bold << (int) mouse_input.y << attr_reset;
             mv((int) mouse_input.x, (int) mouse_input.y);
             //std::cout << cursor;
         }
         else if(KEY key = is_key(ch)){
-            std::cout<< "key: " << (int) key << to_str(key);
+            std::cout<< attr_reset color_fg(50, 50, 60) <<"key: " <<  attr_reset bold << to_str(key) << bold_reset;
+        }
+        else if( is_event(ch)){
+            std::cout<< attr_reset color_fg(50, 50, 60) << "event: " << attr_reset bold<< to_str_event(static_cast<event>(ch)) << bold_reset;
         }
         else{
-            mv(1,1);
-            std::cout<< "char: " << (char) ch;
+            std::cout <<  attr_reset color_fg(50, 50, 60) <<"char: " << attr_reset << bold<<(char) ch << bold_reset;
         }
         
         mv(1, HEIGHT)
