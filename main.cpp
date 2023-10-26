@@ -52,7 +52,7 @@ void resize(int sig){
 
 
 #define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
-#define clear() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
+#define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
 #define clear_scr() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
@@ -477,11 +477,11 @@ inline int wprint(wm::Window* window, std::string str){
     while(true){
         std::basic_string<char> s;
 
-        s = str.substr(pos, pos + wspace.w);
-        pos += wspace.w;
+        s = str.substr(pos, wspace.w);
+        pos+=wspace.w;
 
 
-        std::cout<< cursor_to_column(wspace.x) << s << cursor_down(1) ; 
+        std::cout<< cursor_to_column(wspace.x) << s << cursor_down(1); 
 
         if(s.length() < wspace.w){
             break;
@@ -499,7 +499,7 @@ int init(){
     use_attr(alt_buffer << enable_mouse(USE_MOUSE))
     signal(SIGWINCH, resize);
     tcgetattr(STDIN_FILENO, &oldt);
-    clear();
+    clear_all();
     resize(SIGWINCH);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
@@ -513,18 +513,9 @@ int deinit(){
     use_attr(disable_mouse(USE_MOUSE) << norm_buffer << cursor_visible);
     return 0;
 }
-std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
+std::string tst_str("");
 
-void display(){
-    clear();
-    mv(3,3);
 
-    printf("Hello\nWorld width:%u, len:%zu", WIDTH, tst_str.length());
-    std::cout << std::flush;
-    //std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    mv(3,5);
-    wprintln(nullptr, tst_str, SPLICE_TYPE::END_CUT);
-}
 const char* cursor = "^";
 
 int main(int argc, char const *argv[])
@@ -545,10 +536,16 @@ int main(int argc, char const *argv[])
             space->refresh(1,2,WIDTH-1,HEIGHT-2);
         }
 
+        
 
         std::cout << color_fg(180,180,220);
         box(w);
         auto wspace = w->WriteableSpace();
+        tst_str.clear();
+        for (size_t i = 0; i < wspace.w*2+4; i++)
+        {
+            tst_str+='A'+ (i%25);
+        }
 
         use_attr(cursor_home);
         if(is_mouse(ch)){
