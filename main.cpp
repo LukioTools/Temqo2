@@ -34,7 +34,7 @@ void resize(int sig){
 
 
 
-#define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
+#define mv(x,y) std::cout << "\e["<< y+1 << ";"<< x+1 <<"H" << std::flush;
 #define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
 #define clear_scr() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
@@ -311,8 +311,8 @@ int getch(){
 
     unsigned int btn = 0, x = 0, y = 0;
     btn = std::cin.get();
-    x = std::cin.get()-'\x20';
-    y = std::cin.get()-'\x20';
+    x = std::cin.get()-'\x21';
+    y = std::cin.get()-'\x21';
     ch = '\xFF' + (btn<<8) + (x << 16) + (y << 24);
             
     return ch;
@@ -424,13 +424,15 @@ inline int sprint(wm::Space wspace, std::string str){
             return -1;
         }
     };
+
     size_t iteration = 0;
     size_t pos = 0;
+    std::basic_string<char> s;
     while(true){
-        std::basic_string<char> s;
+        s.clear();
 
-        s = str.substr(pos, wspace.w+1);
-        pos+=wspace.w;
+        s = str.substr(pos, wspace.width());
+        pos+=wspace.width();
 
 
         std::cout<< cursor_to_column(wspace.x) << s << cursor_down(1); 
@@ -480,7 +482,7 @@ int main(int argc, char const *argv[])
 {
     init();
     //display();
-    auto space = new wm::Space(1,2,WIDTH-1,HEIGHT-2);
+    auto space = new wm::Space(0,1,WIDTH,HEIGHT-1);
     auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
@@ -490,57 +492,15 @@ int main(int argc, char const *argv[])
         int ch = getch();
         clear_scr();
         if(ch == RESIZE_EVENT){
-        //    display();
-            space->refresh(1,2,WIDTH-1,HEIGHT-2);
+            space->refresh(0,1,WIDTH,HEIGHT-1);
         }
+
+        mv(0,0)
+        std::cout << *space;
+        mv(WIDTH,HEIGHT)
+        std::cout << "X";
 
         
-
-        std::cout << color_fg(180,180,220);
-        box(w);
-        auto wspace = w->WriteableSpace();
-        tst_str.clear();
-
-        for (size_t i = 0; i < wspace.w*10+4; i++)
-        {
-            tst_str+='A'+ (i%25);
-        }
-
-        use_attr(cursor_home);
-        if(is_mouse(ch)){
-            auto mouse_input = wm::parse_mouse(ch);
-            std::cout << attr_reset color_fg(50, 50, 60) << "mx:"<< attr_reset bold <<(int) mouse_input.pos.x << attr_reset color_fg(50, 50, 60) << " my: " << attr_reset bold << (int) mouse_input.pos.y << attr_reset;
-            mv((int) mouse_input.pos.x, (int) mouse_input.pos.y);
-            mpos = mouse_input.pos;
-            //std::cout << cursor;
-        }
-        else if(KEY key = is_key(ch)){
-            std::cout<< attr_reset color_fg(50, 50, 60) <<"key: " <<  attr_reset bold << to_str(key) << bold_reset;
-        }
-        else if( is_event(ch)){
-            std::cout<< attr_reset color_fg(50, 50, 60) << "event: " << attr_reset bold<< to_str_event(static_cast<event>(ch)) << bold_reset;
-        }
-        else{
-            inp+=(char) ch;
-            std::cout <<  attr_reset color_fg(50, 50, 60) <<"char: " << attr_reset << bold<<(char) ch << bold_reset;
-        }
-        mv(wspace.x+3, wspace.y);
-        wprintln(w, inp);
-
-
-        wm::Space sp = w->WriteableSpace();
-        sp.h-=1;
-        sp.y++;
-
-        mv(sp.x, sp.y);
-
-        if(sp.inside(mpos)){
-            use_attr(color_bg(200,200,200) << color_fg(55,55,55));
-        };
-        sprint(sp, tst_str);
-        std::cout << attr_reset;
-        mv(1, HEIGHT)
-        printf("%i:%i, (%i:%i)(%i:%i) %i:%i", WIDTH, HEIGHT, sp.x, sp.y, sp.w, sp.h,sp.x+sp.w,sp.y+sp.h);
 
         //mv(0,0);
         if(ch == 6939){

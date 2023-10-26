@@ -61,6 +61,38 @@ namespace wm
         u_short w = 0;
         u_short h = 0;
 
+
+        Position start(){
+            return {x,y};
+        }
+        Position end(){
+            return {static_cast<unsigned short>(x+w), static_cast<unsigned short>(y+h)};
+        }
+
+        unsigned short width(){
+            return w;
+        }
+        unsigned short height(){
+            return h;
+        }
+
+        void transform_vertical(int ammount){
+            y+=ammount;
+            h-=ammount;
+        }
+
+        void transform_horizontal(int ammount){
+            x+=ammount;
+            w-=ammount;
+        }
+        /*negative values shrink it*/
+        void expand_right(int ammount){
+            w+=ammount;
+        }
+        void expand_left(int ammount){
+            x+=ammount;
+        }
+
         Space(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
         void refresh(u_short _x, u_short _y, u_short _w, u_short _h){
             x = _x;
