@@ -517,9 +517,9 @@ std::string tst_str("");
 const char* cursor = "^";
 
 
-wm::Position mpos;
+wm::Position mpos = {0,0};
 
-
+bool enter = false;
 int main(int argc, char const *argv[])
 {
     init();
@@ -537,6 +537,11 @@ int main(int argc, char const *argv[])
             space->refresh(0,1,WIDTH,HEIGHT-1);
         }
 
+        if(is_mouse(ch)){
+            auto m = wm::parse_mouse(ch);
+            mpos = m.pos;
+        }
+
         mv(0,0)
         std::cout << *space;
         mv(WIDTH,HEIGHT)
@@ -545,9 +550,34 @@ int main(int argc, char const *argv[])
         if(box(*space) == -1){
             std::cout << "box error";
         };
+        
+        if(w->WriteableSpace().inside(mpos)){
+            if(enter == false)
+                {
+                    use_attr(alert);
+                    enter = true;
+                }
+            auto ws = w->WriteableSpace();
+            use_attr(color_bg(200,200,200) << color_fg(50,50,50))
+            mv(0,0)
+            std::cout << ws;
+
+            for (size_t i = 0; i < ws.height(); i++)
+            {
+                mv(ws.x, ws.y+i);
+                for (size_t i = 0; i < ws.width(); i++)
+                {
+                    std::cout << '#';
+                }
+            }
+            use_attr(attr_reset);
+        }
+        else
+            enter = false;
         std::cout.flush();
 
         
+        use_attr(cursor_invisible);
 
         //mv(0,0);
         if(ch == 6939){
