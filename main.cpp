@@ -429,7 +429,7 @@ inline int sprint(wm::Space wspace, std::string str){
     while(true){
         std::basic_string<char> s;
 
-        s = str.substr(pos, wspace.w);
+        s = str.substr(pos, wspace.w+1);
         pos+=wspace.w;
 
 
@@ -481,7 +481,7 @@ int main(int argc, char const *argv[])
     init();
     //display();
     auto space = new wm::Space(1,2,WIDTH-1,HEIGHT-2);
-    auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,0,2});
+    auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
     std::string inp;
@@ -526,11 +526,13 @@ int main(int argc, char const *argv[])
         }
         mv(wspace.x+3, wspace.y);
         wprintln(w, inp);
-        mv(wspace.x+33, wspace.y+1);
+
+
         wm::Space sp = w->WriteableSpace();
         sp.h-=1;
         sp.y++;
-        sp.w--;
+
+        mv(sp.x, sp.y);
 
         if(sp.inside(mpos)){
             use_attr(color_bg(200,200,200) << color_fg(55,55,55));
@@ -538,7 +540,7 @@ int main(int argc, char const *argv[])
         sprint(sp, tst_str);
         std::cout << attr_reset;
         mv(1, HEIGHT)
-        std::cout << WIDTH <<":"<<HEIGHT << ":" << sp.x+sp.w << ":" << sp.y+sp.h;
+        printf("%i:%i, (%i:%i)(%i:%i) %i:%i", WIDTH, HEIGHT, sp.x, sp.y, sp.w, sp.h,sp.x+sp.w,sp.y+sp.h);
 
         //mv(0,0);
         if(ch == 6939){
