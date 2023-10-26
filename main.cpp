@@ -14,23 +14,8 @@
 #include <sstream>
 
 #include "lib/wm/row.hpp"
+#include "lib/wm/mouse.hpp"
 
-#define SET_X10_MOUSE               9
-#define SET_VT200_MOUSE             1000
-#define SET_VT200_HIGHLIGHT_MOUSE   1001
-#define SET_BTN_EVENT_MOUSE         1002
-#define SET_ANY_EVENT_MOUSE         1003
-
-#define SET_FOCUS_EVENT_MOUSE       1004
-
-#define SET_ALTERNATE_SCROLL        1007
-
-#define SET_EXT_MODE_MOUSE          1005
-#define SET_SGR_EXT_MODE_MOUSE      1006
-#define SET_URXVT_EXT_MODE_MOUSE    1015
-#define SET_PIXEL_POSITION_MOUSE    1016
-
-#define USE_MOUSE SET_ANY_EVENT_MOUSE
 
 struct termios oldt, newt;
 unsigned int WIDTH = 0, HEIGHT = 0;
@@ -47,8 +32,6 @@ void resize(int sig){
     resize_event = true;
 }
 
-#define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
-#define disable_mouse(type) ("\e[?"+    std::to_string(type)    +"l")
 
 
 #define mv(x,y) std::cout << "\e["<< y << ";"<< x <<"H" << std::flush;
@@ -144,20 +127,6 @@ ESC[?1049l 	        disables the alternative buffer
 //'\x44'
 #define KEY_LEFT   0x00445b1b
 
-///!!NOT GUARANTEED!!///
-enum MOUSE_BTN : unsigned char{
-    M_UNDEFINED = 0,
-    M_NONE = '\x42',
-    M_RELEASE = '\x22',
-    M_LEFT = '\x1f',
-    M_MIDDLE = '\x20',
-    M_RIGHT = '\x21',
-    M_SCRL_UP = '\x5F',
-    M_SCRL_DOWN = '\x60',
-    M_LEFT_HILIGHT = '\x3f',
-    M_MIDDLE_HILIGHT = '\x40',
-    M_RIGHT_HILIGHT = '\x41',
-};
 
 enum KEY : u_char{
     K_UNDEFINED = 0,
@@ -170,19 +139,19 @@ enum KEY : u_char{
 #define CASE_STR(clause) \
 case clause:\
     return #clause;
-inline std::string to_str(MOUSE_BTN btn) noexcept{
+inline std::string to_str(wm::MOUSE_BTN btn) noexcept{
     switch (btn) {
-        CASE_STR(M_UNDEFINED);
-        CASE_STR(M_NONE);
-        CASE_STR(M_RELEASE);
-        CASE_STR(M_LEFT);
-        CASE_STR(M_MIDDLE);
-        CASE_STR(M_RIGHT);
-        CASE_STR(M_SCRL_UP);
-        CASE_STR(M_SCRL_DOWN);
-        CASE_STR(M_LEFT_HILIGHT);
-        CASE_STR(M_MIDDLE_HILIGHT);
-        CASE_STR(M_RIGHT_HILIGHT);
+        CASE_STR(wm::M_UNDEFINED);
+        CASE_STR(wm::M_NONE);
+        CASE_STR(wm::M_RELEASE);
+        CASE_STR(wm::M_LEFT);
+        CASE_STR(wm::M_MIDDLE);
+        CASE_STR(wm::M_RIGHT);
+        CASE_STR(wm::M_SCRL_UP);
+        CASE_STR(wm::M_SCRL_DOWN);
+        CASE_STR(wm::M_LEFT_HILIGHT);
+        CASE_STR(wm::M_MIDDLE_HILIGHT);
+        CASE_STR(wm::M_RIGHT_HILIGHT);
         default:
             return "UNKNOWN";
     }
@@ -210,18 +179,10 @@ inline std::string to_str_event(event inp){
     }
 }
 
-struct MOUSE_INPUT {
-    u_short x = 0;
-    u_short y = 0;
-    MOUSE_BTN btn = MOUSE_BTN::M_UNDEFINED;
-    u_char valid = 1;
-};
-
 
 #define is_event(input_integer) (reinterpret_cast<u_short*>(&input_integer)[0] == EVENT_BASE)
 
 
-#define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')
 
 typedef const char* chtype;
 
@@ -322,14 +283,6 @@ KEY is_key(int input) noexcept{
     }
 }
 
-MOUSE_INPUT parse_mouse(int input) noexcept{
-    auto ptr = reinterpret_cast<unsigned char*>(&input);
-    char checksum = static_cast<char>(ptr[0]);
-    MOUSE_BTN btn = static_cast<MOUSE_BTN>(ptr[1]);
-    u_char x = ptr[2];
-    u_char y = ptr[3];
-    return {x,y,btn,checksum == '\xFF'};
-}
 
 int getch(){
     if(resize_event){
@@ -519,6 +472,10 @@ std::string tst_str("");
 
 const char* cursor = "^";
 
+
+wm::Position mpos;
+
+
 int main(int argc, char const *argv[])
 {
     init();
@@ -543,7 +500,7 @@ int main(int argc, char const *argv[])
         box(w);
         auto wspace = w->WriteableSpace();
         tst_str.clear();
-        
+
         for (size_t i = 0; i < wspace.w*10+4; i++)
         {
             tst_str+='A'+ (i%25);
@@ -551,9 +508,10 @@ int main(int argc, char const *argv[])
 
         use_attr(cursor_home);
         if(is_mouse(ch)){
-            auto mouse_input = parse_mouse(ch);
-            std::cout << attr_reset color_fg(50, 50, 60) << "mx:"<< attr_reset bold <<(int) mouse_input.x << attr_reset color_fg(50, 50, 60) << " my: " << attr_reset bold << (int) mouse_input.y << attr_reset;
-            mv((int) mouse_input.x, (int) mouse_input.y);
+            auto mouse_input = wm::parse_mouse(ch);
+            std::cout << attr_reset color_fg(50, 50, 60) << "mx:"<< attr_reset bold <<(int) mouse_input.pos.x << attr_reset color_fg(50, 50, 60) << " my: " << attr_reset bold << (int) mouse_input.pos.y << attr_reset;
+            mv((int) mouse_input.pos.x, (int) mouse_input.pos.y);
+            mpos = mouse_input.pos;
             //std::cout << cursor;
         }
         else if(KEY key = is_key(ch)){
@@ -571,10 +529,16 @@ int main(int argc, char const *argv[])
         mv(wspace.x+33, wspace.y+1);
         wm::Space sp = w->WriteableSpace();
         sp.h-=1;
+        sp.y++;
+        sp.w--;
+
+        if(sp.inside(mpos)){
+            use_attr(color_bg(200,200,200) << color_fg(55,55,55));
+        };
         sprint(sp, tst_str);
         std::cout << attr_reset;
         mv(1, HEIGHT)
-        std::cout << WIDTH <<":"<<HEIGHT;
+        std::cout << WIDTH <<":"<<HEIGHT << ":" << sp.x+sp.w << ":" << sp.y+sp.h;
 
         //mv(0,0);
         if(ch == 6939){

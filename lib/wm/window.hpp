@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include <vector>
 #include "globals.hpp"
+#include "position.hpp"
+
 #if !defined(C_WINDOWS)
 #define C_WINDOWS
 
@@ -66,6 +68,16 @@ namespace wm
             w = _w;
             h = _h;
         }
+
+        bool inside(u_short _x, u_short _y){
+            return !((_x < x || _x > x+w) || (_y < y || _y > y+h));
+        }
+
+        bool inside(wm::Position pos){
+            return !((pos.x < x || pos.x > x+w) || (pos.y < y || pos.y > y+h));
+        }
+
+        
 
         Space operator+(Padding pad){
             return Space(x + pad.r, y + pad.t, w-pad.l-pad.r-1, h-pad.b-pad.t-1);
