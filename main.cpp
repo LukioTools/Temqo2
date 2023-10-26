@@ -460,19 +460,18 @@ enum wprint_bmask : u_char{
     WP_B_REMOVED = 2,
 };
 
-inline int wprint(wm::Window* window, std::string str){
-    bool removed = false;
+inline int sprint(wm::Space wspace, std::string str){
     while (std::size_t idx = str.find_first_of('\n')) {
         if( idx == std::string::npos){
             break;
         }
-        try{str.erase(idx); removed = true;}
+        try{str.erase(idx);}
         catch(...){
             std::cout << "ioutof range";
             return -1;
         }
     };
-    auto wspace = window->WriteableSpace();
+    size_t iteration = 0;
     size_t pos = 0;
     while(true){
         std::basic_string<char> s;
@@ -482,14 +481,16 @@ inline int wprint(wm::Window* window, std::string str){
 
 
         std::cout<< cursor_to_column(wspace.x) << s << cursor_down(1); 
-
-        if(s.length() < wspace.w){
+        iteration ++;
+        if((iteration > wspace.h) || (s.length() < wspace.w)){
             break;
         }
     }
+    return 0;
+}
 
-
-    return (removed << WP_B_REMOVED);
+inline int wprint(wm::Window* window, std::string str){
+    return sprint(window->WriteableSpace(), str);
 };
 
 int init(){
@@ -542,7 +543,7 @@ int main(int argc, char const *argv[])
         box(w);
         auto wspace = w->WriteableSpace();
         tst_str.clear();
-        for (size_t i = 0; i < wspace.w*2+4; i++)
+        for (size_t i = 0; i < wspace.w*10+4; i++)
         {
             tst_str+='A'+ (i%25);
         }
@@ -567,7 +568,9 @@ int main(int argc, char const *argv[])
         mv(wspace.x+3, wspace.y);
         wprintln(w, inp);
         mv(wspace.x+33, wspace.y+1);
-        wprint(w, tst_str);
+        wm::Space sp = w->WriteableSpace();
+        sp.h-=1;
+        sprint(sp, tst_str);
         std::cout << attr_reset;
         mv(1, HEIGHT)
         std::cout << WIDTH <<":"<<HEIGHT;
