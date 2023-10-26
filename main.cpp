@@ -543,6 +543,7 @@ int main(int argc, char const *argv[])
         box(w);
         auto wspace = w->WriteableSpace();
         tst_str.clear();
+        
         for (size_t i = 0; i < wspace.w*10+4; i++)
         {
             tst_str+='A'+ (i%25);
