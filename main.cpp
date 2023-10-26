@@ -453,6 +453,45 @@ inline int wprintln(wm::Window* window, std::string str, SPLICE_TYPE st = SPLICE
 
 }
 
+/*just to make sure everythings inbounds*/
+enum wprint_bmask : u_char{
+    WP_B_CLIPPED = 0,
+    WP_B_WRAPPED = 1,
+    WP_B_REMOVED = 2,
+};
+
+inline int wprint(wm::Window* window, std::string str){
+    bool removed = false;
+    while (std::size_t idx = str.find_first_of('\n')) {
+        if( idx == std::string::npos){
+            break;
+        }
+        try{str.erase(idx); removed = true;}
+        catch(...){
+            std::cout << "ioutof range";
+            return -1;
+        }
+    };
+    auto wspace = window->WriteableSpace();
+    size_t pos = 0;
+    while(true){
+        std::basic_string<char> s;
+
+        s = str.substr(pos, pos + wspace.w);
+        pos += wspace.w;
+
+
+        std::cout<< cursor_to_column(wspace.x) << s << cursor_down(1) ; 
+
+        if(s.length() < wspace.w){
+            break;
+        }
+    }
+
+
+    return (removed << WP_B_REMOVED);
+};
+
 int init(){
     
     //std::locale::global(std::locale("en_US.UTF-8"));
@@ -474,12 +513,12 @@ int deinit(){
     use_attr(disable_mouse(USE_MOUSE) << norm_buffer << cursor_visible);
     return 0;
 }
+std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
 
 void display(){
     clear();
     mv(3,3);
 
-    std::string tst_str("ABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAOABCDEFGHIJKLMNOPQRSTUVWXYZOAO");
     printf("Hello\nWorld width:%u, len:%zu", WIDTH, tst_str.length());
     std::cout << std::flush;
     //std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -487,6 +526,7 @@ void display(){
     wprintln(nullptr, tst_str, SPLICE_TYPE::END_CUT);
 }
 const char* cursor = "^";
+
 int main(int argc, char const *argv[])
 {
     init();
@@ -529,6 +569,8 @@ int main(int argc, char const *argv[])
         }
         mv(wspace.x+3, wspace.y);
         wprintln(w, inp);
+        mv(wspace.x+33, wspace.y+1);
+        wprint(w, tst_str);
         std::cout << attr_reset;
         mv(1, HEIGHT)
         std::cout << WIDTH <<":"<<HEIGHT;
