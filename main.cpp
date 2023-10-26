@@ -263,10 +263,52 @@ int box(wm::Window* window, chtype lt = "┌", chtype rt = "┐",chtype lb = "�
     return 0;
 }
 
+#define ifnsp(var) var? var:" "
+int box(wm::Space sp, chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│", chtype lt = "┌", chtype rt = "┐",chtype lb = "└", chtype rb = "┘"){
+    if(!sp.exists()){
+        return -1;
+    }
+    std::string buffer;
+    
+    {
+        mv(sp.x, sp.y);
+        buffer+=ifnsp(lt);
+        for (size_t i = 0; i < sp.width()-2; i++)
+            buffer+=ifnsp(t);
+        buffer+=ifnsp(rt);
+        std::cout << buffer;
+    }
+    buffer.clear();
+    {
+        mv(sp.x, sp.y+sp.h);
+        buffer+=ifnsp(lb);
+        for (size_t i = 0; i < sp.width()-2; i++)
+            buffer+=ifnsp(b);
+        buffer+=ifnsp(rb);
+        std::cout << buffer;
+    }
 
+    //starts at one, since we wrote the top layer and is -1 because wrote bottom layer
+    if(l || r){
+        for (size_t i = 1; i < sp.height()-1; i++)
+        {
+            if(l){
+                mv(sp.x, sp.y+i)
+                std::cout << l;
+            }
+            if(r){
+                mv(sp.x+sp.width(), sp.y+i)
+                std::cout << r;
+            }
+        }
+    }
+    
 
+    return 0;
 
+}
 
+#undef ifnsp
 
 KEY is_key(int input) noexcept{
     auto ptr = reinterpret_cast<char*>(&input);
@@ -499,6 +541,12 @@ int main(int argc, char const *argv[])
         std::cout << *space;
         mv(WIDTH,HEIGHT)
         std::cout << "X";
+
+        if(box(*space) == -1){
+            std::cout << "box error";
+        };
+        std::cout.flush();
+
 
         
 
