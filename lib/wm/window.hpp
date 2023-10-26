@@ -62,11 +62,17 @@ namespace wm
         u_short h = 0;
 
 
-        Position start(){
+        inline Position start(){
             return {x,y};
         }
-        Position end(){
+        inline Position end(){
             return {static_cast<unsigned short>(x+w), static_cast<unsigned short>(y+h)};
+        }
+        inline u_short max_x(){
+            return static_cast<unsigned short>(x+w);
+        }
+        inline u_short max_y(){
+            return static_cast<unsigned short>(y+h);
         }
 
         unsigned short width(){
@@ -90,9 +96,14 @@ namespace wm
             w+=ammount;
         }
         void expand_left(int ammount){
-            x+=ammount;
+            x-=ammount;
         }
-
+        void expand_top(int ammount){
+            y-=ammount;
+        }
+        void expand_bottom(int ammount){
+            h-=ammount;
+        }
         Space(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
         void refresh(u_short _x, u_short _y, u_short _w, u_short _h){
             x = _x;
@@ -130,8 +141,7 @@ namespace wm
         Space* space;
         Padding padding;
         DisplayMode dm;
-        //bool flag;
-        //u_short _;
+
 
         Space AbsoluteSpace() noexcept{
             if(!space){
@@ -147,9 +157,17 @@ namespace wm
             return *space+padding;
         }
 
+        operator Space(){
+            return AbsoluteSpace();
+        }
+
+        operator Space*(){
+            return space;
+        }
 
         Window & operator=(const Window&) = delete;
         Window(const Window&) = delete;
+
 
         Window(DisplayMode d, Space* ptr, Padding p = {}): dm(d), space(ptr), padding(p) {}
         ~Window() {}
