@@ -7,189 +7,23 @@
 #include <vector>
 #include "globals.hpp"
 #include "position.hpp"
+#include "padding.hpp"
+#include "space.hpp"
+#include "element.hpp"
 #include "def.hpp"
 
 namespace wm
 {
     
     
-    enum DisplayMode : u_char{   
-        UNDEFINED,
-        ABSOLUTE,
-        RELATIVE,
-        PERCENT,
-    };
-    struct Padding{
-        u_char t = 1;
-        u_char b = 1;
-        u_char l = 2;
-        u_char r = 2;
-
-        void pad(){
-            t = 1;
-            b = 1;
-            l = 2;
-            r = 2;
-        }
-        void pad(u_char v){
-            t = v;
-            b = v;
-            l = v;
-            r = v;
-        }
-        void pad(u_char tb, u_char lr){
-            t = tb;
-            b = tb;
-            l = lr;
-            r = lr;
-        }
-        void pad(u_char _t, u_char _b, u_char _l,u_char _r){
-            t = _t;
-            b = _b;
-            l = _l;
-            r = _r;
-        }
-        friend std::ostream& operator<<(std::ostream& os, const Padding& dt) {
-            os <<"t:" << (int) dt.t <<" b:" << (int) dt.b << " l:" << (int) dt.l << " r:" << (int) dt.r;
-            return os;
-        };
-    };
-
-    struct Space{
-        u_short x = 0;
-        u_short y = 0;
-        u_short w = 0;
-        u_short h = 0;
-
-        inline void fill(const char* ch){
-            auto s = start();
-            auto e = end();
-            
-            for (size_t y = s.y; y <= e.y; y++)
-            {
-                mv(s.x, y);
-                for (size_t x = s.x; x <= e.x; x++)
-                {
-                    std::cout << ch;
-                }
-            }
-        }
-        inline Position start(){
-            return {x,y};
-        }
-        inline Position end(){
-            return {static_cast<unsigned short>(x+w), static_cast<unsigned short>(y+h)};
-        }
-        inline u_short max_x(){
-            return static_cast<unsigned short>(x+w);
-        }
-        inline u_short max_y(){
-            return static_cast<unsigned short>(y+h);
-        }
-
-        unsigned short width(){
-            return w;
-        }
-        unsigned short height(){
-            return h;
-        }
-
-        void transform_vertical(int ammount){
-            y+=ammount;
-            h-=ammount;
-        }
-
-        void transform_horizontal(int ammount){
-            x+=ammount;
-            w-=ammount;
-        }
-        /*negative values shrink it*/
-        void expand_right(int ammount){
-            w-=ammount;
-        }
-        void expand_left(int ammount){
-            x-=ammount;
-        }
-        void expand_top(int ammount){
-            y-=ammount;
-        }
-        void expand_bottom(int ammount){
-            h-=ammount;
-        }
-        Space(u_short _x, u_short _y, u_short _w, u_short _h): x(_x), y(_y), h(_h), w(_w) {}
-        void refresh(u_short _x, u_short _y, u_short _w, u_short _h){
-            x = _x;
-            y = _y;
-            w = _w;
-            h = _h;
-        }
-
-        bool inside(u_short _x, u_short _y){
-            return !((_x < x || _x > x+w) || (_y < y || _y > y+h));
-        }
-
-        bool inside(wm::Position pos){
-            return !((pos.x < x || pos.x > x+w) || (pos.y < y || pos.y > y+h));
-        }
-
-        
-
-        Space operator+(Padding pad){
-/*
-            auto out = *this;
-            out.expand_top(-pad.t);
-            out.expand_bottom(-pad.b);
-            out.expand_left(-pad.l);
-            out.expand_right(-pad.r);
-            return out;
-*/
-            return Space(x + pad.r, y + pad.t, w-pad.l-pad.r, h-pad.b-pad.t);
-        }
-        friend std::ostream& operator<<(std::ostream& os, const Space& dt) {
-            os <<"x:" << dt.x <<" y:" << dt.y << " w:" << dt.w << " h:" << dt.h;
-            return os;
-        };
-        bool exists(){
-            return !(w == 0 || h == 0);
-        }
-    };
-
-
+    
+    
         //Simple position holder
-    struct Window
+    struct Window : public Element
     {
-        Space* space;
-        Padding padding;
-        DisplayMode dm;
 
 
-        Space AbsoluteSpace() noexcept{
-            if(!space){
-                return {0,0,0,0};
-            }
-            return *space;
-        }
-
-        Space WriteableSpace() noexcept{
-            if(!space){
-                return {0,0,0,0};
-            }
-            return *space+padding;
-        }
-
-        operator Space(){
-            return AbsoluteSpace();
-        }
-
-        operator Space*(){
-            return space;
-        }
-
-        Window & operator=(const Window&) = delete;
-        Window(const Window&) = delete;
-
-
-        Window(DisplayMode d, Space* ptr, Padding p = {}): dm(d), space(ptr), padding(p) {}
+        Window(DisplayMode d, Space* ptr, Padding p = {}): Element(d, ptr, p) {}
         ~Window() {}
     };
 

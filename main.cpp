@@ -103,7 +103,7 @@ int box(wm::Window* window, chtype lt = "┌", chtype rt = "┐",chtype lb = "�
     if(!window){
         return -1;
     }
-    wm::Space wspace = window->AbsoluteSpace();
+    wm::Space wspace = window->aSpace();
     if(!wspace.exists()){
         mv(2, 2);
         std::cout << wspace;
@@ -300,7 +300,7 @@ inline int wprintln(wm::Window* window, std::string str, SPLICE_TYPE st = SPLICE
         }
     }
     
-    auto wspace = window->WriteableSpace();
+    auto wspace = window->wSpace();
     
     //trunctuate if it was larger than suposed to be
     if(str.length() > wspace.w){
@@ -403,7 +403,7 @@ inline int sprint(wm::Space wspace, std::string str){
 }
 
 inline int wprint(wm::Window* window, std::string str){
-    return sprint(window->WriteableSpace(), str);
+    return sprint(window->wSpace(), str);
 };
 
 int init(){
@@ -440,7 +440,7 @@ int main(int argc, char const *argv[])
 {
     init();
     //display();
-    auto space = new wm::Space(1,1,WIDTH-2,HEIGHT-1);
+    auto space = new wm::Space(0,1,WIDTH,HEIGHT-1);
     auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
@@ -450,7 +450,7 @@ int main(int argc, char const *argv[])
         int ch = getch();
         clear_scr();
         if(ch == RESIZE_EVENT){
-            space->refresh(1,1,WIDTH-2,HEIGHT-1);
+            space->refresh(0,1,WIDTH,HEIGHT-2);
         }
 
         if(is_mouse(ch)){
@@ -458,7 +458,7 @@ int main(int argc, char const *argv[])
             mpos = m.pos;
         }
 
-        auto ws = w->WriteableSpace();
+        auto ws = w->wSpace();
         mv(0,0)
         printf("(Width: %i, Height: %i)", WIDTH, HEIGHT);
         std::cout << space->start() << space->end() << *space;
