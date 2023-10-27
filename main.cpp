@@ -457,17 +457,12 @@ int main(int argc, char const *argv[])
 
         if(space->inside(mpos)){
             use_attr(color_bg(200,200,200) << color_fg(50,50,50))
-        space->fill("0");
+            space->fill("0");
             use_attr(attr_reset);
-
         }
         else{
-        space->fill("0");
-
+            space->fill("0");
         }
-        ws.fill("#");
-        
-
 
         //if(box(*space) == -1){
         //    std::cout << "box error";
