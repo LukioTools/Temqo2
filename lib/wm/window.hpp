@@ -23,7 +23,7 @@ namespace wm
     {
 
 
-        Window(DisplayMode d, Space* ptr, Padding p = {}): Element(d, ptr, p) {}
+        Window(Space* ptr, Padding p = {}): Element(ptr, p) {}
         ~Window() {}
     };
 

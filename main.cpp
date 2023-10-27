@@ -441,7 +441,7 @@ int main(int argc, char const *argv[])
     init();
     //display();
     auto space = new wm::Space(0,1,WIDTH,HEIGHT-1);
-    auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
+    auto w= new wm::Window(space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
     std::string inp;

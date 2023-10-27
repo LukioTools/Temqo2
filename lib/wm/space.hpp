@@ -70,18 +70,18 @@ namespace wm
             h-=ammount;
         }
         Space(unsigned short _x, unsigned short _y, unsigned short _w, unsigned short _h): x(_x), y(_y), h(_h), w(_w) {}
-        void refresh(unsigned short _x, unsigned short _y, unsigned short _w, unsigned short _h){
+        inline void refresh(unsigned short _x, unsigned short _y, unsigned short _w, unsigned short _h){
             x = _x;
             y = _y;
             w = _w;
             h = _h;
         }
 
-        bool inside(unsigned short _x, unsigned short _y){
+        inline bool inside(unsigned short _x, unsigned short _y){
             return !((_x < x || _x > x+w) || (_y < y || _y > y+h));
         }
 
-        bool inside(wm::Position pos){
+        inline bool inside(wm::Position pos){
             return !((pos.x < x || pos.x > x+w) || (pos.y < y || pos.y > y+h));
         }
 

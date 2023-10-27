@@ -1,5 +1,4 @@
-#if !defined(WM_GLOBALS)
-#define WM_GLOBALS
+#pragma once
 
 namespace wm
 {
@@ -8,6 +7,5 @@ namespace wm
 } // namespace wm
 
 
-#endif // WM_GLOBALS
 
 

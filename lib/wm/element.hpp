@@ -17,7 +17,6 @@ namespace wm
     public:
         Space* space;
         Padding pad;
-        DisplayMode dm;
 
         inline Space wSpace(){
             return *space+pad;
@@ -25,11 +24,24 @@ namespace wm
         inline Space aSpace(){
             return *space;
         }
+        inline Padding padding(){
+            return pad;
+        }
+        //useless
+        //inline bool inside(Position pos){
+        //    return space->inside(pos);
+        //}
+        //inline bool ainside(Position pos){
+        //    return space->inside(pos);
+        //}
+        //inline bool winside(Position pos){
+        //    return wSpace().inside(pos);
+        //}
         inline operator Space(){
             return *space;
         }
 
-        Element(DisplayMode d, Space* ptr, Padding p = {}): dm(d), space(ptr), pad(p) {}
+        Element(Space* ptr, Padding p = {}): space(ptr), pad(p) {}
         ~Element() {}
     };
 } // namespace wm
