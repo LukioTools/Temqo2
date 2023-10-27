@@ -1,13 +1,13 @@
+#pragma once
 #include <cmath>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <sys/types.h>
 #include <vector>
 #include "globals.hpp"
 #include "position.hpp"
-
-#if !defined(C_WINDOWS)
-#define C_WINDOWS
+#include "def.hpp"
 
 namespace wm
 {
@@ -61,7 +61,19 @@ namespace wm
         u_short w = 0;
         u_short h = 0;
 
-
+        inline void fill(const char* ch){
+            auto s = start();
+            auto e = end();
+            
+            for (size_t y = s.y; y <= e.y; y++)
+            {
+                mv(s.x, y);
+                for (size_t x = s.x; x <= e.x; x++)
+                {
+                    std::cout << ch;
+                }
+            }
+        }
         inline Position start(){
             return {x,y};
         }
@@ -93,7 +105,7 @@ namespace wm
         }
         /*negative values shrink it*/
         void expand_right(int ammount){
-            w+=ammount;
+            w-=ammount;
         }
         void expand_left(int ammount){
             x-=ammount;
@@ -123,6 +135,14 @@ namespace wm
         
 
         Space operator+(Padding pad){
+/*
+            auto out = *this;
+            out.expand_top(-pad.t);
+            out.expand_bottom(-pad.b);
+            out.expand_left(-pad.l);
+            out.expand_right(-pad.r);
+            return out;
+*/
             return Space(x + pad.r, y + pad.t, w-pad.l-pad.r, h-pad.b-pad.t);
         }
         friend std::ostream& operator<<(std::ostream& os, const Space& dt) {
@@ -257,4 +277,3 @@ namespace wm
 } // namespace wm
 
  
-#endif // C_WINDOWS
