@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include <sstream>
 
+#include "lib/wm/def.hpp"
 #include "lib/wm/row.hpp"
 #include "lib/wm/mouse.hpp"
 
@@ -174,39 +175,49 @@ int box(wm::Space sp, chtype t = "─", chtype b = "─", chtype r = "│", chty
         return -1;
     }
     std::string buffer;
+
+    auto s = sp.start();
+    auto e = sp.end();
     
-    {
-        mv(sp.x, sp.y);
-        buffer+=ifnsp(lt);
-        for (size_t i = 0; i < sp.width()-2; i++)
-            buffer+=ifnsp(t);
-        buffer+=ifnsp(rt);
-        std::cout << buffer;
+    
+    for (size_t x = s.x; x <= e.x; x++)
+    {   
+        if(x == s.x)
+            buffer+=lt;
+        else if (x == e.x)
+            buffer+=rt;
+        else
+            buffer+=t;
     }
+    mv(s.x, s.y);
+    std::cout << buffer;
     buffer.clear();
+
+    for (size_t x = s.x; x <= e.x; x++)
+    {   
+        if(x == s.x)
+            buffer+=lb;
+        else if (x == e.x)
+            buffer+=rb;
+        else
+            buffer+=b;
+    }
+    mv(s.x, e.y);
+    std::cout << buffer;
+    buffer.clear();
+
+
+    for (size_t y = s.y; y <= e.y; y++)
     {
-        mv(sp.x, sp.y+sp.h);
-        buffer+=ifnsp(lb);
-        for (size_t i = 0; i < sp.width()-2; i++)
-            buffer+=ifnsp(b);
-        buffer+=ifnsp(rb);
-        std::cout << buffer;
+        if(y == s.y || y == e.y){
+            continue;
+        }
+        mv(s.x, y)
+        std::cout << l;
+        mv(e.x, y)
+        std::cout << r;
     }
 
-    //starts at one, since we wrote the top layer and is -1 because wrote bottom layer
-    if(l || r){
-        for (size_t i = 1; i < sp.height()-1; i++)
-        {
-            if(l){
-                mv(sp.x, sp.y+i)
-                std::cout << l;
-            }
-            if(r){
-                mv(sp.x+sp.width(), sp.y+i)
-                std::cout << r;
-            }
-        }
-    }
     
 
     return 0;
@@ -421,9 +432,7 @@ std::string tst_str("");
 
 const char* cursor = "^";
 
-
 wm::Position mpos = {0,0};
-
 
 
 bool enter = false;
@@ -431,7 +440,7 @@ int main(int argc, char const *argv[])
 {
     init();
     //display();
-    auto space = new wm::Space(0,1,WIDTH,HEIGHT-1);
+    auto space = new wm::Space(1,1,WIDTH-2,HEIGHT-1);
     auto w= new wm::Window(wm::ABSOLUTE, space, {1,1,2,2});
     //use_attr(cursor_invisible);
 
@@ -441,7 +450,7 @@ int main(int argc, char const *argv[])
         int ch = getch();
         clear_scr();
         if(ch == RESIZE_EVENT){
-            space->refresh(0,1,WIDTH,HEIGHT-2);
+            space->refresh(1,1,WIDTH-2,HEIGHT-1);
         }
 
         if(is_mouse(ch)){
@@ -455,18 +464,18 @@ int main(int argc, char const *argv[])
         std::cout << space->start() << space->end() << *space;
         mv(WIDTH,HEIGHT)
 
-        if(space->inside(mpos)){
-            use_attr(color_bg(200,200,200) << color_fg(50,50,50))
-            space->fill("0");
-            use_attr(attr_reset);
-        }
-        else{
-            space->fill("0");
-        }
+        //if(space->inside(mpos)){
+        //    use_attr(color_bg(200,200,200) << color_fg(50,50,50))
+        //    space->fill("0");
+        //    use_attr(attr_reset);
+        //}
+        //else{
+        //    space->fill("0");
+        //}
 
-        //if(box(*space) == -1){
-        //    std::cout << "box error";
-        //};
+        if(box(*space) == -1){
+            std::cout << "box error";
+        };
         
         if(ws.inside(mpos)){
             use_attr(color_bg(200,200,200) << color_fg(50,50,50))
