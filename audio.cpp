@@ -7,6 +7,8 @@
 #include <vector>
 #include "lib/path/filename.hpp"
 #include "lib/path/absolute.hpp"
+#include <termios.h>
+struct termios oldt, newt;
 
 audio::Playlist p;
 
@@ -16,6 +18,23 @@ void cb(){
     auto filename = path::filename(s);
     audio::load_next(s.c_str(), true);
     printf("Playing: %s\n\e]30;%s\a", s.c_str(), filename.c_str());
+}
+
+int init(){
+    
+    //std::locale::global(std::locale("en_US.UTF-8"));
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    
+    return 0;
+}
+
+int deinit(){
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return 0;
 }
 
 
@@ -44,6 +63,7 @@ int main(int argc, char const *argv[])
     audio::play();
     printf("\rPlaying: %s", p[0].c_str());
 
+    init();
     while (true) {
         char c = getchar();
         switch (c)
@@ -101,6 +121,7 @@ int main(int argc, char const *argv[])
     audio::stop();
 
     audio::deinit();
+    deinit();
 
     return 0;
 }
