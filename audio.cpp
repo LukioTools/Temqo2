@@ -3,21 +3,31 @@
 #include "lib/audio/audio_backend.hpp"
 #include "lib/audio/playlist.hpp"
 #include <iostream>
+#include <thread>
 #include <vector>
+
+audio::Playlist p;
+
+
+void cb(){
+    auto s = p.next();
+    audio::load_next(s.c_str(), true);
+    printf("Playing: %s\n", s.c_str());
+}
+
 
 int main(int argc, char const *argv[])
 {
-    audio::Playlist p;
 
-    p.add(".");
+
+    p.add("/home/pikku/Music/", true);
 
     printf("Found:\n");
     for (auto e : p) {
         std::cout << e << std::endl;
     }
 
-
-
+    audio::songEndedCallback = cb;
     audio::init(p[0].c_str());
 
     audio::play();
@@ -39,12 +49,20 @@ int main(int argc, char const *argv[])
             audio::seek(std::chrono::seconds(-5));
             break;
         }
-        case 'w':{
-            audio::play();
+        case 's':{
+            p.shuffle();
+            printf("Suffling list...\n");
+        }
+        case 'n':{
+            auto s = p.next();
+            audio::load_next(s.c_str(), true);
+            printf("\rPlaying: %s", s.c_str());
             break;
         }
-        case 's':{
-            audio::stop();
+        case 'b':{
+            auto s = p.prev();
+            audio::load_next(s.c_str(), true);
+            printf("\rPlaying: %s", s.c_str());
             break;
         }
         case 'c':{
@@ -61,12 +79,7 @@ int main(int argc, char const *argv[])
             printf("Volume %f\n", audio::volume.load());
             break;
         }
-        case 'n':{
-            auto s = p.next();
-            audio::load_next(s.c_str(), true);
-            printf("\rPlaying: %s", s.c_str());
-            break;
-        }
+        
         }
     }
     exit:

@@ -3,7 +3,9 @@
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <thread>
 #define MINIAUDIO_IMPLEMENTATION
+#define MA_NO_ENCODING
 #include <miniaudio/miniaudio.h>
 
 namespace audio
@@ -16,8 +18,33 @@ namespace audio
 
     bool playing = false;
 
+    bool songEnded = false;
+    void(*songEndedCallback)(void);
+
+    bool songEndedThreadRun = true;
+    std::thread* thr;
+
+    void songEndedChecker(){
+        while (songEndedThreadRun) {
+            if(songEnded){
+                if(songEndedCallback) songEndedCallback();
+                songEnded = false;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        }
+    }
+
+
+
+
+
+
     inline void vol(float multiplier){
         audio::volume.store(audio::volume.load()*multiplier);
+    }
+
+    inline void vol_shift(float val){
+        audio::volume.store(audio::volume.load()+val);
     }
 
 
@@ -43,13 +70,23 @@ namespace audio
 
 
     inline void cb(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
-        ma_decoder_read_pcm_frames(curr, pOutput, frameCount, NULL);
+        ma_uint64 cycle_framesRead;
+        ma_decoder_read_pcm_frames(curr, pOutput, frameCount, &cycle_framesRead);
         //volume shenaniganse
         //yoo its plausable to manipulate the data :333 
         float* pOutputFloat = (float*)pOutput;
         for (size_t i = 0; i < frameCount * pDevice->playback.channels; ++i) {
             pOutputFloat[i] *= volume.load();  // Apply volume level
         }
+
+        if(frameCount != cycle_framesRead){
+            songEnded = true;
+        }
+        else {
+            songEnded = false;
+        }
+
+
         //
         framesRead.fetch_add(frameCount);
         (void)pInput;
@@ -57,13 +94,14 @@ namespace audio
     }
 
     inline int seek_samples(ma_int64 samples){
- 
+        stop();
         framesRead.fetch_add(samples);
         if(framesRead.load() < 0){
             framesRead.store(0);
         }
-
-        return ma_decoder_seek_to_pcm_frame(curr, framesRead.load(std::memory_order_relaxed));
+        auto res = ma_decoder_seek_to_pcm_frame(curr, framesRead.load(std::memory_order_relaxed));
+        play();
+        return res;
         
     }
     template<typename t, typename n>
@@ -98,13 +136,30 @@ namespace audio
     
 
     inline int deinit(){
-        ma_decoder_uninit(curr);
-        free(curr);
+        if(curr){
+            ma_decoder_uninit(curr);
+            free(curr);
+        }
         curr = nullptr;
+
+        songEndedThreadRun = false;
+        if(thr){
+
+            if(thr->joinable())
+                thr->join();
+            delete thr;
+            thr = nullptr;
+        }
+        
+
         return 0;
     }
 
     inline int init(const char* filename){
+        songEnded = false;
+        songEndedThreadRun = true;
+        thr = new std::thread(songEndedChecker);
+
         curr = (ma_decoder*) malloc(sizeof(ma_decoder));
 
         if(load(filename)){return -1;};

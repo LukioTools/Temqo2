@@ -6,6 +6,9 @@
 #include <filesystem>
 #include "scandir.hpp"
 
+#include <algorithm>
+#include <random>
+
 namespace audio
 {
     //implement modes
@@ -42,6 +45,19 @@ namespace audio
                 current_index = 0;
             }
             return files[current_index];
+        }
+        //previous, loops if nececcary
+        std::string prev(){
+            if(current_index == 0){
+                current_index = files.size(); //-1 needed but -- happens so we can simplify :3
+            }
+            current_index--;
+            return files[current_index];
+        }
+
+        void shuffle(){
+            auto rng = std::default_random_engine {};
+            std::shuffle(files.begin(), files.end(), rng);
         }
 
         inline std::vector<std::string>::iterator  begin(){
