@@ -30,7 +30,7 @@ namespace audio
             framesRead.store(0);
         }
 
-        return ma_decoder_seek_to_pcm_frame(curr, framesRead);
+        return ma_decoder_seek_to_pcm_frame(curr, framesRead.load(std::memory_order_relaxed));
         
     }
     template<typename t, typename n>
