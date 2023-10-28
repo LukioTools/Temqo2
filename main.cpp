@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "lib/wm/def.hpp"
+#include "lib/wm/element.hpp"
 #include "lib/wm/row.hpp"
 #include "lib/wm/mouse.hpp"
 
@@ -441,9 +442,12 @@ int main(int argc, char const *argv[])
     init();
     //display();
     auto space = new wm::Space(0,1,WIDTH,HEIGHT-1);
-    auto w= new wm::Window(space, {1,1,2,2});
-    //use_attr(cursor_invisible);
+    auto right_click_element_space = new wm::Space(0,0, 5, 7);
 
+    auto rc_w = new wm::Element(right_click_element_space, {1,1,1,1});
+    auto w= new wm::Element(space, {1,1,2,2});
+    //use_attr(cursor_invisible);
+    bool show_r_window = false;
     std::string inp;
     while (true) {
         std::cout << set_title_static_attr("Hello World")    << std::flush;
@@ -452,11 +456,23 @@ int main(int argc, char const *argv[])
         if(ch == RESIZE_EVENT){
             space->refresh(0,1,WIDTH,HEIGHT-2);
         }
-
+        wm::MOUSE_BTN btn = wm::MOUSE_BTN::M_UNDEFINED;
         if(is_mouse(ch)){
             auto m = wm::parse_mouse(ch);
             mpos = m.pos;
+            btn = m.btn;
+
+            if(m.btn == wm::M_RIGHT){
+                right_click_element_space->refresh(mpos.x, mpos.y, 15, 7);
+                show_r_window = true;
+            }
+            if(!right_click_element_space->inside(mpos)){
+                show_r_window = false;
+            }
+
+
         }
+        
 
         auto ws = w->wSpace();
         mv(0,0)
@@ -491,8 +507,14 @@ int main(int argc, char const *argv[])
             mv(WIDTH- str.length(), 0 );
             std::cout << str;
         }
-        std::cout.flush();
-
+        
+        
+        if(show_r_window == true){
+            box(rc_w->aSpace());
+            rc_w->wSpace().fill("#");
+            auto ws = rc_w->wSpace();
+        }
+        
         
         use_attr(cursor_invisible);
 

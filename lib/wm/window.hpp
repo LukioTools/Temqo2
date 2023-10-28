@@ -17,7 +17,7 @@ namespace wm
     
     
     
-    
+    //useless nowadays
         //Simple position holder
     struct Window : public Element
     {
