@@ -2,7 +2,6 @@
 
 #include <sys/types.h>
 #include "position.hpp"
-#include "globals.hpp"
 #include "def.hpp"
 
 

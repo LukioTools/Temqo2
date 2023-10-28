@@ -2,7 +2,6 @@
 #include <iostream>
 #include <termios.h>
 #include "def.hpp"
-#include "mouse.hpp"
 #include "resize.hpp"
 
 namespace wm
