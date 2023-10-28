@@ -17,7 +17,8 @@ default: build exec
 
 
 exec: 
-	./$(OUT_NAME)
+	@echo "Executing: ./$(OUT_NAME)"
+	@./$(OUT_NAME)
 
 build:     
 	@ $(CXX) $(TARGET_FILE) $(DEPENDENCIES) $(CXXFLAGS) -o $(OUT_NAME)

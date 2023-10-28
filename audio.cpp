@@ -1,24 +1,27 @@
 
 //#include "lib/audio/audio_backend.hpp"
-#include "lib/audio/scandir.hpp"
+#include "lib/audio/audio_backend.hpp"
+#include "lib/audio/playlist.hpp"
 #include <iostream>
 #include <vector>
 
 int main(int argc, char const *argv[])
 {
-    std::vector<std::string> vec;
-    audio::scan(vec, "./", true);
+    audio::Playlist p;
 
+    p.add(".");
 
-    for (auto e : vec) {
+    printf("Found:\n");
+    for (auto e : p) {
         std::cout << e << std::endl;
     }
 
-    /*
-    const char* next = "irridecent.mp3";
-    audio::init("stardust.mp3");
+
+
+    audio::init(p[0].c_str());
 
     audio::play();
+    printf("\rPlaying: %s", p[0].c_str());
 
     while (true) {
         char c = getchar();
@@ -32,8 +35,27 @@ int main(int argc, char const *argv[])
         else if(c == 'a'){
             audio::seek(std::chrono::seconds(-5));
         }
+        else if(c == 'w'){
+            audio::play();
+        }
+        else if(c == 's'){
+            audio::stop();
+        }
+        else if(c == 'c'){
+            audio::playing ? audio::stop() : audio::play();
+        }
+        else if(c == '+'){
+            audio::volume.store(audio::volume.load()*1.1f);
+            printf("Volume %f\n", audio::volume.load());
+        }
+        else if(c == '-'){
+            audio::volume.store(audio::volume.load()*.9f);
+            printf("Volume %f\n", audio::volume.load());
+        }
         else if(c == 'n'){
-            audio::load_next(next, true);
+            auto s = p.next();
+            audio::load_next(s.c_str(), true);
+            printf("\rPlaying: %s", s.c_str());
         }
     }
     
@@ -41,7 +63,6 @@ int main(int argc, char const *argv[])
     audio::stop();
 
     audio::deinit();
-    */
 
     return 0;
 }

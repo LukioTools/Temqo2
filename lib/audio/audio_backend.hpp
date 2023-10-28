@@ -12,6 +12,9 @@ namespace audio
     ma_device device;
 
     std::atomic<ma_int64> framesRead = 0;
+    std::atomic<float> volume(1.0f);  // Initial volume level
+
+    bool playing = false;
 
     inline int play(){
         if (ma_device_start(&device) != MA_SUCCESS) {
@@ -19,6 +22,7 @@ namespace audio
             ma_decoder_uninit(curr);
             return -1;
         }
+        playing = true;
         return 0;
     }
 
@@ -28,12 +32,20 @@ namespace audio
             ma_decoder_uninit(curr);
             return -1;
         }
+        playing = false;
         return 0;
     }
 
 
     inline void cb(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
         ma_decoder_read_pcm_frames(curr, pOutput, frameCount, NULL);
+        //volume shenaniganse
+        //yoo its plausable to manipulate the data :333 
+        float* pOutputFloat = (float*)pOutput;
+        for (size_t i = 0; i < frameCount * pDevice->playback.channels; ++i) {
+            pOutputFloat[i] *= volume.load();  // Apply volume level
+        }
+        //
         framesRead.fetch_add(frameCount);
         (void)pInput;
         (void)pDevice;
