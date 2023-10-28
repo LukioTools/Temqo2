@@ -1,9 +1,21 @@
 
-#include "lib/audio/audio_backend.hpp"
-#include <cstdio>
+//#include "lib/audio/audio_backend.hpp"
+#include "lib/audio/scandir.hpp"
+#include <iostream>
+#include <vector>
 
 int main(int argc, char const *argv[])
 {
+    std::vector<std::string> vec;
+    audio::scan(vec, "./", true);
+
+
+    for (auto e : vec) {
+        std::cout << e << std::endl;
+    }
+
+    /*
+    const char* next = "irridecent.mp3";
     audio::init("stardust.mp3");
 
     audio::play();
@@ -20,12 +32,16 @@ int main(int argc, char const *argv[])
         else if(c == 'a'){
             audio::seek(std::chrono::seconds(-5));
         }
+        else if(c == 'n'){
+            audio::load_next(next, true);
+        }
     }
     
 
     audio::stop();
 
     audio::deinit();
+    */
 
     return 0;
 }

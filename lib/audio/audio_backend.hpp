@@ -13,7 +13,23 @@ namespace audio
 
     std::atomic<ma_int64> framesRead = 0;
 
+    inline int play(){
+        if (ma_device_start(&device) != MA_SUCCESS) {
+            ma_device_uninit(&device);
+            ma_decoder_uninit(curr);
+            return -1;
+        }
+        return 0;
+    }
 
+    inline int stop(){
+        if(ma_device_stop(&device) != MA_SUCCESS){
+            ma_device_uninit(&device);
+            ma_decoder_uninit(curr);
+            return -1;
+        }
+        return 0;
+    }
 
 
     inline void cb(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
@@ -49,12 +65,16 @@ namespace audio
         return 0;
     }
 
-    inline int load_next(const char* filename){
+    inline int load_next(const char* filename, bool _play = true){
         if(!curr)
             return -1;
 
+        stop();
+
         ma_decoder_uninit(curr);
         load(filename);
+        if(_play)
+            play();
         return 0;
     }
 
@@ -85,23 +105,7 @@ namespace audio
         return 0;
     }
 
-    inline int play(){
-        if (ma_device_start(&device) != MA_SUCCESS) {
-            ma_device_uninit(&device);
-            ma_decoder_uninit(curr);
-            return -1;
-        }
-        return 0;
-    }
 
-    inline int stop(){
-        if(ma_device_stop(&device) != MA_SUCCESS){
-            ma_device_uninit(&device);
-            ma_decoder_uninit(curr);
-            return -1;
-        }
-        return 0;
-    }
 
     
 

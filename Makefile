@@ -3,7 +3,7 @@ CXX ?= g++                              # FILL: the compiler
 CFLAGS := -Wall                 # FILL: compile flags
 CXXFLAGS := -Wall               # FILL: compile flags
 
-DEPENDENCIES := -lm -pthread 
+DEPENDENCIES := #-lm -pthread 
 
 
 # compile macros
