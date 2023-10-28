@@ -5,12 +5,7 @@
 #include <iterator>
 #include <sys/types.h>
 #include <vector>
-#include "globals.hpp"
-#include "position.hpp"
-#include "padding.hpp"
-#include "space.hpp"
 #include "element.hpp"
-#include "def.hpp"
 
 namespace wm
 {

@@ -12,14 +12,7 @@
 #include <sys/ioctl.h>
 #include <sstream>
 
-#include "lib/wm/def.hpp"
-#include "lib/wm/element.hpp"
-#include "lib/wm/resize.hpp"
-#include "lib/wm/row.hpp"
-#include "lib/wm/mouse.hpp"
-#include "lib/wm/globals.hpp"
-#include "lib/wm/getch.hpp"
-#include "lib/wm/init.hpp"
+#include "lib/wm/core.hpp"
 
 
 
