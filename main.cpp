@@ -100,75 +100,7 @@ std::string str_repeat(chtype c, int n) {
     return os.str();
 }
 //you can put t, b, l, r to nullptr so that the sides will not be printe
-int box(wm::Window* window, chtype lt = "┌", chtype rt = "┐",chtype lb = "└", chtype rb = "┘", chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│"){
-    if(!window){
-        return -1;
-    }
-    wm::Space wspace = window->aSpace();
-    if(!wspace.exists()){
-        mv(2, 2);
-        std::cout << wspace;
-        return -3;
-    }
-    
-    auto x = window->space->x;
-    auto y = window->space->y;
-    auto w = window->space->w;
-    auto h = window->space->h;
 
-    if(!x || !y || !w || !h){
-        return -2;
-    }
-    if(w < 2 || h < 3){
-        return 1;
-    }
-
-    if(t){
-        std::string buffer;
-        //print top
-        buffer+=lt;
-        buffer+=str_repeat(t, w-1); 
-        buffer+=rt;
-        mv(x, y);
-        std::cout << buffer;
-        buffer = "";
-    }
-    else{
-        mv(x, y);
-        std::cout << lt;
-        mv(x+w, y);
-        std::cout << rt;
-    }
-        
-    if(b){
-        std::string buffer;
-        //print bottom
-        buffer+=lb;
-        buffer+=str_repeat(b, w-1);
-        buffer+=rb;
-
-        mv(x, y+h-1);
-        std::cout << buffer;
-    }
-    else
-    {
-        mv(x, y+h-1);
-        std::cout << lb;
-        mv(x+w, y+h-1);
-        std::cout << rb;
-    }
-    //M_LEFT and M_RIGHT
-    for (size_t i = 1; i < h-1; i++)
-    {
-        mv(x, y+i);
-        std::cout << l;
-        mv(x+w, y+i);
-        std::cout << r;
-    }
-    
-
-    return 0;
-}
 
 #define ifnsp(var) var? var:" "
 int box(wm::Space sp, chtype t = "─", chtype b = "─", chtype r = "│", chtype l = "│", chtype lt = "┌", chtype rt = "┐",chtype lb = "└", chtype rb = "┘"){
