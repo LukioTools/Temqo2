@@ -45,8 +45,9 @@ int main(int argc, char const *argv[])
     pth = path::waveline(pth);
     std::cout << pth << std::endl;
 
-
-    p.add(pth, true);
+    p.load("playlist.pls");
+    //p.add(pth, true);
+    //p.save("playlist.pls");
 
     printf("Found:\n");
     for (auto e : p) {
@@ -117,7 +118,6 @@ int main(int argc, char const *argv[])
         }
     }
     exit:
-
     audio::stop();
 
     audio::deinit();

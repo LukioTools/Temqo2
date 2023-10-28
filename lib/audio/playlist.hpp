@@ -8,9 +8,19 @@
 
 #include <algorithm>
 #include <random>
-
+#include <fstream>
+#include <boost/algorithm/string.hpp>
+#include <regex>
 namespace audio
 {
+    /**
+     * playlist file documentation
+     * [Path]
+     * #filepaths
+     */
+    std::regex playlist_attr_rgx("^ *[A-Za-z*] *$");
+    std::regex playlist_path_rgx("^ *[Path] *$");
+
     //implement modes
     class Playlist
     {
@@ -59,7 +69,48 @@ namespace audio
             auto rng = std::default_random_engine {};
             std::shuffle(files.begin(), files.end(), rng);
         }
+        int load(std::string playlist_file){
+            std::ifstream in(playlist_file);
+            if(!in)
+                return -1;
 
+            std::string line;
+            bool add_ = true;
+            while (std::getline(in, line)) {
+                if(line.length() == 0 || line[0] == '#'  ){
+                    continue;
+                }
+                boost::trim(line);
+                if (line.length() > 5)
+                {
+                    if(line[0] == '[' && line[1] == 'P' && line[2] == 'a' && line[3] == 't' && line[4] == 'h' && line[5] == ']'){
+                        add_ = true;
+                    }
+                }
+                if(add_){
+                    add(line);
+                }
+                
+
+            };
+
+            return 0;
+        }
+
+        int save(std::string dest_file){
+            std::ofstream out(dest_file);
+            if(!out){
+                return -1;
+            }
+            out<<"[Path]\n";
+            for(auto e : files){
+                out << e << "\n";
+            }
+            out.close();
+
+            return 0;
+        }
+        
         inline std::vector<std::string>::iterator  begin(){
             return files.begin();
         }
