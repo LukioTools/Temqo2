@@ -2,29 +2,10 @@
 
 #include <sys/types.h>
 #include "position.hpp"
-
-#define SET_X10_MOUSE               9
-#define SET_VT200_MOUSE             1000
-#define SET_VT200_HIGHLIGHT_MOUSE   1001
-#define SET_BTN_EVENT_MOUSE         1002
-#define SET_ANY_EVENT_MOUSE         1003
-
-#define SET_FOCUS_EVENT_MOUSE       1004
-
-#define SET_ALTERNATE_SCROLL        1007
-
-#define SET_EXT_MODE_MOUSE          1005
-#define SET_SGR_EXT_MODE_MOUSE      1006
-#define SET_URXVT_EXT_MODE_MOUSE    1015
-#define SET_PIXEL_POSITION_MOUSE    1016
-
-#define USE_MOUSE SET_ANY_EVENT_MOUSE
+#include "globals.hpp"
+#include "def.hpp"
 
 
-#define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
-#define disable_mouse(type) ("\e[?"+    std::to_string(type)    +"l")
-
-#define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')
 
 
 namespace wm 
@@ -43,6 +24,24 @@ namespace wm
         M_MIDDLE_HILIGHT = '\x40',
         M_RIGHT_HILIGHT = '\x41',
     };
+
+    inline std::string to_str(wm::MOUSE_BTN btn) noexcept{
+        switch (btn) {
+            CASE_STR(wm::M_UNDEFINED);
+            CASE_STR(wm::M_NONE);
+            CASE_STR(wm::M_RELEASE);
+            CASE_STR(wm::M_LEFT);
+            CASE_STR(wm::M_MIDDLE);
+            CASE_STR(wm::M_RIGHT);
+            CASE_STR(wm::M_SCRL_UP);
+            CASE_STR(wm::M_SCRL_DOWN);
+            CASE_STR(wm::M_LEFT_HILIGHT);
+            CASE_STR(wm::M_MIDDLE_HILIGHT);
+            CASE_STR(wm::M_RIGHT_HILIGHT);
+            default:
+                return "UNKNOWN";
+        }
+    }
 
 
 

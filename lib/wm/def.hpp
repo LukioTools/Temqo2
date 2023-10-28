@@ -94,3 +94,41 @@ ESC[?1049l 	        disables the alternative buffer
 //'\x44'
 #define KEY_LEFT   0x00445b1b
 
+
+
+
+
+
+#define is_event(input_integer) (reinterpret_cast<u_short*>(&input_integer)[0] == EVENT_BASE)
+
+
+#define EVENT_BASE 0x0000EEEE
+#define RESIZE_EVENT (0x00010000 + EVENT_BASE)
+
+
+#define CASE_STR(clause) \
+case clause:\
+    return #clause;
+
+#define SET_X10_MOUSE               9
+#define SET_VT200_MOUSE             1000
+#define SET_VT200_HIGHLIGHT_MOUSE   1001
+#define SET_BTN_EVENT_MOUSE         1002
+#define SET_ANY_EVENT_MOUSE         1003
+
+#define SET_FOCUS_EVENT_MOUSE       1004
+
+#define SET_ALTERNATE_SCROLL        1007
+
+#define SET_EXT_MODE_MOUSE          1005
+#define SET_SGR_EXT_MODE_MOUSE      1006
+#define SET_URXVT_EXT_MODE_MOUSE    1015
+#define SET_PIXEL_POSITION_MOUSE    1016
+
+#define USE_MOUSE SET_ANY_EVENT_MOUSE
+
+
+#define enable_mouse(type) ("\e[?"+     std::to_string(type)    +"h")
+#define disable_mouse(type) ("\e[?"+    std::to_string(type)    +"l")
+
+#define is_mouse(inp) (reinterpret_cast<char*>(&inp)[0] == '\xFF')

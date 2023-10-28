@@ -85,6 +85,56 @@ namespace wm
             return !((pos.x < x || pos.x > x+w) || (pos.y < y || pos.y > y+h));
         }
 
+        int box(const char* t = "─", const char* b = "─", const char* r = "│", const char* l = "│", const char* lt = "┌", const char* rt = "┐",const char* lb = "└", const char* rb = "┘"){
+            if(!exists()){
+                return -1;
+            }
+            std::string buffer;
+
+            auto s = start();
+            auto e = end();
+            
+            
+            for (size_t x = s.x; x <= e.x; x++)
+            {   
+                if(x == s.x)
+                    buffer+=lt;
+                else if (x == e.x)
+                    buffer+=rt;
+                else
+                    buffer+=t;
+            }
+            mv(s.x, s.y);
+            std::cout << buffer;
+            buffer.clear();
+
+            for (size_t x = s.x; x <= e.x; x++)
+            {   
+                if(x == s.x)
+                    buffer+=lb;
+                else if (x == e.x)
+                    buffer+=rb;
+                else
+                    buffer+=b;
+            }
+            mv(s.x, e.y);
+            std::cout << buffer;
+            buffer.clear();
+
+
+            for (size_t y = s.y; y <= e.y; y++)
+            {
+                if(y == s.y || y == e.y){
+                    continue;
+                }
+                mv(s.x, y)
+                std::cout << l;
+                mv(e.x, y)
+                std::cout << r;
+            }
+
+            return 0;
+        }
         
 
         Space operator+(Padding pad){
