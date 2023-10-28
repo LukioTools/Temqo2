@@ -16,6 +16,11 @@ namespace audio
 
     bool playing = false;
 
+    inline void vol(float multiplier){
+        audio::volume.store(audio::volume.load()*multiplier);
+    }
+
+
     inline int play(){
         if (ma_device_start(&device) != MA_SUCCESS) {
             ma_device_uninit(&device);

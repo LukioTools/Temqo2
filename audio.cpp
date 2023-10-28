@@ -45,11 +45,11 @@ int main(int argc, char const *argv[])
             audio::playing ? audio::stop() : audio::play();
         }
         else if(c == '+'){
-            audio::volume.store(audio::volume.load()*1.1f);
+            audio::vol(1.1);
             printf("Volume %f\n", audio::volume.load());
         }
         else if(c == '-'){
-            audio::volume.store(audio::volume.load()*.9f);
+            audio::vol(0.9);
             printf("Volume %f\n", audio::volume.load());
         }
         else if(c == 'n'){
