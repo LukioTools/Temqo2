@@ -25,40 +25,51 @@ int main(int argc, char const *argv[])
 
     while (true) {
         char c = getchar();
-
-        if(c == 'q'){
+        switch (c)
+        {
+        case 'q':{
+            goto exit;
             break;
         }
-        else if(c == 'd'){
+        case 'd':{
             audio::seek(std::chrono::seconds(5));
+            break;
         }
-        else if(c == 'a'){
+        case 'a':{
             audio::seek(std::chrono::seconds(-5));
+            break;
         }
-        else if(c == 'w'){
+        case 'w':{
             audio::play();
+            break;
         }
-        else if(c == 's'){
+        case 's':{
             audio::stop();
+            break;
         }
-        else if(c == 'c'){
+        case 'c':{
             audio::playing ? audio::stop() : audio::play();
+            break;
         }
-        else if(c == '+'){
+        case '+':{
             audio::vol(1.1);
             printf("Volume %f\n", audio::volume.load());
+            break;
         }
-        else if(c == '-'){
+        case '-':{
             audio::vol(0.9);
             printf("Volume %f\n", audio::volume.load());
+            break;
         }
-        else if(c == 'n'){
+        case 'n':{
             auto s = p.next();
             audio::load_next(s.c_str(), true);
             printf("\rPlaying: %s", s.c_str());
+            break;
+        }
         }
     }
-    
+    exit:
 
     audio::stop();
 
