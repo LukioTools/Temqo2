@@ -110,6 +110,22 @@ namespace audio
         return seek_samples(seconds*curr->outputSampleRate);
     }
 
+    inline int seek_abs_samples(ma_int64 samples){
+        stop();
+        framesRead.store(samples);
+        auto res = ma_decoder_seek_to_pcm_frame(curr, samples);
+        play();
+        return res;
+    }
+
+    template<typename t, typename n>
+    inline int seek_abs(std::chrono::duration<t,n> dur){
+        auto seconds = std::chrono::seconds(dur).count();
+        return seek_abs_samples(seconds*curr->outputSampleRate);
+    }
+
+
+
 
 
     inline int load(const char* filename){

@@ -5,26 +5,37 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include "lib/path/filename.hpp"
+#include "lib/path/absolute.hpp"
 
 audio::Playlist p;
 
 
 void cb(){
     auto s = p.next();
+    auto filename = path::filename(s);
     audio::load_next(s.c_str(), true);
-    printf("Playing: %s\n", s.c_str());
+    printf("Playing: %s\n\e]30;%s\a", s.c_str(), filename.c_str());
 }
 
 
 int main(int argc, char const *argv[])
 {
+    std::string pth = "~/Music/";
+    std::cout << pth << std::endl;
+    pth = path::waveline(pth);
+    std::cout << pth << std::endl;
 
 
-    p.add("/home/pikku/Music/", true);
+    p.add(pth, true);
 
     printf("Found:\n");
     for (auto e : p) {
         std::cout << e << std::endl;
+    }
+    if(p.files.size() == 0){
+        std::cout << "No files found! \n";
+        return -1;
     }
 
     audio::songEndedCallback = cb;
@@ -56,14 +67,16 @@ int main(int argc, char const *argv[])
         }
         case 'n':{
             auto s = p.next();
+            auto filename = path::filename(s);
             audio::load_next(s.c_str(), true);
-            printf("\rPlaying: %s", s.c_str());
+            printf("Playing: %s\n\e]30;%s\a", s.c_str(), filename.c_str());
             break;
         }
         case 'b':{
             auto s = p.prev();
+            auto filename = path::filename(s);
             audio::load_next(s.c_str(), true);
-            printf("\rPlaying: %s", s.c_str());
+            printf("Playing: %s\n\e]30;%s\a", s.c_str(), filename.c_str());
             break;
         }
         case 'c':{
