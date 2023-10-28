@@ -52,6 +52,7 @@ int main(int argc, char const *argv[])
         case 's':{
             p.shuffle();
             printf("Suffling list...\n");
+            //no break so it executes the next thing
         }
         case 'n':{
             auto s = p.next();
