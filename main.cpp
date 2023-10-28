@@ -382,9 +382,11 @@ int main(int argc, char const *argv[])
     bool show_r_window = false;
     std::string inp;
     while (true) {
-        std::cout << set_title_static_attr("Hello World")    << std::flush;
         int ch = getch();
         clear_scr();
+        if(ch == 6939){
+            break;
+        }
         if(ch == RESIZE_EVENT){
             space->refresh(0,1,WIDTH,HEIGHT-2);
         }
@@ -450,10 +452,8 @@ int main(int argc, char const *argv[])
         
         use_attr(cursor_invisible);
 
-        //mv(0,0);
-        if(ch == 6939){
-            break;
-        }
+        
+        
     }
     delete w;
     delete space;
