@@ -3,11 +3,11 @@ CXX ?= g++                              # FILL: the compiler
 CFLAGS := -Wall                 # FILL: compile flags
 CXXFLAGS := -Wall               # FILL: compile flags
 
-DEPENDENCIES := 
+DEPENDENCIES := -lm -pthread 
 
 
 # compile macros
-TARGET_FILE := main.cpp # FILL: target name
+TARGET_FILE := audio.cpp # FILL: target name
 OUT_NAME := temqo
 
 

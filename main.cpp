@@ -451,7 +451,7 @@ int main(int argc, char const *argv[])
         
         
         use_attr(cursor_invisible);
-
+        std::cout.flush();
         
         
     }
