@@ -79,7 +79,8 @@
         "valarray": "cpp",
         "variant": "cpp",
         "csignal": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "strstream": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

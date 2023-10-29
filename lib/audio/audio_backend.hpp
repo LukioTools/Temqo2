@@ -24,6 +24,11 @@ namespace audio
     bool songEndedThreadRun = true;
     std::thread* thr;
 
+    inline std::chrono::seconds currentSongPosition(){
+        size_t t = framesRead / curr->outputSampleRate;
+        return std::chrono::seconds(t);
+    }
+
     void songEndedChecker(){
         while (songEndedThreadRun) {
             if(songEnded){

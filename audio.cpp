@@ -2,6 +2,7 @@
 //#include "lib/audio/audio_backend.hpp"
 #include "lib/audio/audio_backend.hpp"
 #include "lib/audio/playlist.hpp"
+#include <cstdio>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -44,25 +45,30 @@ int main(int argc, char const *argv[])
     std::cout << pth << std::endl;
     pth = path::waveline(pth);
     std::cout << pth << std::endl;
-
-    p.load("playlist.pls");
+    //returns seconds to seek to if avalable 0 is either a error or the index
+    auto seek_seconds = p.use("playlist.pls");
     //p.add(pth, true);
-    //p.save("playlist.pls");
 
-    printf("Found:\n");
-    for (auto e : p) {
-        std::cout << e << std::endl;
-    }
+    //printf("Found:\n");
+    //for (auto e : p) {
+    //    std::cout << e << std::endl;
+    //}
+    printf("CINDEX: %lu\n", p.current_index);
     if(p.files.size() == 0){
         std::cout << "No files found! \n";
         return -1;
     }
 
     audio::songEndedCallback = cb;
-    audio::init(p[0].c_str());
+    {
+        std::string s = p.current();
+        audio::init(s.c_str());
+        auto filename = path::filename(s);
+        audio::play();
+        printf("Playing: %s\n\e]30;%s\a", s.c_str(), filename.c_str());
+    }
 
-    audio::play();
-    printf("\rPlaying: %s", p[0].c_str());
+    audio::seek_abs(std::chrono::seconds(seek_seconds));
 
     init();
     while (true) {
@@ -71,6 +77,10 @@ int main(int argc, char const *argv[])
         {
         case 'q':{
             goto exit;
+            break;
+        }
+        case 'i':{
+            printf("Info: current time: %lu, current index: %lu \n", audio::currentSongPosition().count(), p.current_index);
             break;
         }
         case 'd':{
@@ -84,6 +94,7 @@ int main(int argc, char const *argv[])
         case 's':{
             p.shuffle();
             printf("Suffling list...\n");
+            p.save();
             //no break so it executes the next thing
         }
         case 'n':{
@@ -118,6 +129,7 @@ int main(int argc, char const *argv[])
         }
     }
     exit:
+    p.save();
     audio::stop();
 
     audio::deinit();
