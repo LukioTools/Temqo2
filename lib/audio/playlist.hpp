@@ -1,8 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <iterator>
 #include <regex>
 #include <string>
+#include <thread>
 #include <vector>
 #include <filesystem>
 #include "audio_backend.hpp"
@@ -16,6 +18,7 @@
 namespace audio
 {
     #define path_cfg "Path"
+    #define folder_cfg "Folder"
     #define current_index_cfg "CurrentIndex"
     #define current_time_cfg "CurrentTime"
     /**
@@ -25,9 +28,15 @@ namespace audio
      */
     std::regex playlist_attr_rgx("^ *\\[[A-Za-z]*\\] *$");
     std::regex playlist_path_rgx("^ *\\[" path_cfg "\\] *$");
+    std::regex playlist_fldr_rgx("^ *\\[" folder_cfg "\\] *$");
     std::regex playlist_indx_rgx("^ *\\[" current_index_cfg "\\] *= *[0-9]{1,20} *$");
     std::regex playlist_time_rgx("^ *\\[" current_time_cfg "\\] *= *[0-9]{1,20} *$");
 
+    inline void __unique(std::vector<std::string>* vec){
+        std::sort(vec->begin(), vec->end());
+        auto it = std::unique(vec->begin(), vec->end());
+        vec->resize(std::distance(vec->begin(), it));
+    }
     //implement modes
     class Playlist
     {
@@ -36,6 +45,7 @@ namespace audio
     public:
         size_t current_index = 0;
         std::vector<std::string> files;
+        std::vector<std::string> folders;
         std::string use_file;
 
         //-1 doesnt exist, 1 exists but is not supportted, 0 success
@@ -48,6 +58,7 @@ namespace audio
                     path+='/';
                 }
                 scan(files, path,  true);
+                folders.push_back(path);
             }else if(std::regex_match(path, supported_audio)){
                 files.push_back(path);
             }
@@ -87,6 +98,25 @@ namespace audio
             use_file = "";
         }
 
+
+
+        void unique(){
+            //std::sort(files.begin(), files.end());
+            //std::sort(folders.begin(), folders.end());
+            //auto it_files = std::unique(files.begin(), files.end());
+            //auto it_folders = std::unique(folders.begin(), folders.end());
+//
+            //files.resize(std::distance(files.begin(), it_files));
+            //folders.resize(std::distance(folders.begin(), it_folders));
+
+            std::thread thr1(__unique, &files);
+            std::thread thr2(__unique, &folders);
+
+            thr1.join();
+            thr2.join();
+            return;
+        }
+
         int use(std::string playlist_file){
             std::ifstream in(playlist_file);
             use_file = playlist_file;
@@ -102,6 +132,9 @@ namespace audio
                 boost::trim(line);
                 if (std::regex_match(line, playlist_path_rgx))
                 {
+                    add_ = true;
+                }
+                else if(std::regex_match(line, playlist_fldr_rgx)){
                     add_ = true;
                 }
                 else if(std::regex_match(line, playlist_attr_rgx)){
@@ -134,6 +167,8 @@ namespace audio
             if(current_index >= files.size()){
                 current_index = 0;
             }
+            unique();
+
             return time;
         }
 
@@ -141,14 +176,23 @@ namespace audio
             if(dest_file.length() == 0)
                 dest_file = use_file;
 
+            //unique();
+            
+
 
             std::ofstream out(dest_file);
             if(!out){
                 return -1;
             }
-            out << "[" current_index_cfg "] = " << current_index << "\n";
-            out << "[" current_time_cfg "] = " << currentSongPosition().count() << "\n";
-            out<<"[" path_cfg "]\n";
+            out << "\n[" current_index_cfg "] = " << current_index << "\n";
+            out << "\n[" current_time_cfg "] = " << currentSongPosition().count() << "\n";
+            out<<"\n[" folder_cfg "]\n";
+            for (auto e : folders)
+            {
+                out << e << "\n";
+            }
+            
+            out<<"\n[" path_cfg "]\n";
             for(auto e : files){
                 out << e << "\n";
             }
