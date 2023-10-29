@@ -112,8 +112,8 @@ namespace audio
             std::thread thr1(__unique, &files);
             std::thread thr2(__unique, &folders);
 
-            thr1.join();
             thr2.join();
+            thr1.join();
             return;
         }
 
