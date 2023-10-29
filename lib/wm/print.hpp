@@ -21,10 +21,10 @@ namespace wm
         BEGIN_CUT,
         BEGIN_DOTS,
     };
-    typedef std::string (*wprintln_splicer)(wm::Window *window, std::string str, SPLICE_TYPE st);
-    inline int wprintln(wm::Window *window, std::string str, SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS, wprintln_splicer csplicer = nullptr)
+    typedef std::string (*wprintln_splicer)(wm::Space space, std::string str, SPLICE_TYPE st);
+    inline int sprintln(wm::Space space, std::string str, SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS, wprintln_splicer csplicer = nullptr)
     {
-        if (!window)
+        if (!space.exists())
             return -1;
 
         /// remove newlines, since they anyoing
@@ -45,43 +45,43 @@ namespace wm
             }
         }
 
-        auto wspace = window->wSpace();
+        
 
         // trunctuate if it was larger than suposed to be
-        if (str.length() > wspace.w)
+        if (str.length() > space.width())
         {
             switch (st)
             {
             case BEGIN_DOTS:
-                str = str.substr(str.length() - wspace.w, str.length());
+                str = str.substr(str.length() - space.width(), str.length());
                 str.replace(0, 3, "...");
                 break;
             case END_DOTS:
-                str = str.substr(0, wspace.w - 3); //(-3 to make space for dots)
+                str = str.substr(0, space.width() - 3); //(-3 to make space for dots)
                 str.append("...");
                 break;
             case BEGIN_CUT:
-                str = str.substr(str.length() - wspace.w, str.length());
+                str = str.substr(str.length() - space.width(), str.length());
                 break;
             case END_CUT:
             default:
                 if (csplicer)
                 {
-                    str = csplicer(window, str, st);
+                    str = csplicer(space, str, st);
                 }
-                if (str.length() > wspace.w)
+                if (str.length() > space.width())
                 { // just in case cap that bitch
-                    str = str.substr(0, wspace.w);
+                    str = str.substr(0, space.width());
                 }
                 break;
             }
         }
         else
         {
-            str.append(wspace.w - str.length(), ' ');
+            str.append(space.width() - str.length(), ' ');
         }
 
-        std::cout << cursor_to_column(wspace.x) << str;
+        std::cout << cursor_to_column(space.x) << str;
 
         return 0;
     }

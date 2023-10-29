@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <ratio>
 #include <thread>
 #define MINIAUDIO_IMPLEMENTATION
 #define MA_NO_ENCODING
@@ -14,14 +15,17 @@ namespace audio
     ma_device device;
 
     std::atomic<ma_int64> framesRead = 0;
+    ma_uint64 framesInSong = 0;
     std::atomic<float> volume(1.0f);  // Initial volume level
 
     bool playing = false;
 
     bool songEnded = false;
     void(*songEndedCallback)(void);
+    void(*song_played_secondly)(void);
 
     bool songEndedThreadRun = true;
+    std::chrono::duration song_check_break_time = std::chrono::milliseconds(30);
     std::thread* thr;
 
     inline std::chrono::seconds currentSongPosition(){
@@ -30,12 +34,18 @@ namespace audio
     }
 
     void songEndedChecker(){
+        auto start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
         while (songEndedThreadRun) {
             if(songEnded){
                 if(songEndedCallback) songEndedCallback();
                 songEnded = false;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            if(song_played_secondly &&  std::chrono::high_resolution_clock::now().time_since_epoch().count()-start > 100000000L){
+                start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+                song_played_secondly();
+            }
+            
+            std::this_thread::sleep_for(song_check_break_time);
         }
     }
 
@@ -71,6 +81,13 @@ namespace audio
         }
         playing = false;
         return 0;
+    }
+
+    inline unsigned int seconds_in_current(){
+        if(!curr){
+            return 0;
+        }
+        return framesInSong/curr->outputSampleRate;
     }
 
 
@@ -137,6 +154,7 @@ namespace audio
         if(!curr)
             return -1;
         ma_decoder_init_file(filename, nullptr, curr);
+        ma_decoder_get_length_in_pcm_frames(curr, &framesInSong);
         framesRead = 0;
         return 0;
     }

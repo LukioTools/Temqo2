@@ -28,7 +28,7 @@ if((boolean) != invert_bool){\
 
 
 //positive macros
-#define check(boolean, errormsg) \
+#define check__(boolean, errormsg) \
     __check(boolean, errormsg, check_err_type, false)
 #define check_err(boolean, errormsg, errtype) \
     __check(boolean, errormsg, errtype, false)
@@ -170,10 +170,10 @@ namespace ascii_img
         int cx,cy,n_channels;
 
         u_char* data = stbi_load(filename.c_str(), &cx, &cy, &n_channels, 0);
-        check(!data, ("could not load image: " + filename).c_str());
+        check__(!data, ("could not load image: " + filename).c_str());
 
         unsigned char* out_data = (unsigned char*)malloc(x * y * n_channels);
-        check(!out_data, "could not allocate memory for image");
+        check__(!out_data, "could not allocate memory for image");
 
         stbir_resize_uint8(data, cx, cy, 0, out_data, x, y, 0, n_channels);
         
