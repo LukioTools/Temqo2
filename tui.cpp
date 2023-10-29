@@ -48,7 +48,7 @@ int print_playlist(){
         }
         mv(s.x, y);
         if(i == p.current_index){
-            use_attr(color_bg(200,200,200) << color_fg(20,30,20));
+            use_attr(color_bg(200,200,200) << color_fg(20,30,20) << bold);
         }
         wm::sprintln(ws,  std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);//std::to_string(i) + ": " + std::to_string(p.files.size())+ ": " + );
         if(i == p.current_index){
@@ -68,7 +68,7 @@ int print_playing(std::string song){
     mv(ws.x, ws.y);
     clear_row();
     boost::trim(song);
-    wm::sprintln(ws, song);
+    wm::sprintln(ws, song, wm::SPLICE_TYPE::END_DOTS);
     set_title(song.c_str());
     print_playlist();
     return 0;
@@ -156,17 +156,31 @@ void print_ui(){
 
         ss << ' ' << alzisst2ni(minutes) << ':' << alzisst2ni(seconds - 60*minutes) << '/' << alzisst2ni(aaa_minutes) << ':' << alzisst2ni(aaa- 60*aaa_minutes);
     }
+    ss << ' ' << "⚙"<< ' ';
 
-    print_info(ss.str(), 3+(std::string(((vol > 100) ? color_fg_str(warning_color.r, warning_color.g, warning_color.b) : ""))+std::string(((vol > 100) ? attr_reset : ""))).length());
+    print_info(ss.str(), 3+2+(std::string(((vol > 100) ? color_fg_str(warning_color.r, warning_color.g, warning_color.b) : ""))+std::string(((vol > 100) ? attr_reset : ""))).length());
     
 }
 #undef alzisst2ni
 
 void secondly(void){
     if(mainthread_waiting){
+        if(wm::resize_event){
+            clear_scr();
+            refresh_elements();
+            print_playlist();
+            print_playing(path::filename(p.current()));
+            {
+                if(curplay_element)
+                    curplay_element->aSpace().box(nullptr, "─", nullptr, nullptr, nullptr, nullptr, "─", "─");
+                if(input_element)
+                    input_element->aSpace().box("─", nullptr, nullptr, nullptr, "─", "─", nullptr, nullptr);
+            }
+        }
         print_ui();
         std::cout.flush();
     }
+    
 }
 
 
@@ -221,6 +235,14 @@ int main(int argc, char const *argv[])
                 playlist_offset++;
             }
             print_playlist();
+        }
+        if(auto key = wm::is_key(c)){
+            if(key == wm::KEY::K_RIGHT){
+                audio::seek(std::chrono::seconds(5));
+            }
+            else if(key == wm::KEY::K_LEFT){
+                audio::seek(std::chrono::seconds(-5));
+            }
         }
         //if(curplay_element) curplay_element->aSpace().fill("#");//.box("#", "─", "R", "L", "0", "1", "─", "─");
         print_ui();

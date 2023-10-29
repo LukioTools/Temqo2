@@ -1,7 +1,7 @@
 
-[CurrentIndex] = 1
+[CurrentIndex] = 9
 
-[CurrentTime] = 66
+[CurrentTime] = 91
 
 [Folder]
 /home/pikku/Music/Meleg/
