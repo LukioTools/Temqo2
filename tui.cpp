@@ -8,11 +8,14 @@
 #include "lib/wm/getch.hpp"
 #include "lib/wm/globals.hpp"
 #include "lib/wm/init.hpp"
+#include "lib/wm/mouse.hpp"
+#include "lib/wm/print.hpp"
 #include "lib/wm/space.hpp"
 #include <codecvt>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <valarray>
 
 bool mainthread_waiting = true;
 
@@ -25,6 +28,39 @@ bool playlist_leftmost = true;
 bool playlist_rightmost = true;
 wm::Element* playlist_element = nullptr;
 
+
+int playlist_offset = 0;
+bool playlist_filename_only = true;
+int print_playlist(){
+    if(!playlist_element){
+        return -1;
+    }
+    auto ws = playlist_element->wSpace();
+    auto s  =ws.start();
+    auto e  =ws.end();
+    
+    auto i = p.current_index;
+
+    for (size_t y = s.y; y <= e.y; y++)
+    {
+        if(i >= p.files.size()){
+            i = 0;
+        }
+        mv(s.x, y);
+        if(i == p.current_index){
+            use_attr(color_bg(200,200,200) << color_fg(20,30,20));
+        }
+        wm::sprintln(ws,  std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);//std::to_string(i) + ": " + std::to_string(p.files.size())+ ": " + );
+        if(i == p.current_index){
+            use_attr(attr_reset);
+        }
+        i++;
+    }
+    
+    
+    return 0;
+}
+
 int print_playing(std::string song){
     if(!curplay_element)
         return -1;
@@ -34,6 +70,7 @@ int print_playing(std::string song){
     boost::trim(song);
     wm::sprintln(ws, song);
     set_title(song.c_str());
+    print_playlist();
     return 0;
 }
 
@@ -130,9 +167,9 @@ void secondly(void){
         print_ui();
         std::cout.flush();
     }
-        
-    
 }
+
+
 
 int main(int argc, char const *argv[])
 {
@@ -160,6 +197,7 @@ int main(int argc, char const *argv[])
         if(c == RESIZE_EVENT){
             clear_scr();
             refresh_elements();
+            print_playlist();
         }
         if(print_playing(path::filename(p.current()))){
             goto exit;
@@ -173,6 +211,16 @@ int main(int argc, char const *argv[])
             //playlist_element->aSpace().fill("#"); // ┬ // ┴
             playlist_element->aSpace().box(nullptr, nullptr, playlist_rightmost ? nullptr : "│" , playlist_leftmost ? nullptr : "│", playlist_leftmost ? "─" : "┬" , playlist_rightmost ? "─" : "┬", playlist_leftmost ? "─" : "┴" , playlist_rightmost ? "─" : "┴"  );
             //playlist_element->wSpace().fill("#");
+        }
+        if(is_mouse(c)){
+            auto m = wm::parse_mouse(c);
+            if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+                playlist_offset--;
+            }
+            if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+                playlist_offset++;
+            }
+            print_playlist();
         }
         //if(curplay_element) curplay_element->aSpace().fill("#");//.box("#", "─", "R", "L", "0", "1", "─", "─");
         print_ui();
