@@ -2,6 +2,6 @@
 
 int main(int argc, char const *argv[])
 {
-    audio::extra::getAlbumCover("irridecent.mp3");
+    audio::extra::extractAlbumCover("irridecent.mp3", "current.png");
     return 0;
 }

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <taglib/taglib.h>
 #include <taglib/tag.h>
 #include <taglib/fileref.h>
@@ -8,13 +9,12 @@
 
 #include <FreeImage.h>  // You need to have FreeImage installed.
 
-#include "../CImg-3.3.1/CImg.h"
 
 namespace audio
 {
     namespace extra
     {
-        inline unsigned char* getAlbumCover(std::string filename){
+        inline int extractAlbumCover(std::string filename, std::string out){
             TagLib::MPEG::File mp3File(filename.c_str());
             TagLib::ID3v2::Tag* id3v2Tag = mp3File.ID3v2Tag();
 
@@ -35,25 +35,24 @@ namespace audio
                                 // Save the image to a file using FreeImage
                     FIMEMORY* memory = FreeImage_OpenMemory((BYTE*) coverArtData.data(), coverArtData.size());
                     FIBITMAP* bitmap = FreeImage_LoadFromMemory(FIF_PNG, memory, 0);
-
+                    std::cout << mimeType << "\n";
                     if (bitmap) {
                         // Specify the output image file name and format (e.g., "output.jpg")
-                        const char* outputFileName = "output.png";
-                        FREE_IMAGE_FORMAT format = FIF_JPEG;
 
                         // Save the image to a file
-                        FreeImage_Save(format, bitmap, outputFileName, 0);
+                        FreeImage_Save(FIF_PNG, bitmap, out.c_str(), 0);
 
-                        std::cout << "Album cover saved to: " << outputFileName << std::endl;
+                        std::cout << "Album cover saved to: " << out << std::endl;
 
                         FreeImage_Unload(bitmap);
+                        return 0;
                     }
                     else{
                         std::cout << "No bitmap\n";
                     }
                 }
             }
-            return nullptr;
+            return 1;
         }
     } // namespace extra
     
