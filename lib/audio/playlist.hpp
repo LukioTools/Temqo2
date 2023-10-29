@@ -104,7 +104,11 @@ namespace audio
                 {
                     add_ = true;
                 }
-                else if(std::regex_match(line, playlist_indx_rgx)){
+                else if(std::regex_match(line, playlist_attr_rgx)){
+                    add_ = false;
+                }
+
+                if(std::regex_match(line, playlist_indx_rgx)){
                     
                     auto idx = line.find_first_of('=');
                     if(idx == std::string::npos){
@@ -119,9 +123,7 @@ namespace audio
                     }
                     time = std::stoull(line.substr(idx+1));
                 }
-                else if(std::regex_match(line, playlist_attr_rgx)){
-                    add_ = false;
-                }
+                
 
 
                 if(add_){

@@ -53,7 +53,7 @@ int main(int argc, char const *argv[])
     //for (auto e : p) {
     //    std::cout << e << std::endl;
     //}
-    printf("CINDEX: %lu\n", p.current_index);
+    //printf("CINDEX: %lu\n", p.current_index);
     if(p.files.size() == 0){
         std::cout << "No files found! \n";
         return -1;
@@ -116,12 +116,12 @@ int main(int argc, char const *argv[])
             break;
         }
         case '+':{
-            audio::vol(1.1);
+            audio::vol_shift(.1f);
             printf("Volume %f\n", audio::volume.load());
             break;
         }
         case '-':{
-            audio::vol(0.9);
+            audio::vol_shift(-.1f);
             printf("Volume %f\n", audio::volume.load());
             break;
         }
