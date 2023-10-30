@@ -82,16 +82,17 @@ int deinit(){
 }
 int main(int argc, char const *argv[])
 {
-    std::string url = "sftp://pikku@88.115.52.221/home/pikku/em.m4a";
-    printf("is sftp: %s\n", std::regex_match(url, sftp_regex) ? "true" : "false");
-
-    init();
-    fetch(url, "./");
-    deinit();
+    std::string url = "em.flac";
+    //std::string url = "sftp://pikku@88.115.52.221/home/pikku/em.m4a";
+    //printf("is sftp: %s\n", std::regex_match(url, sftp_regex) ? "true" : "false");
+//
+    //init();
+    //fetch(url, "./");
+    //deinit();
 
     if(!std::regex_match(url, is_supportted)){
-        //convertAudioToMP3(path::filename(url).c_str(), (path::filebasename(url) + "f.mp3").c_str());
-        system_ffmpeg(path::filename(url), path::filebasename(url) + ".mp3");
+        convertAudioToMP3(path::filename(url).c_str(), (path::filebasename(url) + "f.mp3").c_str());
+        //system_ffmpeg(path::filename(url), path::filebasename(url) + ".mp3");
     }
     
 
