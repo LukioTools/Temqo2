@@ -80,10 +80,7 @@
         "variant": "cpp",
         "csignal": "cpp",
         "regex": "cpp",
-        "strstream": "cpp",
-        "coroutine": "cpp",
-        "ranges": "cpp",
-        "shared_mutex": "cpp"
+        "strstream": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
