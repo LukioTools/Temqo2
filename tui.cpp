@@ -1,23 +1,16 @@
 #include "lib/ansi/ascii_img2.hpp"
 #include "lib/audio/audio.hpp"
-#include "lib/audio/audio_backend.hpp"
 #include "lib/path/filename.hpp"
 #include "lib/wm/core.hpp"
-#include "lib/wm/def.hpp"
-#include "lib/wm/element.hpp"
 #include "lib/wm/getch.hpp"
-#include "lib/wm/globals.hpp"
-#include "lib/wm/init.hpp"
 #include "lib/wm/mouse.hpp"
-#include "lib/wm/print.hpp"
-#include "lib/wm/space.hpp"
 #include <codecvt>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <valarray>
 
-bool mainthread_waiting = true;
+bool mainthread_waiting = false;
 
 audio::Playlist p;
 
@@ -39,18 +32,25 @@ int print_playlist(){
     auto s  =ws.start();
     auto e  =ws.end();
     
-    auto i = p.current_index;
+    auto i = ( (long) p.current_index + playlist_offset );
+    while(i < 0){
+        i += p.files.size();
+    }
+    if(i >= p.files.size()){
+        i = i%p.files.size();
+    }
+    
 
     for (size_t y = s.y; y <= e.y; y++)
     {
-        if(i >= p.files.size()){
+        if(i >= p.files.size() || i < 0){
             i = 0;
         }
         mv(s.x, y);
         if(i == p.current_index){
             use_attr(color_bg(200,200,200) << color_fg(20,30,20) << bold);
         }
-        wm::sprintln(ws,  std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);//std::to_string(i) + ": " + std::to_string(p.files.size())+ ": " + );
+        wm::sprintln(ws,  std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);
         if(i == p.current_index){
             use_attr(attr_reset);
         }
@@ -60,6 +60,9 @@ int print_playlist(){
     
     return 0;
 }
+
+
+
 
 int print_playing(std::string song){
     if(!curplay_element)
@@ -185,6 +188,35 @@ void secondly(void){
 
 
 
+int click(wm::MOUSE_INPUT minp){
+    //song switcher
+    if(minp.btn == wm::M_LEFT && playlist_element->wSpace().inside(minp.pos)){
+        auto index = minp.pos.y-playlist_element->wSpace().y;
+        auto i = ( (long) p.current_index + playlist_offset );
+        while(i < 0){
+            i += p.files.size();
+        }
+        if(i >= p.files.size()){
+            i = i%p.files.size();
+        }
+        auto e = i+index;
+        while(e < 0){
+            e += p.files.size();
+        }
+        if(e >= p.files.size()){
+            e=e%p.files.size();
+        }
+        if(e != p.current_index){
+            p.current_index = e;
+            playlist_offset = 0; // put cursor to the top
+            load_audio(p.current());
+        }
+    }
+
+    return 0;
+}
+
+
 int main(int argc, char const *argv[])
 {
     {
@@ -228,20 +260,41 @@ int main(int argc, char const *argv[])
         }
         if(is_mouse(c)){
             auto m = wm::parse_mouse(c);
-            if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+            switch (m.btn)
+            {
+            case wm::MOUSE_BTN::M_SCRL_UP:
                 playlist_offset--;
-            }
-            if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+                break;
+            case wm::MOUSE_BTN::M_SCRL_DOWN:
                 playlist_offset++;
+                break;
+            case wm::MOUSE_BTN::M_LEFT:
+                click(m);
+                break;
+            default:
+                break;
             }
             print_playlist();
         }
         if(auto key = wm::is_key(c)){
-            if(key == wm::KEY::K_RIGHT){
-                audio::seek(std::chrono::seconds(5));
-            }
-            else if(key == wm::KEY::K_LEFT){
-                audio::seek(std::chrono::seconds(-5));
+            switch (key) {
+                case wm::KEY::K_RIGHT:
+                    audio::seek(std::chrono::seconds(5));
+                    break;
+                case wm::KEY::K_LEFT:
+                    audio::seek(std::chrono::seconds(-5));
+                    break;
+                case wm::KEY::K_UP:
+                    playlist_offset--;
+                    print_playlist();
+                    break;
+                case wm::KEY::K_DOWN:
+                    playlist_offset++;
+                    print_playlist();
+                    break;
+                default:
+                    print_playlist();
+                    break;
             }
         }
         //if(curplay_element) curplay_element->aSpace().fill("#");//.box("#", "─", "R", "L", "0", "1", "─", "─");
