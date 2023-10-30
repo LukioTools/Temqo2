@@ -11,4 +11,12 @@ namespace path
         }
         return path.substr(idx+1);
     }
+    inline std::string filebasename(std::string path){
+        auto fname = filename(path);
+        return fname.substr(0,fname.find_first_of('.'));
+    }
+    inline std::string fileext(std::string path){ // includes dot
+        return path.substr(path.find_last_of('.'));
+    }
+
 } // namespace path

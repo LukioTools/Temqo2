@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <iostream>
@@ -7,7 +8,7 @@
 #include "lib/remote/remote.hpp"
 
 CURL* curl = nullptr;
-FILE* file;
+FILE* file = nullptr;
 std::regex ftp_regex("^ftp://.*@.*/.*$");
 std::regex sftp_regex("^sftp://.*@.*/.*$");
 std::regex is_supportted("^.*\\.mp3$");
@@ -21,43 +22,48 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 }
 
 //returns read error if could not read from file
-CURLcode fetch_sftp(std::string url, std::string dest_dir){
+CURLcode fetch_sftp(){
+    curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, CURLSSH_AUTH_ANY);
+    curl_easy_setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE,  private_key_path.c_str());
+    return curl_easy_perform(curl);
+}
+
+CURLcode fetch_ftp(){
+    return curl_easy_perform(curl);
+}
+
+
+inline CURLcode fetch_init(std::string url, std::string dest_dir){
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
     auto fname = path::filename(url);
     file = fopen((dest_dir + fname).c_str(), "wb");
     if(!file) {
         return CURLcode::CURLE_READ_ERROR;
     }
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, CURLSSH_AUTH_ANY);
-    curl_easy_setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE,  private_key_path.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    return curl_easy_perform(curl);
+    return CURLcode::CURLE_OK;    
 }
-
-CURLcode fetch_ftp(std::string url, std::string dest_dir){
-auto fname = path::filename(url);
-    file = fopen((dest_dir + fname).c_str(), "wb");
-    if(!file) {
-        return CURLcode::CURLE_READ_ERROR;
-    }
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    //curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, CURLSSH_AUTH_ANY);
-    //curl_easy_setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE,  private_key_path.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    return curl_easy_perform(curl);
-}
-
 
 CURLcode fetch(std::string url, std::string dest_dir){
+    CURLcode ret = CURLcode::CURLE_UNSUPPORTED_PROTOCOL;
+    
+    {
+        auto code = fetch_init(url, dest_dir);
+        if(code != CURLcode::CURLE_OK){
+            return code;
+        }
+    }
+
     if(std::regex_match(url, sftp_regex)){
-        return fetch_sftp(url, dest_dir);
+        ret = fetch_sftp();
     }
-    if(std::regex_match(url, ftp_regex)){
-        return fetch_ftp(url, dest_dir);
+    else if(std::regex_match(url, ftp_regex)){
+        ret = fetch_ftp();
     }
-    return CURLcode::CURLE_UNSUPPORTED_PROTOCOL;
+
+    fclose(file);
+    return ret;
 }
 
 int init(){
@@ -82,6 +88,10 @@ int main(int argc, char const *argv[])
     init();
     fetch(url, "./");
     deinit();
+
+    if(!std::regex_match(url, is_supportted)){
+        system_ffmpeg(path::filename(url), path::filebasename(url) + ".mp3");
+    }
     
 
     return 0;
