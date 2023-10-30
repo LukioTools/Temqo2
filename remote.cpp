@@ -47,7 +47,7 @@ inline CURLcode fetch_init(std::string url, std::string dest_dir){
 
 CURLcode fetch(std::string url, std::string dest_dir){
     CURLcode ret = CURLcode::CURLE_UNSUPPORTED_PROTOCOL;
-    
+
     {
         auto code = fetch_init(url, dest_dir);
         if(code != CURLcode::CURLE_OK){
@@ -90,6 +90,7 @@ int main(int argc, char const *argv[])
     deinit();
 
     if(!std::regex_match(url, is_supportted)){
+        //convertAudioToMP3(path::filename(url).c_str(), (path::filebasename(url) + "f.mp3").c_str());
         system_ffmpeg(path::filename(url), path::filebasename(url) + ".mp3");
     }
     
