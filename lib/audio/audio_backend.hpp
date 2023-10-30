@@ -117,11 +117,11 @@ namespace audio
 
     inline int seek_samples(ma_int64 samples){
         stop();
-        framesRead.fetch_add(samples);
-        if(framesRead.load() < 0){
+        auto current_fram = framesRead.fetch_add(samples);
+        if(current_fram < 0){
             framesRead.store(0);
         }
-        auto res = ma_decoder_seek_to_pcm_frame(curr, framesRead.load(std::memory_order_relaxed));
+        auto res = ma_decoder_seek_to_pcm_frame(curr, framesRead.load());
         play();
         return res;
         

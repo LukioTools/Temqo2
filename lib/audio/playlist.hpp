@@ -69,6 +69,9 @@ namespace audio
         }
         //may throw idk man
         std::string next(){
+            if(!files.size()){
+                throw std::runtime_error("No files loaded");
+            }
             current_index++;
             if(current_index >= files.size()){
                 current_index = 0;
@@ -76,10 +79,20 @@ namespace audio
             return files[current_index];
         }
         std::string current(){
+            if(!files.size()){
+                throw std::runtime_error("No files loaded");
+            }
+            if(current_index >= files.size()){
+                //throw std::out_of_range("current_index out of range");
+                current_index = 0;
+            }
             return files[current_index];
         }
         //previous, loops if nececcary
         std::string prev(){
+            if(!files.size()){
+                throw std::runtime_error("No files loaded");
+            }
             if(current_index == 0){
                 current_index = files.size(); //-1 needed but -- happens so we can simplify :3
             }

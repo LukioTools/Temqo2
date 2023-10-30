@@ -12,6 +12,8 @@
 #include "lib/wm/print.hpp"
 #include "lib/wm/space.hpp"
 #include <codecvt>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -31,6 +33,7 @@ wm::Element* playlist_element = nullptr;
 
 int playlist_offset = 0;
 bool playlist_filename_only = true;
+bool repeat_same_songs = false;
 int print_playlist(){
     if(!playlist_element){
         return -1;
@@ -40,12 +43,13 @@ int print_playlist(){
     auto e  =ws.end();
     
     auto i = p.current_index;
+    if(i >= p.files.size()){
+            i = 0;
+    }
+    auto b = i;
 
     for (size_t y = s.y; y <= e.y; y++)
     {
-        if(i >= p.files.size()){
-            i = 0;
-        }
         mv(s.x, y);
         if(i == p.current_index){
             use_attr(color_bg(200,200,200) << color_fg(20,30,20) << bold);
@@ -55,6 +59,13 @@ int print_playlist(){
             use_attr(attr_reset);
         }
         i++;
+        if(i >= p.files.size()){
+            i = 0;
+        }
+        if(!repeat_same_songs && i==b){
+            break;
+        }
+
     }
     
     
@@ -191,10 +202,19 @@ int main(int argc, char const *argv[])
         const char* filename = argc > 2 ? argv[2]:"playlist.pls";
         clear_all();
         //std::cout << "loading file: " << filename << "\n";
+
         auto seek_seconds = p.use(filename);
-        audio::init(p.current().c_str());
+
         audio::songEndedCallback = next_callback;
         audio::song_played_secondly = secondly;
+        try {
+        audio::init(p.current().c_str());
+        } catch (const std::runtime_error& er) {
+            //no files
+            std::cout << er.what() << std::endl;
+            return EXIT_FAILURE;
+        }
+        audio::init(p.current().c_str());
         audio::play();
 
         audio::seek_abs(std::chrono::seconds(seek_seconds));
@@ -238,7 +258,12 @@ int main(int argc, char const *argv[])
         }
         if(auto key = wm::is_key(c)){
             if(key == wm::KEY::K_RIGHT){
-                audio::seek(std::chrono::seconds(5));
+                mv(0,0);
+                std::cout << audio::framesRead.load() << ' ' << std::flush;
+                auto res = audio::seek(std::chrono::seconds(5));
+                std::cout << res << std::flush;
+                std::cout << ' ' << audio::framesRead.load() << ' ' << std::flush;
+                //getchar();
             }
             else if(key == wm::KEY::K_LEFT){
                 audio::seek(std::chrono::seconds(-5));
