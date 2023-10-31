@@ -24,6 +24,7 @@ wm::Element* playlist_element = nullptr;
 
 int playlist_offset = 0;
 bool playlist_filename_only = true;
+bool pls_dont_fill = true;
 int print_playlist(){
     if(!playlist_element){
         return -1;
@@ -53,6 +54,9 @@ int print_playlist(){
         wm::sprintln(ws,  std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);
         if(i == p.current_index){
             use_attr(attr_reset);
+        }
+        if(pls_dont_fill && y-s.y >= p.files.size()-1){
+            break;;
         }
         i++;
     }

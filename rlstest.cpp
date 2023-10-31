@@ -67,9 +67,52 @@ CURLcode scanremotedir(CURL* curl, std::vector<std::string>& add, const std::str
                 continue;
             }
         }
+        if(e.length() == 0){
+            continue;
+        }
         add.push_back(e);
     }
 
+
+    return CURLcode::CURLE_OK;
+}
+
+CURLcode scanRemote(CURL* curl, std::string url, std::vector<std::string>& files, std::vector<std::string>& directories, const char* private_key_file = nullptr, std::regex file_rgx = std::regex("^-.*$"), std::regex dir_rgx = std::regex("^d.*$")){
+    if(!curl){
+        return CURLcode::CURLE_FAILED_INIT;
+    }
+    std::vector<char> buffer(1024);
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+
+    if(private_key_file){
+        curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, CURLSSH_AUTH_ANY);
+        curl_easy_setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE,  private_key_file);
+    }
+
+    auto res = curl_easy_perform(curl);
+    if(res){
+        return res;
+    }
+
+
+    std::string str(buffer.begin(), buffer.end());
+    std::vector<std::string> all = split_string(str, "\n");
+
+    for (auto e : all) {
+        //boost::trim(e);
+        auto lword = last_word(e);
+        if(e.length() == 0 || lword == "." || lword == ".."){
+            continue;
+        }
+        if(std::regex_match(e, dir_rgx)){
+            directories.push_back(lword);
+        }
+        else if(std::regex_match(e, file_rgx)){
+            files.push_back(lword);
+        }
+    }
 
     return CURLcode::CURLE_OK;
 }
@@ -83,12 +126,17 @@ int main() {
         return -1;
     }
     std::vector<std::string> files;
-    std::regex file_parser("^(d.{6,999})||(.*\\.m4a)$");
+    std::vector<std::string> dirs;
+    std::regex file_parser("^-.*\\.m4a$");
 
-    scanremotedir(curl, files, "sftp://pikku@88.115.52.221/home/pikku/", private_key_path.c_str(), &file_parser);
-
+    auto vale = scanRemote(curl, "sftp://pikku@88.115.52.221/home/pikku/", files, dirs, private_key_path.c_str(), file_parser);
+    //scanremotedir(curl, files, "sftp://pikku@88.115.52.221/home/pikku/", private_key_path.c_str(), &file_parser);
     for (auto e : files) {
         std::cout << "File: " << e << std::endl;
+    }
+
+    for (auto e : dirs) {
+        std::cout << "Dir: " << e << " : " << std::endl;
     }
 
     return 0;
