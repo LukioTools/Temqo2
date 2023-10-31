@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <curl/curl.h>
 #include <regex>
@@ -76,8 +77,8 @@ CURLcode scanremotedir(CURL* curl, std::vector<std::string>& add, const std::str
 
     return CURLcode::CURLE_OK;
 }
-
-CURLcode scanRemote(CURL* curl, std::string url, std::vector<std::string>& files, std::vector<std::string>& directories, const char* private_key_file = nullptr, std::regex file_rgx = std::regex("^-.*$"), std::regex dir_rgx = std::regex("^d.*$")){
+unsigned long time_spent_fetching = 0;
+CURLcode scanRemote(CURL* curl, std::string url, std::vector<std::string>& files, bool recursive = true, const char* private_key_file = nullptr, std::regex file_rgx = std::regex("^-.*$"), std::regex dir_rgx = std::regex("^d.*$")){
     if(!curl){
         return CURLcode::CURLE_FAILED_INIT;
     }
@@ -90,28 +91,38 @@ CURLcode scanRemote(CURL* curl, std::string url, std::vector<std::string>& files
         curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, CURLSSH_AUTH_ANY);
         curl_easy_setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE,  private_key_file);
     }
-
-    auto res = curl_easy_perform(curl);
-    if(res){
-        return res;
+    {
+        auto s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        auto res = curl_easy_perform(curl);
+        if(res){
+            return res;
+        }
+        time_spent_fetching += std::chrono::high_resolution_clock::now().time_since_epoch().count() - s;
     }
+    
 
 
-    std::string str(buffer.begin(), buffer.end());
-    std::vector<std::string> all = split_string(str, "\n");
-
-    for (auto e : all) {
-        //boost::trim(e);
-        auto lword = last_word(e);
-        if(e.length() == 0 || lword == "." || lword == ".."){
-            continue;
+    std::string buffer_2;
+    for (char c : buffer) {
+        if(c == '\n'){
+            auto lword = last_word(buffer_2);
+            if(lword.length() == 0 || lword == "." || lword == ".."){
+                continue;
+            }
+            if(recursive && std::regex_match(buffer_2, dir_rgx) ){
+                auto newpath = url+lword+"/";
+                scanRemote(curl, newpath, files, recursive, private_key_file, file_rgx, dir_rgx);
+            }
+            else if(std::regex_match(buffer_2, file_rgx)){
+                auto newpath = url+lword;
+                files.push_back(newpath);
+            }
+            buffer_2 = "";
         }
-        if(std::regex_match(e, dir_rgx)){
-            directories.push_back(lword);
+        else{
+            buffer_2+=c;
         }
-        else if(std::regex_match(e, file_rgx)){
-            files.push_back(lword);
-        }
+        
     }
 
     return CURLcode::CURLE_OK;
@@ -126,18 +137,21 @@ int main() {
         return -1;
     }
     std::vector<std::string> files;
-    std::vector<std::string> dirs;
+    //std::regex file_parser("^-.*\\.m4a$");
     std::regex file_parser("^-.*\\.m4a$");
-
-    auto vale = scanRemote(curl, "sftp://pikku@88.115.52.221/home/pikku/", files, dirs, private_key_path.c_str(), file_parser);
+    auto s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    auto vale = scanRemote(curl, "sftp://pikku@88.115.52.221/home/pikku/", files, true, private_key_path.c_str(), file_parser);
+    
+    auto e = std::chrono::high_resolution_clock::now().time_since_epoch().count() - s;
     //scanremotedir(curl, files, "sftp://pikku@88.115.52.221/home/pikku/", private_key_path.c_str(), &file_parser);
+    
     for (auto e : files) {
-        std::cout << "File: " << e << std::endl;
+        std::cout  << e << std::endl;
     }
 
-    for (auto e : dirs) {
-        std::cout << "Dir: " << e << " : " << std::endl;
-    }
+    std::cout << "Time spent fetching: " << time_spent_fetching << std::endl;
+    std::cout << "Time spent not fetchin: " << e-time_spent_fetching  << std::endl;
+    std::cout << "Time spent total: " << e  << std::endl;
 
     return 0;
 }
