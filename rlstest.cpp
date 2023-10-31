@@ -83,7 +83,7 @@ int main() {
         return -1;
     }
     std::vector<std::string> files;
-    std::regex file_parser("^(d.*)||(.*\\.m4a)$");
+    std::regex file_parser("^(d.{6,999})||(.*\\.m4a)$");
 
     scanremotedir(curl, files, "sftp://pikku@88.115.52.221/home/pikku/", private_key_path.c_str(), &file_parser);
 
