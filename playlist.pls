@@ -1,18 +1,12 @@
 
-[CurrentIndex] = 12
+[CurrentIndex] = 242
 
-[CurrentTime] = 0
+[CurrentTime] = 5
 
 [Folder]
-./
 /home/pikku/Music/
 
 [Path]
-./em.flac
-./em.mp3
-./emf.mp3
-./old/irridecent.mp3
-./old/stardust.mp3
 /home/pikku/Music/EDM/10⧸0 PLACEMENT MUSIC-kRh2fyX7b1w.mp3
 /home/pikku/Music/EDM/ANZA, Mei Shidar - Ashes (Original Mix) #ExxUnderground #IndieDance-_-Q2X3nP6_U.mp3
 /home/pikku/Music/EDM/ATFC - U Got Me-HJnDYEjDVbQ.mp3

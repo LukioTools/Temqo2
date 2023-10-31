@@ -148,9 +148,10 @@ namespace wm
             return 0;
         }
         
+#undef if_not_mv_left
 
         Space operator+(Padding pad){
-            return Space(x + pad.r, y + pad.t, w-pad.l-pad.r, h-pad.b-pad.t);
+            return Space(x + pad.l, y + pad.t, (w-pad.l)-pad.r, (h-pad.b)-pad.t);
         }
         friend std::ostream& operator<<(std::ostream& os, const Space& dt) {
             os <<"x:" << dt.x <<" y:" << dt.y << " w:" << dt.w << " h:" << dt.h;

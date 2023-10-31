@@ -25,7 +25,7 @@ namespace audio
     void(*song_played_secondly)(void);
 
     bool songEndedThreadRun = true;
-    std::chrono::duration song_check_break_time = std::chrono::milliseconds(30);
+    std::chrono::duration song_check_break_time = std::chrono::milliseconds(200);
     std::thread* thr;
 
     inline std::chrono::seconds currentSongPosition(){

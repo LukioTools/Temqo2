@@ -40,7 +40,9 @@ namespace wm
         inline operator Space(){
             return *space;
         }
-
+        bool not_valid(){
+            return !space || !space->exists() || !wSpace().exists();
+        }
         Element(Space* ptr, Padding p = {}): space(ptr), pad(p) {}
         ~Element() {}
     };

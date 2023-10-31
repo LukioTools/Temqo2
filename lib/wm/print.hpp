@@ -55,10 +55,12 @@ namespace wm
             case BEGIN_DOTS:
                 str = str.substr(str.length() - space.width(), str.length());
                 str.replace(0, 3, "...");
+                str = str.substr(0, space.width());
                 break;
             case END_DOTS:
                 str = str.substr(0, space.width() - 3); //(-3 to make space for dots)
                 str.append("...");
+                str = str.substr(0, space.width());
                 break;
             case BEGIN_CUT:
                 str = str.substr(str.length() - space.width(), str.length());

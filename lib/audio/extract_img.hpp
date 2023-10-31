@@ -41,44 +41,36 @@ namespace audio
                                 // Save the image to a file using FreeImage
                     FIMEMORY* memory = FreeImage_OpenMemory((BYTE*) coverArtData.data(), coverArtData.size());
                     FIBITMAP* bitmap = FreeImage_LoadFromMemory(FIF_PNG, memory, 0);
-                    std::cout << mimeType << "\n";
                     if (bitmap) {
                         // Specify the output image file name and format (e.g., "output.jpg")
 
                         // Save the image to a file
                         FreeImage_Save(FIF_PNG, bitmap, out.c_str(), 0);
 
-                        std::cout << "Album cover saved to: " << out << std::endl;
 
                         FreeImage_Unload(bitmap);
                         return 0;
                     }
                     else{
-                        std::cout << "No bitmap\n";
                     }
                 }
             }
             return 1;
         }
 
-        inline std::string getImg(std::string filename, int x, int y){
-            std::ostringstream str;
+        inline ascii_img::load_image_t* getImg(std::string filename, int x, int y){
             auto r = ascii_img::load_image(filename, x, y);
-            for (size_t i = 0; i < r->size(); i++)
-            {
-                auto c = r->get(i);
-                str << color_bg((int) c.r, (int) c.g, (int) c.b) << ' ' << attr_reset;
+            if(r->size() != x*y){
+                delete r;
+                return nullptr;
             }
-            
-
-            delete r;
-            return str.str();
+            return r;
         } 
 
-        inline std::string get(std::string mp3,int x, int y){
+        inline ascii_img::load_image_t* get(std::string mp3,int x, int y){
             auto ret = extractAlbumCoverTo(mp3, TMP_OUT);
             if(ret != 0){
-                return "";
+                return nullptr;
             }
             return getImg(TMP_OUT, x,y);
         }
