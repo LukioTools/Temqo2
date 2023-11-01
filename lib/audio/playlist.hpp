@@ -96,6 +96,23 @@ namespace audio
             return files[current_index];
         }
 
+        std::string find(const std::string& thing,size_t* index = nullptr){
+            if(index){
+                *index = std::string::npos;
+            }
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                if(files[i].find(thing)!= std::string::npos){
+                    if(index){
+                        *index = i;
+                    }
+                    return files[i];
+                }
+            }
+            return "";
+            
+        }
+
         void shuffle(){
             if(files.size() < 1){
                 return;

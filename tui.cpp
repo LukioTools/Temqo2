@@ -53,6 +53,7 @@ wm::Element* albumcover_element = nullptr;
 int playlist_offset = 0;
 bool playlist_filename_only = true;
 bool pls_dont_fill = true;
+
 int print_playlist(){
     if(playlist_element == nullptr){
         return -1;
@@ -64,7 +65,7 @@ int print_playlist(){
     auto s  =ws.start();
     auto e  =ws.end();
     
-    auto i = ( (long) p.current_index + playlist_offset );
+    auto i = playlist_offset;
     while(i < 0){
         i += p.files.size();
     }
@@ -87,7 +88,7 @@ int print_playlist(){
             use_attr(attr_reset);
         }
         if(pls_dont_fill && y-s.y >= p.files.size()-1){
-            break;;
+            break;
         }
         i++;
     }
@@ -115,7 +116,6 @@ int print_info(std::string info, unsigned int offset = 0){
         return -1;
 
     auto ws = input_element->aSpace();
-    auto s = ws.start();
     auto e = ws.end();
     mv(e.x-info.length()+offset, e.y);
     clear_row();

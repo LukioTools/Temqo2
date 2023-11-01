@@ -69,7 +69,7 @@ namespace wm
         void expand_bottom(int ammount){
             h-=ammount;
         }
-        Space(unsigned short _x, unsigned short _y, unsigned short _w, unsigned short _h): x(_x), y(_y), h(_h), w(_w) {}
+        Space(unsigned short _x, unsigned short _y, unsigned short _w, unsigned short _h): x(_x), y(_y), w(_w) , h(_h) {}
         inline void refresh(unsigned short _x, unsigned short _y, unsigned short _w, unsigned short _h){
             x = _x;
             y = _y;
