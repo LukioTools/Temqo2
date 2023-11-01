@@ -57,6 +57,8 @@ INPUT_MODE mode = IM_PLAYBACK;
 std::string input;
 
 
+int scroll_sensitivity = 3;
+
 std::ofstream log_t("/dev/pts/4");
 bool mainthread_waiting = false;
 bool second_thread_waiting = false;
@@ -452,10 +454,10 @@ void handle_mouse(wm::MOUSE_INPUT m)
     switch (m.btn)
     {
     case wm::MOUSE_BTN::M_SCRL_UP:
-        playlist_offset--;
+        playlist_offset-=scroll_sensitivity;
         break;
     case wm::MOUSE_BTN::M_SCRL_DOWN:
-        playlist_offset++;
+        playlist_offset+=scroll_sensitivity;
         break;
     case wm::MOUSE_BTN::M_LEFT:
         drag_p_s = m.pos;
@@ -493,14 +495,17 @@ std::string find_and_seek(bool play = false){
         auto str = input.substr(1);
         out = p.find_insensitive(str, &index);
     }
+    else if(std::regex_match(input, find_rgx)){
+        auto str = input.substr(input.find_first_of(' '));
+        out = p.frgx(std::regex(str), &index);
+    }
 
+    //seek
     if(out.length() == 0 || index == std::string::npos){
         return "";
     }
-
     cursor_position = index;
     playlist_offset = index;
-    
     return out;
 }
 
@@ -514,8 +519,10 @@ void handle_input(int c)
         return;
     }
     if(ch == '\b' || c == 127){
-        input.pop_back();
-        find_and_seek();
+        if(input.length() > 0){
+            input.pop_back();
+            find_and_seek();
+        }
         //halfway_process();
     }
     //[space, ~]
@@ -619,6 +626,13 @@ int main(int argc, char const *argv[])
             case 'h':
                 // print help
                 break;
+            case 'f':
+                playlist_filename_only = !playlist_filename_only;
+                break;
+            case 'a':
+                p.sort();
+                load_audio(p.current());
+                break;
             case 's':
                 p.shuffle();
                 load_audio(p.current());
@@ -644,9 +658,9 @@ int main(int argc, char const *argv[])
             case '/':
                 input= "/";
                 mode = INPUT_MODE::IM_INPUT;
-                print_ui();
+                break;
             case ':':
-                input= "";
+                input= ":";
                 mode = INPUT_MODE::IM_INPUT;
             default:
                 break;

@@ -37,6 +37,7 @@ namespace audio
         auto it = std::unique(vec->begin(), vec->end());
         vec->resize(std::distance(vec->begin(), it));
     }
+    
     //implement modes
     class Playlist
     {
@@ -47,6 +48,10 @@ namespace audio
         std::vector<std::string> files;
         std::vector<std::string> folders;
         std::string use_file;
+
+        void sort(){
+            std::sort(files.begin(), files.end());
+        }
 
         //-1 doesnt exist, 1 exists but is not supportted, 0 success
         int add(std::string path, bool recursive = true){
@@ -118,7 +123,7 @@ namespace audio
 
             if(index)
                 *index = std::string::npos;
-                
+
             if(index){
                 *index = std::string::npos;
             }
