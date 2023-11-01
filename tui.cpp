@@ -377,19 +377,9 @@ void secondly(void)
         second_thread_waiting = true;
         if (wm::resize_event)
         {
-            clear_scr();
-            refresh_elements();
-            print_playlist();
-            if (p.files.size() > 0)
-            {
-                print_playing(path::filename(p.current()));
-            }
+            force_refresh();
+            print_playing(p.current());
         }
-        if (!cover_valid)
-        {
-            draw_album_cover();
-        }
-        print_ui();
         std::cout.flush();
     }
     second_thread_waiting = false;
