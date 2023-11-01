@@ -377,8 +377,8 @@ void secondly(void)
         second_thread_waiting = true;
         if (wm::resize_event)
         {
+            wm::resize_event = false;
             force_refresh();
-            print_playing(p.current());
         }
         std::cout.flush();
     }
