@@ -162,6 +162,9 @@ int refresh_cover(){
     if(albumcover_element->not_valid()){
         return 1;
     }
+    if(p.files.size() == 0){
+        return 2;
+    }
     auto res = audio::extra::extractAlbumCoverTo(p.current(), TMP_OUT);
     current_cover_image_path =  (res == 0) ? TMP_OUT : "";
     return res;
@@ -318,12 +321,8 @@ void secondly(void){
             clear_scr();
             refresh_elements();
             print_playlist();
-            print_playing(path::filename(p.current()));
-            {
-                //if(curplay_element)
-                //    curplay_element->aSpace().box(nullptr, "─", nullptr, nullptr, nullptr, nullptr, "─", "─");
-                //if(input_element)
-                //    input_element->aSpace().box("─", nullptr, nullptr, nullptr, "─", "─", nullptr, nullptr);
+            if(p.files.size() > 0){
+                print_playing(path::filename(p.current()));
             }
         }
         if(!cover_valid)
@@ -504,7 +503,7 @@ int main(int argc, char const *argv[])
             audio::vol_shift(-.1f);
             break;
         case 'r':
-            //log_t<< "draw_album_cover(): " << draw_album_cover() << std::endl;
+            draw_album_cover();
             break;
         default:
             break;

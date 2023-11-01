@@ -69,6 +69,9 @@ namespace audio
         }
         //may throw idk man
         std::string next(){
+            if(files.size() < 1){
+                return "";
+            }
             current_index++;
             if(current_index >= files.size()){
                 current_index = 0;
@@ -76,10 +79,16 @@ namespace audio
             return files[current_index];
         }
         std::string current(){
+            if(files.size() < 1){
+                return "";
+            }
             return files[current_index];
         }
         //previous, loops if nececcary
         std::string prev(){
+            if(files.size() < 1){
+                return "";
+            }
             if(current_index == 0){
                 current_index = files.size(); //-1 needed but -- happens so we can simplify :3
             }
@@ -88,6 +97,9 @@ namespace audio
         }
 
         void shuffle(){
+            if(files.size() < 1){
+                return;
+            }
             auto rng = std::default_random_engine {};
             std::shuffle(files.begin(), files.end(), rng);
         }
