@@ -5,6 +5,7 @@
 #define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
 #define clear_scr() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;
+#define clear_row_str  "\e[2K"
 #define clear_curs_eol() std::cout << "\e[0K" << std::flush;
 #define clear_curs_sol() std::cout << "\e[1K" << std::flush;
 

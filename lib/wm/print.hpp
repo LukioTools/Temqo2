@@ -3,6 +3,8 @@
 #include "space.hpp"
 #include "window.hpp"
 #include <sstream>
+#include "clip.hpp"
+
 
 namespace wm
 {
@@ -14,13 +16,6 @@ namespace wm
         return os.str();
     }
 
-    enum SPLICE_TYPE
-    {
-        END_CUT,
-        END_DOTS,
-        BEGIN_CUT,
-        BEGIN_DOTS,
-    };
     typedef std::string (*wprintln_splicer)(wm::Space space, std::string str, SPLICE_TYPE st);
     inline int sprintln(wm::Space space, std::string str, SPLICE_TYPE st = SPLICE_TYPE::BEGIN_DOTS, wprintln_splicer csplicer = nullptr)
     {
@@ -45,37 +40,16 @@ namespace wm
             }
         }
 
-        
-
         // trunctuate if it was larger than suposed to be
         if (str.length() > space.width())
         {
-            switch (st)
-            {
-            case BEGIN_DOTS:
-                str = str.substr(str.length() - space.width(), str.length());
-                str.replace(0, 3, "...");
-                str = str.substr(0, space.width());
-                break;
-            case END_DOTS:
-                str = str.substr(0, space.width() - 3); //(-3 to make space for dots)
-                str.append("...");
-                str = str.substr(0, space.width());
-                break;
-            case BEGIN_CUT:
-                str = str.substr(str.length() - space.width(), str.length());
-                break;
-            case END_CUT:
-            default:
-                if (csplicer)
-                {
-                    str = csplicer(space, str, st);
+            if(st == SPLICE_TYPE::CUSTOM){
+                if(csplicer){
+                    csplicer(space, str, st);
                 }
-                if (str.length() > space.width())
-                { // just in case cap that bitch
-                    str = str.substr(0, space.width());
-                }
-                break;
+            }
+            else{
+                clip(str, space.width(), st);
             }
         }
         else

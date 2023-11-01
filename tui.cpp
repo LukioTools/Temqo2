@@ -12,96 +12,131 @@
 #include <codecvt>
 #include <cstdlib>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <valarray>
 #include <fstream>
 
-
-
-
 std::string current_cover_image_path;
 bool cover_valid = false;
 
-inline void set_cover_refresh(){
+inline void set_cover_refresh()
+{
     cover_valid = false;
 }
 
-inline void invalidate_cover(){
+inline void invalidate_cover()
+{
     current_cover_image_path = "";
     set_cover_refresh();
 }
 
-//std::ofstream log_t("/dev/pts/4");
+
+
+enum INPUT_MODE
+{
+    IM_PLAYBACK,
+    IM_INPUT,
+};
+
+namespace wm
+{
+    std::string to_str(INPUT_MODE md){
+        switch (md) {
+            CASE_STR(INPUT_MODE::IM_PLAYBACK)
+            CASE_STR(INPUT_MODE::IM_INPUT)
+            default:
+                return "INPUT_MODE::UNKNOWN";
+        }
+    }
+} // namespace wm
+
+
+INPUT_MODE mode = IM_PLAYBACK;
+std::string input;
+
+
+std::ofstream log_t("/dev/pts/4");
 bool mainthread_waiting = false;
 bool second_thread_waiting = false;
 
 audio::Playlist p;
 
-wm::Element* curplay_element = nullptr;
-wm::Element* input_element = nullptr;
+wm::Element *curplay_element = nullptr;
+wm::Element *input_element = nullptr;
 
 bool playlist_leftmost = true;
 bool playlist_rightmost = false;
-wm::Element* playlist_element = nullptr;
+wm::Element *playlist_element = nullptr;
 
 bool albumcover_leftmost = false;
 bool albumcover_rightmost = true;
-wm::Element* albumcover_element = nullptr;
-
+wm::Element *albumcover_element = nullptr;
 
 int playlist_offset = 0;
+int cursor_position = 0;
 bool playlist_filename_only = true;
 bool pls_dont_fill = true;
 
-int print_playlist(){
-    if(playlist_element == nullptr){
+bool enable_cover = true;
+
+int print_playlist()
+{
+    if (playlist_element == nullptr)
+    {
         return -1;
     }
-    if(playlist_element->not_valid()){
+    if (playlist_element->not_valid())
+    {
         return 0;
     }
     auto ws = playlist_element->wSpace();
-    auto s  =ws.start();
-    auto e  =ws.end();
-    
+    auto s = ws.start();
+    auto e = ws.end();
+
     auto i = playlist_offset;
-    while(i < 0){
+    while (i < 0)
+    {
         i += p.files.size();
     }
-    if(i >= p.files.size()){
-        i = i%p.files.size();
+    if (i >= p.files.size())
+    {
+        i = i % p.files.size();
     }
-    
 
     for (size_t y = s.y; y <= e.y; y++)
     {
-        if(i >= p.files.size() || i < 0){
+        if (i >= p.files.size() || i < 0)
+        {
             i = 0;
         }
         mv(s.x, y);
-        if(i == p.current_index){
-            use_attr(color_bg(200,200,200) << color_fg(20,30,20) << bold);
+        if (i == p.current_index){
+            use_attr(color_bg(200, 200, 200) << color_fg(20, 30, 20) << bold);
         }
-        wm::sprintln(ws,  std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);
-        if(i == p.current_index){
+        else if(i== cursor_position){
+            use_attr(color_bg(60, 60, 60) << color_fg(222, 222, 222) << italic);
+        }
+        wm::sprintln(ws, std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);
+        if (i == p.current_index || i == cursor_position){
             use_attr(attr_reset);
         }
-        if(pls_dont_fill && y-s.y >= p.files.size()-1){
+        if (pls_dont_fill && y - s.y >= p.files.size() - 1)
+        {
             break;
         }
         i++;
     }
-    
-    
+
     return 0;
 }
 
-
-int print_playing(std::string song){
-    if(!curplay_element)
+int print_playing(std::string song)
+{
+    if (!curplay_element)
         return -1;
-    auto ws = curplay_element->aSpace(); //yeea im using absoluteSpace..... writeableSpace broki tehe :3 (mfw) https://media.tenor.com/qUprvC3gwB0AAAAd/taiho-shichau-zo-teehee.gif
+    auto ws = curplay_element->aSpace(); // yeea im using absoluteSpace..... writeableSpace broki tehe :3 (mfw) https://media.tenor.com/qUprvC3gwB0AAAAd/taiho-shichau-zo-teehee.gif
     mv(ws.x, ws.y);
     clear_row();
     boost::trim(song);
@@ -111,221 +146,244 @@ int print_playing(std::string song){
     return 0;
 }
 
-int print_info(std::string info, unsigned int offset = 0){
-    if(!input_element)
+int print_info(std::string info, unsigned int offset = 0)
+{
+    if (!input_element)
         return -1;
 
     auto ws = input_element->aSpace();
     auto e = ws.end();
-    mv(e.x-info.length()+offset, e.y);
-    clear_row();
-    std::cout << info;
+    auto str = (mode == INPUT_MODE::IM_INPUT) ? input : wm::to_str(mode);
+    wm::clip(str, (ws.width() - info.length() + offset), wm::SPLICE_TYPE::BEGIN_DOTS);
+    
+    std::cout << mv_str(ws.x,e.y) << clear_row_str <<  str << mv_str(e.x - info.length() + offset, e.y) << info;
     return 0;
 }
 
-
 ascii_img::RGB<> warning_color = {150, 60, 60};
 
-void print_ui(){
+void print_ui()
+{
     std::ostringstream ss;
-    auto vol = (int)(audio::volume.load()*100);
-    ss 
+    auto vol = (int)(audio::volume.load() * 100);
+    ss
         << (audio::playing ? "⏵" : "⏸")
         << ' '
         << ((vol > 100) ? color_fg_str(warning_color.r, warning_color.g, warning_color.b) : "")
-        <<std::to_string(vol)
+        << std::to_string(vol)
         << '%'
         << ((vol > 100) ? attr_reset : "");
-        //add_a_leading_zero_if_is_shorter_than_2_numbers_int
+    // add_a_leading_zero_if_is_shorter_than_2_numbers_int
 #define alzisst2ni(number) ((number < 10) ? "0" : "") << number
-    if(audio::curr){
-        auto seconds = audio::framesRead/audio::curr->outputSampleRate;
-        auto minutes = seconds/60;
+    if (audio::curr)
+    {
+        auto seconds = audio::framesRead / audio::curr->outputSampleRate;
+        auto minutes = seconds / 60;
 
         auto aaa = audio::seconds_in_current();
-        auto aaa_minutes = aaa/60;
+        auto aaa_minutes = aaa / 60;
 
-        ss << ' ' << alzisst2ni(minutes) << ':' << alzisst2ni(seconds - 60*minutes) << '/' << alzisst2ni(aaa_minutes) << ':' << alzisst2ni(aaa- 60*aaa_minutes);
+        ss << ' ' << alzisst2ni(minutes) << ':' << alzisst2ni(seconds - 60 * minutes) << '/' << alzisst2ni(aaa_minutes) << ':' << alzisst2ni(aaa - 60 * aaa_minutes);
     }
-    ss << ' ' << "⚙"<< ' ';
+    ss << ' ' << "⚙" << ' ';
 
-    print_info(ss.str(), 3+2+(std::string(((vol > 100) ? color_fg_str(warning_color.r, warning_color.g, warning_color.b) : ""))+std::string(((vol > 100) ? attr_reset : ""))).length());
-    
+    print_info(ss.str(), 3 + 2 + (std::string(((vol > 100) ? color_fg_str(warning_color.r, warning_color.g, warning_color.b) : "")) + std::string(((vol > 100) ? attr_reset : ""))).length());
 }
 #undef alzisst2ni
 
-
-int refresh_cover(){
-    if(!albumcover_element){
+int refresh_cover()
+{
+    if (!enable_cover)
+    {
+        return 0;
+    }
+    if (!albumcover_element)
+    {
         return -1;
     }
-    if(albumcover_element->not_valid()){
+    if (albumcover_element->not_valid())
+    {
         return 1;
     }
-    if(p.files.size() == 0){
+    if (p.files.size() == 0)
+    {
         return 2;
     }
     auto res = audio::extra::extractAlbumCoverTo(p.current(), TMP_OUT);
-    current_cover_image_path =  (res == 0) ? TMP_OUT : "";
+    current_cover_image_path = (res == 0) ? TMP_OUT : "";
     return res;
 }
 
-
-int draw_album_cover(){
+int draw_album_cover()
+{
     cover_valid = true;
-    if(!albumcover_element){
-        return -1;
-    }
-    if(albumcover_element->not_valid()){
+    if (!enable_cover)
+    {
         return 0;
     }
-    if(current_cover_image_path == ""){
-        //log_t << "refreshing cover" << std::endl;
-        if(refresh_cover()){
+    if (!albumcover_element)
+    {
+        return -1;
+    }
+    if (albumcover_element->not_valid())
+    {
+        return 0;
+    }
+    if (current_cover_image_path == "")
+    {
+        if (refresh_cover())
+        {
             return 1;
         }
-        if(current_cover_image_path == ""){
-            //log_t << "refresh failed cover with path:" << current_cover_image_path << std::endl;
+        if (current_cover_image_path == "")
+        {
             return -1;
         }
     }
     auto ws = albumcover_element->wSpace();
-    auto cover_ansi = audio::extra::getImg(current_cover_image_path, ws.width(), ws.height()+1);
+    auto cover_ansi = audio::extra::getImg(current_cover_image_path, ws.width(), ws.height() + 1);
 
-    //log_t << "drawing cover" << std::endl;
     std::ostringstream out;
-#define clamp_1(val) (val == 0)? 1 : val
+#define clamp_1(val) (val == 0) ? 1 : val
     for (size_t iy = 0; iy <= ws.height(); iy++)
     {
-        out << mv_str(ws.x, ws.y+iy);
+        out << mv_str(ws.x, ws.y + iy);
         for (size_t ix = 0; ix < ws.width(); ix++)
         {
-            auto rgb = cover_ansi->get(ix+ws.width()*iy);
+            auto rgb = cover_ansi->get(ix + ws.width() * iy);
 
-            out << color_bg_str(clamp_1(rgb.r),clamp_1(rgb.g),clamp_1(rgb.b)) << ' ' << attr_reset;
-            ////log_t << color_bg_str(rgb.r,rgb.g,rgb.b) << ' ' << attr_reset;
-        }       
-        
+            out << color_bg_str(clamp_1(rgb.r), clamp_1(rgb.g), clamp_1(rgb.b)) << ' ' << attr_reset;
+        }
     }
     delete cover_ansi;
     std::cout << out.str();
     return 0;
 }
 
-
 int playlist_width_offset = -3;
 
-void refresh_elements(){
-    *curplay_element->space = wm::Space(0,0,wm::WIDTH, 1);
-    *input_element->space = wm::Space(0, wm::HEIGHT-1, wm::WIDTH, 1);
+void refresh_elements()
+{
+    *curplay_element->space = wm::Space(0, 0, wm::WIDTH, 1);
+    *input_element->space = wm::Space(0, wm::HEIGHT - 1, wm::WIDTH, 1);
 
-
-    *playlist_element->space = wm::Space(0,1,(wm::WIDTH/2)+playlist_width_offset, wm::HEIGHT-2);
+    *playlist_element->space = wm::Space(0, 1, (wm::WIDTH / 2) + playlist_width_offset, wm::HEIGHT - 2);
     playlist_rightmost = playlist_element->space->end().x == wm::WIDTH;
     playlist_leftmost = playlist_element->space->x == 0;
-    playlist_element->pad = {1,1,static_cast<unsigned char>(playlist_leftmost ? 1 : 2),static_cast<unsigned char>(playlist_rightmost ? 1 : 2)};
+    playlist_element->pad = {1, 1, static_cast<unsigned char>(playlist_leftmost ? 1 : 2), static_cast<unsigned char>(playlist_rightmost ? 1 : 2)};
 
-
-    *albumcover_element->space = wm::Space(playlist_element->space->end().x+1, 1, (wm::WIDTH/2)-playlist_width_offset, wm::HEIGHT-2);
-    albumcover_rightmost =  albumcover_element->space->end().x == wm::WIDTH;
-    albumcover_leftmost =   albumcover_element->space->x == 0;
-    albumcover_element->pad = {1,1,static_cast<unsigned char>(1*!albumcover_leftmost),static_cast<unsigned char>(1*!albumcover_rightmost)};
+    *albumcover_element->space = wm::Space(playlist_element->space->end().x + 1, 1, (wm::WIDTH / 2) - playlist_width_offset, wm::HEIGHT - 2);
+    albumcover_rightmost = albumcover_element->space->end().x == wm::WIDTH;
+    albumcover_leftmost = albumcover_element->space->x == 0;
+    albumcover_element->pad = {1, 1, static_cast<unsigned char>(1 * !albumcover_leftmost), static_cast<unsigned char>(1 * !albumcover_rightmost)};
 }
 
-
-
-
-void light_refresh(){
-    if(print_playing(path::filename(p.current()))){
+void light_refresh()
+{
+    if (print_playing(path::filename(p.current())))
+    {
         exit(1);
     }
 
     {
-        //curplay_element->aSpace().box(nullptr, "─", nullptr, nullptr, nullptr, nullptr, "─", "─");
-        //input_element->aSpace().box("─", nullptr, nullptr, nullptr, "─", "─", nullptr, nullptr);
+        // curplay_element->aSpace().box(nullptr, "─", nullptr, nullptr, nullptr, nullptr, "─", "─");
+        // input_element->aSpace().box("─", nullptr, nullptr, nullptr, "─", "─", nullptr, nullptr);
     }
-    if(playlist_element) {
-        if(!playlist_element->not_valid()){
-            playlist_element->aSpace().box("─", "─", playlist_rightmost ? nullptr : "│" , playlist_leftmost ? nullptr : "│", playlist_leftmost ? "─" : "┬" , playlist_rightmost ? "─" : "┬", playlist_leftmost ? "─" : "┴" , playlist_rightmost ? "─" : "┴"  );
+    if (playlist_element)
+    {
+        if (!playlist_element->not_valid())
+        {
+            playlist_element->aSpace().box("─", "─", playlist_rightmost ? nullptr : "│", playlist_leftmost ? nullptr : "│", playlist_leftmost ? "─" : "┬", playlist_rightmost ? "─" : "┬", playlist_leftmost ? "─" : "┴", playlist_rightmost ? "─" : "┴");
         }
-        //playlist_element->aSpace().fill("#"); // ┬ // ┴
-        //playlist_element->wSpace().fill("#");
+        // playlist_element->aSpace().fill("#"); // ┬ // ┴
+        // playlist_element->wSpace().fill("#");
     }
-    if(albumcover_element){
-        albumcover_element->aSpace().box("─", "─", nullptr , playlist_leftmost ? nullptr : "│","─","─","─","─");
-        //albumcover_element->wSpace().fill("?");
+    if (albumcover_element)
+    {
+        albumcover_element->aSpace().box("─", "─", nullptr, playlist_leftmost ? nullptr : "│", "─", "─", "─", "─");
+        // albumcover_element->wSpace().fill("?");
         auto ws = albumcover_element->wSpace();
         mv(ws.x, ws.y);
     }
-    if(!cover_valid){
+    if (!cover_valid)
+    {
         draw_album_cover();
     }
     print_playlist();
     print_ui();
 }
 
-void force_refresh(){
+void force_refresh()
+{
     clear_scr();
     refresh_elements();
     light_refresh();
     draw_album_cover();
 }
 
-
-void init_elements(){
-    curplay_element = new wm::Element(new wm::Space(0,0,0,0), {0,0,0,0});
-    input_element = new wm::Element(new wm::Space(0,0,0,0), {0,0,0,0});
-    playlist_element = new wm::Element(new wm::Space(0,0,0,0), {1,1,static_cast<unsigned char>(2*!playlist_leftmost),static_cast<unsigned char>(2*!playlist_rightmost)});
-    albumcover_element = new wm::Element(new wm::Space(0,0,0,0), {1,1, static_cast<unsigned char>(1*!albumcover_leftmost),static_cast<unsigned char>(1*!albumcover_rightmost)});
+void init_elements()
+{
+    curplay_element = new wm::Element(new wm::Space(0, 0, 0, 0), {0, 0, 0, 0});
+    input_element = new wm::Element(new wm::Space(0, 0, 0, 0), {0, 0, 0, 0});
+    playlist_element = new wm::Element(new wm::Space(0, 0, 0, 0), {1, 1, static_cast<unsigned char>(2 * !playlist_leftmost), static_cast<unsigned char>(2 * !playlist_rightmost)});
+    albumcover_element = new wm::Element(new wm::Space(0, 0, 0, 0), {1, 1, static_cast<unsigned char>(1 * !albumcover_leftmost), static_cast<unsigned char>(1 * !albumcover_rightmost)});
     refresh_elements();
 }
 
-void deinit_elements(){
-    if(curplay_element){
+void deinit_elements()
+{
+    if (curplay_element)
+    {
         delete curplay_element->space;
         delete curplay_element;
         curplay_element = nullptr;
     }
-    
-    if(input_element){
+
+    if (input_element)
+    {
         delete input_element->space;
         delete input_element;
         input_element = nullptr;
     }
 
-    if(playlist_element){
+    if (playlist_element)
+    {
         delete playlist_element->space;
         delete playlist_element;
         playlist_element = nullptr;
     }
-    
 }
 
-void load_audio(std::string fn){
+void load_audio(std::string fn)
+{
     auto filename = path::filename(fn);
     audio::load_next(fn.c_str(), true);
     print_playing(filename);
     invalidate_cover();
 }
 
-void next_callback(){
+void next_callback()
+{
     auto next_song_path = p.next();
     load_audio(next_song_path);
 }
 
-
-void secondly(void){
-    if(mainthread_waiting){
+void secondly(void)
+{
+    if (mainthread_waiting)
+    {
         second_thread_waiting = true;
-        if(wm::resize_event){
+        if (wm::resize_event)
+        {
             clear_scr();
             refresh_elements();
             print_playlist();
-            if(p.files.size() > 0){
+            if (p.files.size() > 0)
+            {
                 print_playing(path::filename(p.current()));
             }
         }
-        if(!cover_valid)
+        if (!cover_valid)
         {
             draw_album_cover();
         }
@@ -333,58 +391,64 @@ void secondly(void){
         std::cout.flush();
     }
     second_thread_waiting = false;
-    
 }
 
-
-
-wm::Position drag_p_s = {0,0};
-wm::Position drag_p_e = {0,0};
+wm::Position drag_p_s = {0, 0};
+wm::Position drag_p_e = {0, 0};
 bool drag_b = false;
-void drag_m(wm::MOUSE_INPUT m){
-    if(!playlist_element){
+void drag_m(wm::MOUSE_INPUT m)
+{
+    if (!playlist_element)
+    {
         return;
     }
-    if(drag_p_s.x == playlist_element->aSpace().end().x){
+    if (drag_p_s.x == playlist_element->aSpace().end().x)
+    {
         playlist_width_offset -= drag_p_s.x - drag_p_e.x;
         force_refresh();
     }
-
 }
 
-int click(wm::MOUSE_INPUT minp){
-    //song switcher
-    if(minp.btn == wm::M_LEFT  && playlist_element->wSpace().inside(minp.pos)){
-        if(!playlist_element){
+int click(wm::MOUSE_INPUT minp)
+{
+    // song switcher
+    if (minp.btn == wm::M_LEFT && playlist_element->wSpace().inside(minp.pos))
+    {
+        if (!playlist_element)
+        {
             return 0;
         }
-        auto index = minp.pos.y-playlist_element->wSpace().y;
-        auto i = ( (long) p.current_index + playlist_offset );
-        while(i < 0){
+        auto index = minp.pos.y - playlist_element->wSpace().y;
+        auto i = playlist_offset;
+        while (i < 0)
+        {
             i += p.files.size();
         }
-        if(i >= p.files.size()){
-            i = i%p.files.size();
+        if (i >= p.files.size())
+        {
+            i = i % p.files.size();
         }
-        auto e = i+index;
-        while(e < 0){
+        auto e = i + index;
+        while (e < 0)
+        {
             e += p.files.size();
         }
-        if(e >= p.files.size()){
-            e=e%p.files.size();
+        if (e >= p.files.size())
+        {
+            e = e % p.files.size();
         }
-        if(e != p.current_index){
+        if (e != p.current_index)
+        {
             p.current_index = e;
-            playlist_offset = 0; // put cursor to the top
+            /// playlist_offset = 0; // put cursor to the top
             load_audio(p.current());
         }
     }
     return 0;
 }
 
-void handle_mouse(wm::MOUSE_INPUT m){
-    mv(0, wm::HEIGHT-1);
-    std::cout << wm::to_str(m.btn);
+void handle_mouse(wm::MOUSE_INPUT m)
+{
     switch (m.btn)
     {
     case wm::MOUSE_BTN::M_SCRL_UP:
@@ -401,7 +465,8 @@ void handle_mouse(wm::MOUSE_INPUT m){
         drag_b = true;
         break;
     case wm::MOUSE_BTN::M_RELEASE:
-        if(drag_b){
+        if (drag_b)
+        {
             drag_p_e = m.pos;
             drag_m(m);
         }
@@ -410,20 +475,79 @@ void handle_mouse(wm::MOUSE_INPUT m){
         break;
     }
 
-    if(m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT){
+    if (m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT)
+    {
         drag_b = true;
     }
 }
 
 
+std::regex find_i("^/.*$");
+std::regex find("^fi?n?d? .*$");
+std::regex find_rgx("^re?ge?x .*$");
+
+std::string find_and_seek(bool play = false){
+    size_t index = std::string::npos;
+    std::string out;
+    if(std::regex_match(input, find_i)){
+        auto str = input.substr(1);
+        out = p.find_insensitive(str, &index);
+    }
+
+    if(out.length() == 0 || index == std::string::npos){
+        return "";
+    }
+
+    cursor_position = index;
+    playlist_offset = index;
+    
+    return out;
+}
+
+void handle_input(int c)
+{
+    char ch = static_cast<char>(c);
+    if (c == 0x1b1b)
+    {
+        input = "";
+        mode = INPUT_MODE::IM_PLAYBACK;
+        return;
+    }
+    if(ch == '\b' || c == 127){
+        input.pop_back();
+        find_and_seek();
+        //halfway_process();
+    }
+    //[space, ~]
+    else if (c > 0x1F && c < 0x7F)
+    {
+        input += static_cast<char>(c);
+        find_and_seek();
+    }
+    else if (ch == '\n')
+    { // process input
+        //process_input();
+        {
+            auto str = p[cursor_position];
+            if(str.length() != 0 ){
+                p.current_index = cursor_position;
+                load_audio(str);
+            }
+        }
+        
+        input = "";
+        mode = INPUT_MODE::IM_PLAYBACK;
+    }
+    
+}
 
 
 int main(int argc, char const *argv[])
 {
     {
-        const char* filename = argc > 2 ? argv[2]:"playlist.pls";
+        const char *filename = argc > 2 ? argv[2] : "playlist.pls";
         clear_all();
-        //std::cout << "loading file: " << filename << "\n";
+        // std::cout << "loading file: " << filename << "\n";
         auto seek_seconds = p.use(filename);
         audio::init(p.current().c_str());
         audio::songEndedCallback = next_callback;
@@ -436,93 +560,118 @@ int main(int argc, char const *argv[])
         init_elements();
         print_playing(p.current());
     }
+    
+    playlist_offset = p.current_index;
     use_attr(cursor_invisible);
-    while(true){
+    while (true)
+    {
         mainthread_waiting = true;
         auto c = wm::getch();
         mainthread_waiting = false;
-        if(c == RESIZE_EVENT){
+        log_t << "c:" << c << std::endl;
+        if (c == RESIZE_EVENT)
+        {
             force_refresh();
         }
-        if(is_mouse(c)){
+        if (is_mouse(c))
+        {
             auto m = wm::parse_mouse(c);
             handle_mouse(m);
         }
 
-
-
-        if(auto key = wm::is_key(c)){
-            switch (key) {
-                case wm::KEY::K_RIGHT:
-                    audio::seek(std::chrono::seconds(5));
-                    break;
-                case wm::KEY::K_LEFT:
-                    audio::seek(std::chrono::seconds(-5));
-                    break;
-                case wm::KEY::K_UP:
-                    playlist_offset--;
-                    break;
-                case wm::KEY::K_DOWN:
-                    playlist_offset++;
-                    break;
-                default:
-                    break;
+        if (auto key = wm::is_key(c))
+        {
+            switch (key)
+            {
+            case wm::KEY::K_RIGHT:
+                audio::seek(std::chrono::seconds(5));
+                break;
+            case wm::KEY::K_LEFT:
+                audio::seek(std::chrono::seconds(-5));
+                break;
+            case wm::KEY::K_UP:
+                playlist_offset--;
+                break;
+            case wm::KEY::K_DOWN:
+                playlist_offset++;
+                break;
+            default:
+                break;
             }
         }
 
-
-        //if(curplay_element) curplay_element->aSpace().fill("#");//.box("#", "─", "R", "L", "0", "1", "─", "─");
-        switch (c)
+        switch (mode)
         {
-        case 'q':
-            goto exit;
+        case INPUT_MODE::IM_INPUT:
+            handle_input(c);
             break;
-        case 'i':
-            //print info
-            break;
-        case 'h':
-            //print help
-            break;
-        case 's':
-            p.shuffle();
-            load_audio(p.current());
-            break;
-        case 'n':
-            next_callback();
-            break;
-        case 'b':
-            load_audio(p.prev());
-            break;
-        case 'c':
-            audio::playing ? audio::stop() : audio::play();
-            break;
-        case '+':
-            audio::vol_shift(.1f);
-            break;
-        case '-':
-            audio::vol_shift(-.1f);
-            break;
-        case 'r':
-            draw_album_cover();
-            break;
-        default:
-            break;
+        case INPUT_MODE::IM_PLAYBACK:
+        {
+            switch (c)
+            {
+            case 'q':
+                goto exit;
+                break;
+            case 'i':
+                input = "";
+                mode = INPUT_MODE::IM_INPUT;
+                break;
+            case 'h':
+                // print help
+                break;
+            case 's':
+                p.shuffle();
+                load_audio(p.current());
+                break;
+            case 'n':
+                next_callback();
+                break;
+            case 'b':
+                load_audio(p.prev());
+                break;
+            case 'c':
+                audio::playing ? audio::stop() : audio::play();
+                break;
+            case '+':
+                audio::vol_shift(.1f);
+                break;
+            case '-':
+                audio::vol_shift(-.1f);
+                break;
+            case 'r':
+                draw_album_cover();
+                break;
+            case '/':
+                input= "/";
+                mode = INPUT_MODE::IM_INPUT;
+                print_ui();
+            case ':':
+                input= "";
+                mode = INPUT_MODE::IM_INPUT;
+            default:
+                break;
+            }
         }
+        }
+
+        // if(curplay_element) curplay_element->aSpace().fill("#");//.box("#", "─", "R", "L", "0", "1", "─", "─");
+
         light_refresh();
     }
-    exit:
-    try{
+exit:
+    try
+    {
         p.save();
     }
-    catch(...){
-        //idk man
+    catch (...)
+    {
+        // idk man
         std::cout << "Save config not found\n";
     }
     use_attr(cursor_visible);
     audio::deinit();
     deinit_elements();
     wm::deinit();
-
 
     return 0;
 }

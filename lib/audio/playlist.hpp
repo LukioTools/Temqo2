@@ -102,7 +102,7 @@ namespace audio
             }
             for (size_t i = 0; i < files.size(); i++)
             {
-                if(files[i].find(thing)!= std::string::npos){
+                if(files[i].find(thing) != std::string::npos){
                     if(index){
                         *index = i;
                     }
@@ -110,7 +110,57 @@ namespace audio
                 }
             }
             return "";
+        }
+        std::string find_insensitive(const std::string& thing, size_t* index = nullptr, bool split = true){
+            std::vector<std::string> find_shits;
+            split ?  (void) boost::split(find_shits, thing, boost::is_any_of(" ")) : find_shits.push_back(thing);
             
+
+            if(index)
+                *index = std::string::npos;
+                
+            if(index){
+                *index = std::string::npos;
+            }
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                for (auto check_shit: find_shits)
+                {
+                    auto it = std::search(
+                        files[i].begin(), files[i].end(),
+                        thing.begin(),   thing.end(),
+                        [](unsigned char ch1, unsigned char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+                    );
+                    if(it == files[i].end()){
+                        goto loop_again;
+                    };
+                }
+                *index = i;
+                return files[i];
+                
+                    //lööp again
+                loop_again:
+                continue;
+            }
+            
+            
+            return "";
+        }
+        //find regex
+        std::string frgx(const std::regex& rgx, size_t* index = nullptr){
+            if(index){
+                *index = std::string::npos;
+            }
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                if(std::regex_match(files[i], rgx)){
+                    if(index){
+                        *index = i;
+                    }
+                    return files[i];
+                }
+            }
+            return "";
         }
 
         void shuffle(){
@@ -130,13 +180,6 @@ namespace audio
 
 
         void unique(){
-            //std::sort(files.begin(), files.end());
-            //std::sort(folders.begin(), folders.end());
-            //auto it_files = std::unique(files.begin(), files.end());
-            //auto it_folders = std::unique(folders.begin(), folders.end());
-//
-            //files.resize(std::distance(files.begin(), it_files));
-            //folders.resize(std::distance(folders.begin(), it_folders));
 
             std::thread thr1(__unique, &files);
             std::thread thr2(__unique, &folders);
@@ -239,6 +282,9 @@ namespace audio
         }
         
         std::string operator[](size_t index){
+            if( index >= files.size() || index < 0){
+                return "";
+            }
             return files[index];
         }
 
