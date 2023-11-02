@@ -13,9 +13,12 @@ namespace wm
 
         use_attr(alt_buffer << enable_mouse(USE_MOUSE));
         signal(SIGWINCH, wm::resize);
-        tcgetattr(STDIN_FILENO, &oldt);
         clear_all();
         wm::resize(SIGWINCH);
+
+
+
+        tcgetattr(STDIN_FILENO, &oldt);
         newt = oldt;
         newt.c_lflag &= ~(ICANON | ECHO);
         tcsetattr(STDIN_FILENO, TCSANOW, &newt);

@@ -3,7 +3,7 @@
 #include <string>
 namespace wm
 {
-    enum SPLICE_TYPE
+    enum SPLICE_TYPE: unsigned char
     {
         CUSTOM,
         END_CUT,
@@ -38,11 +38,9 @@ namespace wm
             str.replace(0, 3, "...");
             str = str.substr(0, width);
         }
-
-
     } // namespace clip_functions
     
-    inline void clip( std::string& str_ref, unsigned char width, SPLICE_TYPE st){
+    inline void clip( std::string& str_ref, unsigned int width, SPLICE_TYPE st){
         if(str_ref.length() <= width){
             return;
         }
@@ -61,6 +59,48 @@ namespace wm
         default:
             clip_functions::end_cut(str_ref, width);
             break;
+        }
+    }
+
+    enum PAD_TYPE : unsigned char
+    {
+        PAD_CUSTOM,
+        PAD_RIGHT,
+        PAD_LEFT,
+        PAD_CENTER,
+    };
+
+
+    namespace pad_functions
+    {
+        inline void right(std::string& str, unsigned int width){
+            str.append(width-str.length(), ' ');
+        }
+        inline void left(std::string& str, unsigned int width){
+            str.insert(str.begin(),width-str.length(), ' ');
+        }
+        inline void center(std::string& str, unsigned int width){
+            auto to_pad = width-str.length();
+            auto pleft = to_pad/2;
+            auto pright = to_pad-pleft;
+            str.insert(str.begin(),pleft, ' ');
+            str.append(pright, ' ');
+        }
+
+
+    } // namespace pad_functions
+    
+
+    
+    inline void pad(std::string& str, unsigned int width, PAD_TYPE pt){
+        if(str.length() >= width){
+        }
+        switch (pt) {
+            case PAD_RIGHT: return pad_functions::right(str, width);
+            case PAD_LEFT: return pad_functions::left(str, width);
+            case PAD_CENTER: return pad_functions::center(str, width);
+            default:
+                return;
         }
     }
 

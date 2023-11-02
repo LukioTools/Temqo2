@@ -2,6 +2,7 @@
 #include "lib/audio/audio.hpp"
 #include "lib/audio/extract_img.hpp"
 #include "lib/path/filename.hpp"
+#include "lib/wm/clip.hpp"
 #include "lib/wm/core.hpp"
 #include "lib/wm/def.hpp"
 #include "lib/wm/element.hpp"
@@ -48,10 +49,10 @@ namespace wm
 {
     std::string to_str(INPUT_MODE md){
         switch (md) {
-            CASE_STR(INPUT_MODE::IM_PLAYBACK)
-            CASE_STR(INPUT_MODE::IM_INPUT)
+            case IM_INPUT: return "INPUT";
+            case IM_PLAYBACK: return "PLAYBACK";
             default:
-                return "INPUT_MODE::UNKNOWN";
+                return "UNKNOWN";
         }
     }
 } // namespace wm
@@ -89,6 +90,8 @@ bool enable_cover = true;
 
 int print_playlist()
 {
+    log_t << "print_playlist" << std::endl;
+
     if (playlist_element == nullptr)
     {
         return -1;
@@ -138,17 +141,29 @@ int print_playlist()
     return 0;
 }
 
+
+wm::SPLICE_TYPE playing_clip = wm::BEGIN_DOTS;
+wm::PAD_TYPE playing_pad = wm::PAD_CENTER;
+bool playing_filename_only = true;
+
 int print_playing(std::string song)
 {
+    log_t << "print_playing" << std::endl;
+
     if (!curplay_element)
         return -1;
     auto ws = curplay_element->aSpace(); // yeea im using absoluteSpace..... writeableSpace broki tehe :3 (mfw) https://media.tenor.com/qUprvC3gwB0AAAAd/taiho-shichau-zo-teehee.gif
-    mv(ws.x, ws.y);
     clear_row();
+    if( playing_filename_only){
+        song = path::filename(song);
+    }
     boost::trim(song);
-    wm::sprintln(ws, song, wm::SPLICE_TYPE::END_DOTS);
+    wm::clip(song, ws.width(), playing_clip);
+    wm::pad(song, ws.width(), playing_pad);
+
+
+    std::cout << mv_str(ws.x, ws.y) << song;
     set_title(song.c_str());
-    print_playlist();
     return 0;
 }
 
@@ -159,7 +174,7 @@ int print_info(std::string info, unsigned int offset = 0)
 
     auto ws = input_element->aSpace();
     auto e = ws.end();
-    auto str = (mode == INPUT_MODE::IM_INPUT) ? input : wm::to_str(mode);
+    auto str = (mode == INPUT_MODE::IM_INPUT) ? input : '['+wm::to_str(mode)+']';
     wm::clip(str, (ws.width() - info.length() + offset), wm::SPLICE_TYPE::BEGIN_DOTS);
     
     std::cout << mv_str(ws.x,e.y) << clear_row_str <<  str << mv_str(e.x - info.length() + offset, e.y) << info;
@@ -170,6 +185,7 @@ ascii_img::RGB<> warning_color = {150, 60, 60};
 
 void print_ui()
 {
+    log_t << "print_ui" << std::endl;
     std::ostringstream ss;
     auto vol = (int)(audio::volume.load() * 100);
     ss
@@ -286,10 +302,6 @@ void refresh_elements()
 
 void light_refresh()
 {
-    if (print_playing(path::filename(p.current())))
-    {
-        exit(1);
-    }
 
     {
         // curplay_element->aSpace().box(nullptr, "─", nullptr, nullptr, nullptr, nullptr, "─", "─");
@@ -301,13 +313,10 @@ void light_refresh()
         {
             playlist_element->aSpace().box("─", "─", playlist_rightmost ? nullptr : "│", playlist_leftmost ? nullptr : "│", playlist_leftmost ? "─" : "┬", playlist_rightmost ? "─" : "┬", playlist_leftmost ? "─" : "┴", playlist_rightmost ? "─" : "┴");
         }
-        // playlist_element->aSpace().fill("#"); // ┬ // ┴
-        // playlist_element->wSpace().fill("#");
     }
     if (albumcover_element)
     {
         albumcover_element->aSpace().box("─", "─", nullptr, playlist_leftmost ? nullptr : "│", "─", "─", "─", "─");
-        // albumcover_element->wSpace().fill("?");
         auto ws = albumcover_element->wSpace();
         mv(ws.x, ws.y);
     }
@@ -323,6 +332,7 @@ void force_refresh()
 {
     clear_scr();
     refresh_elements();
+    print_playing(p.current());
     light_refresh();
     draw_album_cover();
 }
@@ -365,6 +375,7 @@ void load_audio(std::string fn)
     auto filename = path::filename(fn);
     audio::load_next(fn.c_str(), true);
     print_playing(filename);
+    print_playlist();
     invalidate_cover();
 }
 
@@ -384,6 +395,7 @@ void secondly(void)
             wm::resize_event = false;
             force_refresh();
         }
+        print_ui();
         std::cout.flush();
     }
     second_thread_waiting = false;
@@ -577,17 +589,17 @@ int main(int argc, char const *argv[])
 
         wm::init();
         init_elements();
-        print_playing(p.current());
     }
     
     playlist_offset = p.current_index;
     use_attr(cursor_invisible);
+    force_refresh();
     while (true)
     {
         mainthread_waiting = true;
         auto c = wm::getch();
         mainthread_waiting = false;
-        log_t << "c:" << c << std::endl;
+        //log_t << "c:" << c << std::endl;
         if (c == RESIZE_EVENT)
         {
             force_refresh();
@@ -674,6 +686,7 @@ int main(int argc, char const *argv[])
             case ':':
                 input= ":";
                 mode = INPUT_MODE::IM_INPUT;
+                break;
             default:
                 break;
             }
