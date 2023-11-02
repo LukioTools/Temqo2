@@ -1,7 +1,7 @@
 
-[CurrentIndex] = 291
+[CurrentIndex] = 405
 
-[CurrentTime] = 54
+[CurrentTime] = 41
 
 [Folder]
 /home/pikku/Music/

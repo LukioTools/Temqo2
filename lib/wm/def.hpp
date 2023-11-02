@@ -1,14 +1,14 @@
 
 #pragma once
-#define mv(x,y) std::cout << "\e["<< y+1 << ";"<< x+1 <<"H" << std::flush;
+#define mv(x,y) std::cout << "\e["<< y+1 << ";"<< x+1 <<"H" ;
 #define mv_str(x,y) "\e[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H" 
-#define clear_all_no_mouse() std::cout << "\ec" << std::flush;
-#define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
-#define clear_scr() std::cout << "\e[2J" << std::flush;
-#define clear_row() std::cout << "\e[2K" << std::flush;
+#define clear_all_no_mouse() std::cout << "\ec" ;
+#define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) ;
+#define clear_scr() std::cout << "\e[2J" ;
+#define clear_row() std::cout << "\e[2K" ;
 #define clear_row_str  "\e[2K"
-#define clear_curs_eol() std::cout << "\e[0K" << std::flush;
-#define clear_curs_sol() std::cout << "\e[1K" << std::flush;
+#define clear_curs_eol() std::cout << "\e[0K" ;
+#define clear_curs_sol() std::cout << "\e[1K" ;
 
 #define alert '\a'
 
@@ -27,15 +27,17 @@
 #define cursor_load_sco "\e[u"
 
 //use charachter width
-#define color_fg(r,g,b) "\e[38;2;"<< r << ';'<< g << ';' << b << 'm'
-#define color_bg(r,g,b) "\e[48;2;"<< r << ';'<< g << ';' << b << 'm'
+#define color_fg(r,g,b) "\e[38;2;"<< (int) r << ';'<< (int) g << ';' << (int) b << 'm'
+#define color_bg(r,g,b) "\e[48;2;"<< (int) r << ';'<< (int) g << ';' << (int) b << 'm'
 
-#define color_fg_rgb(rgb) "\e[38;2;"<< rgb.r << ';'<< rgb.g << ';' << rgb.b << 'm'
-#define color_bg_rgb(rgb) "\e[48;2;"<< rgb.r << ';'<< rgb.g << ';' << rgb.b << 'm'
+#define color_fg_rgb(rgb) "\e[38;2;"<< (int) rgb.r << ';'<< (int) rgb.g << ';' << (int) rgb.b << 'm'
+#define color_bg_rgb(rgb) "\e[48;2;"<< (int) rgb.r << ';'<< (int) rgb.g << ';' << (int) rgb.b << 'm'
 
-#define color_fg_str(r,g,b) ("\e[38;2;" + std::to_string(r) + ';' + std::to_string(g) + ';' + std::to_string(b) + 'm')
-#define color_bg_str(r,g,b) ("\e[48;2;" + std::to_string(r) + ';' + std::to_string(g) + ';' + std::to_string(b) + 'm')
+#define color_fg_str(r,g,b) ("\e[38;2;" + std::to_string((int) r) + ';' + std::to_string((int) g) + ';' + std::to_string((int) b) + 'm')
+#define color_bg_str(r,g,b) ("\e[48;2;" + std::to_string((int) r) + ';' + std::to_string((int) g) + ';' + std::to_string((int) b) + 'm')
 
+#define color_fg_rgb_str(rgb) ("\e[38;2;" + std::to_string((int) rgb.r) + ';' + std::to_string((int) rgb.g) + ';' + std::to_string( (int) rgb.b) + 'm')
+#define color_bg_rgb_str(rgb) ("\e[48;2;" + std::to_string((int) rgb.r) + ';' + std::to_string((int) rgb.g) + ';' + std::to_string( (int) rgb.b) + 'm')
 
 #define attr_reset "\e[0m"
 #define bold "\e[1m"
