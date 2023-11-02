@@ -84,7 +84,8 @@
         "coroutine": "cpp",
         "ranges": "cpp",
         "shared_mutex": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "hash_set": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
