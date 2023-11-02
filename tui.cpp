@@ -19,8 +19,14 @@
 #include <string>
 #include <valarray>
 #include <fstream>
+#include "lib/cfg/config.hpp"
 
-
+//COLORS
+ascii_img::RGB<> warning_color = {150, 60, 60};
+ascii_img::RGB<> hilight_color_bg = {200,200,200};
+ascii_img::RGB<> hilight_color_fg = {20, 30, 20};
+ascii_img::RGB<> hover_color_bg = {60,60,60};
+ascii_img::RGB<> hover_color_fg = {222,222,222};
 
 
 std::string current_cover_image_path;
@@ -122,10 +128,10 @@ int print_playlist()
         }
         mv(s.x, y);
         if (i == p.current_index){
-            use_attr(color_bg(200, 200, 200) << color_fg(20, 30, 20) << bold);
+            use_attr(color_bg_rgb(hilight_color_bg) << color_fg_rgb(hilight_color_fg) << bold);
         }
         else if(i== cursor_position){
-            use_attr(color_bg(60, 60, 60) << color_fg(222, 222, 222) << italic);
+            use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << bold);
         }
         wm::sprintln(ws, std::to_string(i) + ": " + (playlist_filename_only ? path::filename(p[i]) : p[i]), wm::SPLICE_TYPE::END_DOTS);
         if (i == p.current_index || i == cursor_position){
@@ -181,7 +187,6 @@ int print_info(std::string info, unsigned int offset = 0)
     return 0;
 }
 
-ascii_img::RGB<> warning_color = {150, 60, 60};
 
 void print_ui()
 {
@@ -570,6 +575,9 @@ void sigexit(int sig){
     wm::deinit();
     exit(0);
 }
+
+
+
 
 
 int main(int argc, char const *argv[])

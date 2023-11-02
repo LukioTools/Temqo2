@@ -14,7 +14,9 @@ OUT_NAME := temqo
 # default rule
 default: build exec
 
-
+cfg:
+	c++ cfg.cpp -o cfgtest
+	./cfgtest
 
 exec: 
 	@echo "Executing: ./$(OUT_NAME)"

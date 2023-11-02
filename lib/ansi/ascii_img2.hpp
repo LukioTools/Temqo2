@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <ostream>
 #include <string>
 #include <sys/types.h>
 #include <thread>
@@ -47,6 +48,11 @@ namespace ascii_img
         T r;
         T g;
         T b;
+
+        friend std::ostream& operator<<(std::ostream& os, const RGB<T> rgb){
+            os << "r:" << (int) rgb.r << " g:" <<(int)  rgb.g << " b:" << (int) rgb.b;
+            return os;
+        }
     };
 
     class load_image_t {

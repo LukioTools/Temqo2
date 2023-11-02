@@ -30,6 +30,9 @@
 #define color_fg(r,g,b) "\e[38;2;"<< r << ';'<< g << ';' << b << 'm'
 #define color_bg(r,g,b) "\e[48;2;"<< r << ';'<< g << ';' << b << 'm'
 
+#define color_fg_rgb(rgb) "\e[38;2;"<< rgb.r << ';'<< rgb.g << ';' << rgb.b << 'm'
+#define color_bg_rgb(rgb) "\e[48;2;"<< rgb.r << ';'<< rgb.g << ';' << rgb.b << 'm'
+
 #define color_fg_str(r,g,b) ("\e[38;2;" + std::to_string(r) + ';' + std::to_string(g) + ';' + std::to_string(b) + 'm')
 #define color_bg_str(r,g,b) ("\e[48;2;" + std::to_string(r) + ';' + std::to_string(g) + ';' + std::to_string(b) + 'm')
 
