@@ -2,6 +2,7 @@
 #pragma once
 #define mv(x,y) std::cout << "\e["<< y+1 << ";"<< x+1 <<"H" << std::flush;
 #define mv_str(x,y) "\e[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H" 
+#define clear_all_no_mouse() std::cout << "\ec" << std::flush;
 #define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) << std::flush;
 #define clear_scr() std::cout << "\e[2J" << std::flush;
 #define clear_row() std::cout << "\e[2K" << std::flush;

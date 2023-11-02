@@ -10,6 +10,7 @@
 #include "lib/wm/mouse.hpp"
 #include "lib/wm/position.hpp"
 #include <codecvt>
+#include <csignal>
 #include <cstdlib>
 #include <iostream>
 #include <regex>
@@ -17,6 +18,9 @@
 #include <string>
 #include <valarray>
 #include <fstream>
+
+
+
 
 std::string current_cover_image_path;
 bool cover_valid = false;
@@ -538,6 +542,23 @@ void handle_input(int c)
     
 }
 
+void sigexit(int sig){
+    try
+    {
+        p.save();
+    }
+    catch (...)
+    {
+        // idk man
+        std::cout << "Save config not found\n";
+    }
+    audio::deinit();
+    deinit_elements();
+    use_attr(disable_mouse(USE_MOUSE) << norm_buffer << cursor_visible);
+    wm::deinit();
+    exit(0);
+}
+
 
 int main(int argc, char const *argv[])
 {
@@ -545,6 +566,7 @@ int main(int argc, char const *argv[])
         const char *filename = argc > 2 ? argv[2] : "playlist.pls";
         clear_all();
         // std::cout << "loading file: " << filename << "\n";
+        signal(SIGINT, sigexit);
         auto seek_seconds = p.use(filename);
         audio::init(p.current().c_str());
         audio::songEndedCallback = next_callback;
