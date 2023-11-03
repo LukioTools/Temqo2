@@ -117,10 +117,14 @@ namespace audio
 
     inline int seek_samples(ma_int64 samples){
         stop();
-        framesRead.fetch_add(samples);
-        if(framesRead.load() < 0){
+        auto fr = framesRead.fetch_add(samples);
+        if(fr < 0){
             framesRead.store(0);
         }
+        if(fr > framesInSong){
+            framesRead.store(framesInSong);
+        }
+        
         auto res = ma_decoder_seek_to_pcm_frame(curr, framesRead.load(std::memory_order_relaxed));
         play();
         return res;
@@ -134,6 +138,9 @@ namespace audio
 
     inline int seek_abs_samples(ma_int64 samples){
         stop();
+        if(samples > framesInSong){
+            samples = framesInSong;
+        }
         framesRead.store(samples);
         auto res = ma_decoder_seek_to_pcm_frame(curr, samples);
         play();
