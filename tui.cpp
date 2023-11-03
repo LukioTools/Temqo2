@@ -37,19 +37,25 @@ cfg::RGB progress_bar_color_played_bg = {0,0,0};
 cfg::RGB progress_bar_color_played_fg = {255,0,0};
 cfg::RGB progress_bar_color_remaining_bg = {0,0,0};
 cfg::RGB progress_bar_color_remaining_fg = {200,200,200};
+cfg::RGB border_color_fg = {193,119,1};
+cfg::RGB border_color_bg = {0,0,0};
+
+
+//char/strings
 std::string progres_bar_char_first = "├";
 std::string progres_bar_char_center = "─";
 std::string progres_bar_char_last = "┤";
 std::string progres_bar_char_cursor = "•";
 
+//ease of use
 int arrowkey_scroll_sensitivity = 1;
 int mouse_scroll_sensitivity = 3;
 
+//le cover art
 std::string current_cover_image_path;
-
-
-
 bool cover_valid = false;
+
+
 
 inline void set_cover_refresh()
 {
@@ -125,6 +131,7 @@ bool pls_dont_fill = true;
 int volume_warn_treshold = 100;
 
 bool enable_cover = true;
+bool playlist_invalid = true;
 
 size_t playlist_clamp(long i){
     while (i < 0)
@@ -179,7 +186,7 @@ int print_playlist()
         }
         i++;
     }
-
+    playlist_invalid = false;
     return 0;
 }
 
@@ -187,6 +194,7 @@ int print_playlist()
 wm::SPLICE_TYPE playing_clip = wm::BEGIN_DOTS;
 wm::PAD_TYPE playing_pad = wm::PAD_CENTER;
 bool playing_filename_only = true;
+
 
 int print_playing(std::string song)
 {
@@ -448,29 +456,30 @@ void refresh_elements()
 
 void light_refresh()
 {
-
-    {
-        // curplay_element->aSpace().box(nullptr, "─", nullptr, nullptr, nullptr, nullptr, "─", "─");
-        // input_element->aSpace().box("─", nullptr, nullptr, nullptr, "─", "─", nullptr, nullptr);
-    }
     if (playlist_element)
     {
         if (!playlist_element->not_valid())
         {
+            std::cout<< color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg);
             playlist_element->aSpace().box("─", "─", playlist_rightmost ? nullptr : "│", playlist_leftmost ? nullptr : "│", playlist_leftmost ? "─" : "┬", playlist_rightmost ? "─" : "┬", playlist_leftmost ? "─" : "┴", playlist_rightmost ? "─" : "┴");
+            std::cout<< attr_reset;
         }
     }
     if (albumcover_element)
     {
+        std::cout<< color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg);
         albumcover_element->aSpace().box("─", "─", nullptr, playlist_leftmost ? nullptr : "│", "─", "─", "─", "─");
-        auto ws = albumcover_element->wSpace();
-        mv(ws.x, ws.y);
+        std::cout<< attr_reset;
+        //auto ws = albumcover_element->wSpace();
+        //mv(ws.x, ws.y);
     }
     if (!cover_valid)
     {
         draw_album_cover();
     }
-    print_playlist();
+    if(playlist_invalid){
+        print_playlist();
+    }
     //print_ui();
     print_ui2();
 }
@@ -479,9 +488,10 @@ void force_refresh()
 {
     clear_scr();
     refresh_elements();
+    playlist_invalid = true;
+    cover_valid = false;
     print_playing(p.current());
     light_refresh();
-    draw_album_cover();
 }
 
 void init_elements()
@@ -539,6 +549,8 @@ void deinit_elements()
 
 void load_audio(std::string fn)
 {
+    cover_valid = false;
+
     auto filename = path::filename(fn);
     audio::load_next(fn.c_str(), true);
     cursor_position = p.current_index;
@@ -576,6 +588,8 @@ wm::Position drag_p_e = {0, 0};
 bool drag_b = false;
 void drag_m(wm::MOUSE_INPUT m)
 {
+    playlist_invalid = true;
+
     if (!playlist_element)
     {
         return;
@@ -592,6 +606,8 @@ int click(wm::MOUSE_INPUT m)
     // song switcher
     if (m.btn == wm::M_LEFT && playlist_element->wSpace().inside(m.pos))
     {
+        playlist_invalid = true;
+
         if (!playlist_element)
         {
             return 0;
@@ -627,6 +643,7 @@ void handle_mouse(wm::MOUSE_INPUT m)
     case wm::MOUSE_BTN::M_SCRL_UP:
         if(playlist_element->wSpace().inside(m.pos)){
             playlist_offset-=mouse_scroll_sensitivity;
+            playlist_invalid = true;
         }
         else if (volume_button->aSpace().inside(m.pos)){
             audio::vol_shift(0.01);
@@ -635,6 +652,7 @@ void handle_mouse(wm::MOUSE_INPUT m)
     case wm::MOUSE_BTN::M_SCRL_DOWN:
         if(playlist_element->wSpace().inside(m.pos)){
             playlist_offset+=mouse_scroll_sensitivity;
+            playlist_invalid = true;
         }
         else if (volume_button->aSpace().inside(m.pos)){
             audio::vol_shift(-0.01);
@@ -656,6 +674,7 @@ void handle_mouse(wm::MOUSE_INPUT m)
         break;
     case wm::MOUSE_BTN::M_NONE:
         if(playlist_element && playlist_element->wSpace().inside(m.pos)){
+            playlist_invalid = true;
             auto index = m.pos.y - playlist_element->wSpace().y;
             cursor_position = playlist_clamp(playlist_clamp(playlist_offset) + index);
         }
@@ -676,6 +695,7 @@ std::regex find_rgx("^re?ge?x .*$");
 std::regex command("^:.*$");
 
 std::string find_and_seek(bool play = false){
+    playlist_invalid = true;
     size_t index = std::string::npos;
     std::string out;
     if(std::regex_match(input, find_i)){
@@ -777,6 +797,23 @@ void configuraton(){
         hover_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         hover_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
     });
+    cfg::add_config_inline("BorderColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        border_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        border_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); 
+    });
+    ///Playlist
+    cfg::add_config_inline("PlaylistFilenameOnly", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        playlist_filename_only = cfg::parse_bool(str);
+    });
+    cfg::add_config_inline("PlayingFilenameOnly", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        playing_filename_only = cfg::parse_bool(str);
+    });
+
+
 
     ///Progress Bar
     cfg::add_config_inline("ProgresBarPlayedColor", [](std::string line){
@@ -878,6 +915,7 @@ int main(int argc, char const *argv[])
                 audio::seek(std::chrono::seconds(-5));
                 break;
             case wm::KEY::K_UP:
+                playlist_invalid = true;
                 cursor_position-=arrowkey_scroll_sensitivity;
                 {
                     auto i = playlist_clamp(playlist_offset);
@@ -888,6 +926,7 @@ int main(int argc, char const *argv[])
 
                 break;
             case wm::KEY::K_DOWN:
+                playlist_invalid = true;
                 cursor_position+=arrowkey_scroll_sensitivity;
                 {
                     auto i = playlist_clamp(playlist_offset);
@@ -922,6 +961,8 @@ int main(int argc, char const *argv[])
                 break;
             case 'f':
                 playlist_filename_only = !playlist_filename_only;
+                playlist_invalid = true;
+
                 break;
             case 'a':
                 p.sort();
@@ -974,8 +1015,6 @@ int main(int argc, char const *argv[])
             }
         }
         }
-
-        // if(curplay_element) curplay_element->aSpace().fill("#");//.box("#", "─", "R", "L", "0", "1", "─", "─");
 
         light_refresh();
     }
