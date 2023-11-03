@@ -102,8 +102,8 @@ namespace audio_vlc
     
 
 
-    inline void play(){
-        mediaPlayer.play();
+    inline bool play(){
+        return mediaPlayer.play();
     }
 
     inline void stop(){

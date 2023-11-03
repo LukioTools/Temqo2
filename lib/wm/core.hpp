@@ -9,7 +9,4 @@
 #include "position.hpp"
 #include "print.hpp"
 #include "resize.hpp"
-#include "row.hpp"
 #include "space.hpp"
-#include "window.hpp"
-#include "windowmanager.hpp"

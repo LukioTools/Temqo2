@@ -194,6 +194,8 @@ namespace audio
         }
 
         int use(std::string playlist_file){
+            if(!std::filesystem::exists(playlist_file))
+                return 2;
             std::ifstream in(playlist_file);
             use_file = playlist_file;
             if(!in)

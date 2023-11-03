@@ -7,7 +7,7 @@ DEPENDENCIES := -ltag -lvlc -lfreeimage #-lm -pthread
 
 
 # compile macros
-TARGET_FILE := tui.cpp # FILL: target name
+TARGET_FILE := vtui.cpp # FILL: target name
 OUT_NAME := temqo
 
 

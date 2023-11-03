@@ -15,14 +15,14 @@ namespace wm
     class Element
     {
     public:
-        Space* space;
+        Space space;
         Padding pad;
 
         inline Space wSpace(){
-            return *space+pad;
+            return space+pad;
         }
         inline Space aSpace(){
-            return *space;
+            return space;
         }
         inline Padding padding(){
             return pad;
@@ -38,12 +38,13 @@ namespace wm
         //    return wSpace().inside(pos);
         //}
         inline operator Space(){
-            return *space;
+            return space;
         }
         bool not_valid(){
-            return !space || !space->exists() || !wSpace().exists();
+            return false;
         }
-        Element(Space* ptr, Padding p = {}): space(ptr), pad(p) {}
+        Element(){}
+        Element(Space sp, Padding p = {}): space(sp), pad(p) {}
         ~Element() {}
     };
 } // namespace wm

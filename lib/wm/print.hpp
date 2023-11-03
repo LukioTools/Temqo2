@@ -1,7 +1,7 @@
 #pragma once
 
+#include "element.hpp"
 #include "space.hpp"
-#include "window.hpp"
 #include <sstream>
 #include "clip.hpp"
 
@@ -103,7 +103,7 @@ namespace wm
         return 0;
     }
 
-    inline int wprint(wm::Window *window, std::string str)
+    inline int wprint(wm::Element *window, std::string str)
     {
         return sprint(window->wSpace(), str);
     };

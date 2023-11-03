@@ -76,6 +76,12 @@ namespace wm
             w = _w;
             h = _h;
         }
+        Space(){
+            x = 0;
+            y = 0;
+            w = 0;
+            h = 0;
+        }
 
         inline bool inside(unsigned short _x, unsigned short _y){
             return !((_x < x || _x > x+w) || (_y < y || _y > y+h));
