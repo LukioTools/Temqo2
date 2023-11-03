@@ -44,13 +44,13 @@ void load_file(std::string filepath){
         (title_filename_only ? path::filename(filepath) : filepath).c_str()
     );
         //refresh the shit
-    auto s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    while (!audio_vlc::playing()) {
-        audio_vlc::play();
-    };
-    auto e = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    mv(0,4)
-    std::cout << "Playback start took (ns): " << e-s << "\n";
+    while (true) {
+        std::cout<< audio_vlc::mediaPlayer.willPlay() << std::endl;
+        if(!audio_vlc::mediaPlayer.willPlay()){
+            audio_vlc::play();
+            break;
+        }
+    }
 }
 
 void refresh_element_sizes(){
@@ -103,6 +103,7 @@ int main(int argc, char const *argv[])
 {
     init(argc, argv);
     while (true) {
+        audio_vlc::play();
         auto ch = wm::getch();
         if(ch == (int) 'q')
             break;
