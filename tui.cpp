@@ -1,6 +1,6 @@
 #include "lib/ansi/ascii_img2.hpp"
-#include "lib/audio/audio.hpp"
-#include "lib/audio/audio_backend.hpp"
+#include "lib/audio/vlc.hpp"
+#include "lib/audio/playlist.hpp"
 #include "lib/audio/extract_img.hpp"
 #include "lib/cfg/parsers.hpp"
 #include "lib/path/filename.hpp"
@@ -22,6 +22,7 @@
 #include <string>
 #include <valarray>
 #include <fstream>
+#include <vlc/libvlc_media_player.h>
 #include "lib/cfg/config.hpp"
 
 wm::Position mpos = {0,0};
@@ -94,7 +95,7 @@ std::string input;
 
 
 
-std::ofstream log_t("/dev/pts/4");
+std::ofstream log_t("/dev/pts/5");
 bool mainthread_waiting = false;
 bool second_thread_waiting = false;
 
@@ -147,6 +148,8 @@ size_t playlist_clamp(long i){
 
 int print_playlist()
 {
+    if(!p.files.size())
+        return 1;
     log_t << "print_playlist" << std::endl;
 
     if (playlist_element == nullptr)
@@ -160,6 +163,7 @@ int print_playlist()
     auto ws = playlist_element->wSpace();
     auto s = ws.start();
     auto e = ws.end();
+    log_t << "print_playlist 2" << std::endl;
 
     auto i = playlist_clamp(playlist_offset);
     for (size_t y = s.y; y <= e.y; y++)
@@ -236,7 +240,7 @@ int print_info(std::string info, unsigned int offset = 0)
 #define leading_zero(n) ((n < 10) ? "0" : "") << n
 void print_ui2(){
 
-    auto vol = (int)(audio::volume.load() * 100);
+    auto vol = audio_vlc::volume::get();
     if(settings_button){
         mv(settings_button->space->x, settings_button->space->y);
         bool inside = settings_button->aSpace().inside(mpos);
@@ -249,11 +253,11 @@ void print_ui2(){
             std::cout << attr_reset;
         }
     }
-    if(time_button && audio::curr){
-        auto seconds = audio::framesRead / audio::curr->outputSampleRate;
+    if(time_button && audio_vlc::currentMedia){
+        auto seconds = audio_vlc::played::get_s().count();
         auto minutes = seconds / 60;
 
-        auto total_seconds = audio::seconds_in_current();
+        auto total_seconds = audio_vlc::lenght::get_s().count();
         auto total_minutes = total_seconds / 60;
 
         auto actual_seconds = seconds - (60 * minutes);
@@ -275,7 +279,7 @@ void print_ui2(){
         }
     }
     if(volume_button){
-        auto vol = (int)(audio::volume.load() * 100);
+        auto vol = audio_vlc::volume::get();
         if(vol < 0){
             vol = -vol;
         }
@@ -306,7 +310,7 @@ void print_ui2(){
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg);
         }
 
-        std::cout << (audio::playing ? "⏵" : "⏸");
+        std::cout << (audio_vlc::playing() ? "⏵" : "⏸");
 
         if(inside){
             std::cout << attr_reset;
@@ -322,13 +326,14 @@ void print_ui2(){
         mv(s.x, s.y);
         std::cout << str;  
     }
-    if(mode == INPUT_MODE::IM_PLAYBACK && progress_bar && audio::curr){
+    if(mode == INPUT_MODE::IM_PLAYBACK && progress_bar && audio_vlc::mediaPlayer){
         auto s = progress_bar->wSpace();
-        auto seconds = audio::framesRead / audio::curr->outputSampleRate;
-        auto total_seconds = audio::seconds_in_current();
-        auto _progress = static_cast<double>(seconds)/static_cast<double>(total_seconds);
+        auto delta = audio_vlc::played::get();
+        //auto seconds = audio_vlc::played::get_s().count();
+        //auto total_seconds = audio_vlc::lenght::get_s().count();
+        //auto _progress = static_cast<double>(seconds)/static_cast<double>(total_seconds);
 
-        auto current_index = static_cast<size_t>(std::round(_progress*s.width()));
+        auto current_index = static_cast<size_t>(std::round(delta*s.width()));
         std::string str;
         str.append(color_bg_rgb_str(progress_bar_color_played_bg));
         str.append(color_fg_rgb_str(progress_bar_color_played_fg));
@@ -465,6 +470,8 @@ void light_refresh()
             std::cout<< attr_reset;
         }
     }
+    log_t << "aPlaylist" << std::endl;
+
     if (albumcover_element)
     {
         std::cout<< color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg);
@@ -473,13 +480,16 @@ void light_refresh()
         //auto ws = albumcover_element->wSpace();
         //mv(ws.x, ws.y);
     }
+    log_t << "after albumcover_element" << std::endl;
     if (!cover_valid)
     {
         draw_album_cover();
     }
+    log_t << "after Cover" << std::endl;
     if(playlist_invalid){
         print_playlist();
     }
+    log_t << "after Playlist" << std::endl;
     //print_ui();
     print_ui2();
 }
@@ -491,6 +501,7 @@ void force_refresh()
     playlist_invalid = true;
     cover_valid = false;
     print_playing(p.current());
+    log_t << "Light Refreh" << std::endl;
     light_refresh();
 }
 
@@ -552,7 +563,7 @@ void load_audio(std::string fn)
     cover_valid = false;
 
     auto filename = path::filename(fn);
-    audio::load_next(fn.c_str(), true);
+    audio_vlc::load(fn.c_str());
     cursor_position = p.current_index;
 
     print_playing(filename);
@@ -566,7 +577,7 @@ void next_callback()
     load_audio(next_song_path);
 }
 
-void secondly(void)
+void secondly(long)
 {
     if (mainthread_waiting)
     {
@@ -623,14 +634,14 @@ int click(wm::MOUSE_INPUT m)
     }
     
     if(playing_button->aSpace().inside(m.pos)){
-        audio::playing ? audio::stop() : audio::play();
+        audio_vlc::toggle_play();
     }
 
-    if(progress_bar && progress_bar->wSpace().inside(m.pos) && audio::curr){
+    if(progress_bar && progress_bar->wSpace().inside(m.pos) && audio_vlc::currentMedia){
         auto s = progress_bar->wSpace();
         auto delta = m.pos.x-s.x;
         auto delta_d = static_cast<double>(delta)/static_cast<double>(s.width());
-        audio::seek_abs_samples(std::floor(delta_d*audio::seconds_in_current()*audio::curr->outputSampleRate));
+        audio_vlc::seek::abs(delta_d);
     }
     return 0;
 }
@@ -646,7 +657,7 @@ void handle_mouse(wm::MOUSE_INPUT m)
             playlist_invalid = true;
         }
         else if (volume_button->aSpace().inside(m.pos)){
-            audio::vol_shift(0.01);
+            audio_vlc::volume::shift(1);
         }
         break;
     case wm::MOUSE_BTN::M_SCRL_DOWN:
@@ -655,7 +666,7 @@ void handle_mouse(wm::MOUSE_INPUT m)
             playlist_invalid = true;
         }
         else if (volume_button->aSpace().inside(m.pos)){
-            audio::vol_shift(-0.01);
+            audio_vlc::volume::shift(-1);
         }
         break;
     case wm::MOUSE_BTN::M_LEFT:
@@ -756,16 +767,16 @@ void handle_input(int c)
 }
 
 void sigexit(int sig){
-    try
-    {
-        p.save();
-    }
-    catch (...)
-    {
-        // idk man
-        std::cout << "Save config not found\n";
-    }
-    audio::deinit();
+    //try
+    //{
+    //    //p.save();
+    //}
+    //catch (...)
+    //{
+    //    // idk man
+    //    std::cout << "Save config not found\n";
+    //}
+    audio_vlc::deinit();
     deinit_elements();
     use_attr(disable_mouse(USE_MOUSE) << norm_buffer << cursor_visible);
     wm::deinit();
@@ -849,14 +860,14 @@ void configuraton(){
     });
     cfg::add_config_inline("Volume", [](std::string line){
         auto str = cfg::parse_inline(line);
-        auto vol = std::stod(str);
-        if(vol > 2){
+        auto vol = std::stoi(str);
+        if(vol > 200){
             vol = 2;
         }
-        if(vol < -2){
-            vol = -2;
+        if(vol < -200){
+            vol = -200;
         }
-        audio::volume = vol;
+        audio_vlc::volume::set(vol);
     });
     
 }
@@ -865,31 +876,40 @@ const char* config_path = "temqo.cfg";
 
 int main(int argc, char const *argv[])
 {
+    log_t << "\ec" << std::endl;
     {
         const char *filename = argc > 2 ? argv[2] : "playlist.pls";
+        audio_vlc::init();
+        audio_vlc::on::end(song_ended);
+        audio_vlc::on::time(secondly);
+        
         clear_all();
+        
         // std::cout << "loading file: " << filename << "\n";
         signal(SIGINT, sigexit);
+        
         configuraton();
         cfg::parse(config_path);
+
         auto seek_seconds = p.use(filename);
         cursor_position = p.current_index;
-        audio::init(p.current().c_str());
-        audio::songEndedCallback = song_ended;
-        audio::song_played_secondly = secondly;
-        audio::play();
 
-        audio::seek_abs(std::chrono::seconds(seek_seconds));
+        audio_vlc::load(p.current().c_str());
+        audio_vlc::play();
+        audio_vlc::seek::abs(static_cast<double>(seek_seconds)/audio_vlc::lenght::get_s_d());
 
         wm::init();
         init_elements();
     }
+    log_t << "Hell is broken loose" << std::endl;
     
     playlist_offset = p.current_index;
     use_attr(cursor_invisible);
+    log_t << "force refresh" << std::endl;
     force_refresh();
     while (true)
     {
+        log_t << "GetChar" << std::endl;
         mainthread_waiting = true;
         auto c = wm::getch();
         mainthread_waiting = false;
@@ -909,10 +929,10 @@ int main(int argc, char const *argv[])
             switch (key)
             {
             case wm::KEY::K_RIGHT:
-                audio::seek(std::chrono::seconds(5));
+                audio_vlc::seek::rel(std::chrono::seconds(5));
                 break;
             case wm::KEY::K_LEFT:
-                audio::seek(std::chrono::seconds(-5));
+                audio_vlc::seek::rel(std::chrono::seconds(-5));
                 break;
             case wm::KEY::K_UP:
                 playlist_invalid = true;
@@ -979,13 +999,13 @@ int main(int argc, char const *argv[])
                 load_audio(p.prev());
                 break;
             case 'c':
-                audio::playing ? audio::stop() : audio::play();
+                audio_vlc::toggle_play();
                 break;
             case '+':
-                audio::vol_shift(.1f);
+                audio_vlc::volume::shift(10);
                 break;
             case '-':
-                audio::vol_shift(-.1f);
+                audio_vlc::volume::shift(-10);
                 break;
             case 'r':
                 cfg::parse(config_path);
@@ -1029,7 +1049,7 @@ exit:
         std::cout << "Save config not found\n";
     }
     use_attr(cursor_visible);
-    audio::deinit();
+    audio_vlc::deinit();
     deinit_elements();
     wm::deinit();
 

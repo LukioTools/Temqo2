@@ -7,9 +7,8 @@
 #include <thread>
 #include <vector>
 #include <filesystem>
-#include "audio_backend.hpp"
 #include "scandir.hpp"
-
+#include "vlc.hpp"
 #include <algorithm>
 #include <random>
 #include <fstream>
@@ -262,7 +261,7 @@ namespace audio
                 return -1;
             }
             out << "\n[" current_index_cfg "] = " << current_index << "\n";
-            out << "\n[" current_time_cfg "] = " << currentSongPosition().count() << "\n";
+            out << "\n[" current_time_cfg "] = " << audio_vlc::played::get_s().count() << "\n";
             out<<"\n[" folder_cfg "]\n";
             for (auto e : folders)
             {
