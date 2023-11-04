@@ -1,6 +1,7 @@
 #include "lib/audio/playlist.hpp"
 #include "lib/audio/sfml.hpp"
 #include "lib/path/filename.hpp"
+#include "lib/wm/clip.hpp"
 #include "lib/wm/core.hpp"
 #include "lib/wm/def.hpp"
 #include "lib/wm/globals.hpp"
@@ -37,6 +38,7 @@ bool cover_valid = false;
 std::string covert_img_path;
 
 bool playlist_filename_only = true;
+bool currently_playing_filename_only = true;
 bool title_filename_only = true;
 
 void load_file(std::string filepath){
@@ -52,16 +54,70 @@ void refresh_playlist(){
     playlist.space.fill("P");
 }
 void refresh_currently_playing(){
-    current_file.space.fill("?");
+    std::string c = currently_playing_filename_only? path::filename(pl.current()): pl.current();
+    auto s = current_file.aSpace();
+    //current_file.space.fill("?");
+    wm::clip(c, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
+    wm::pad(c, s.width(), wm::PAD_TYPE::PAD_CENTER);
+    mv(s.x, s.y);
+    std::cout << c;
 }
+void refresh_settings(){
+    auto pe = UIelements::settings.space;
+    mv(pe.x, pe.y);
+    std::cout <<  "⚙ ";
+}
+#define leading_zero(n) ((n < 10) ? "0" : "") << n
+void refresh_time_played(){
+    auto s  =UIelements::time_played.space;
+    mv(s.x,s.y);
+    auto ps = audio::position::get<std::ratio<1,1>>().count();
+    auto ts = audio::duration::get<std::ratio<1,1>>().count();
+
+    auto pm = ps/60;
+    auto tm = ts/60;
+
+    auto psec = ps-pm*60; 
+    auto tsec = ts-tm*60;
+
+    std::cout 
+    << leading_zero(pm) << ':' << leading_zero(psec) 
+    << '/' 
+    << leading_zero(tm) << ':' << leading_zero(tsec);
+}
+#undef leading_zero
+
+void refresh_volume(){
+    auto s = UIelements::volume.space;
+    mv(s.x,s.y);
+    int vol = (int) audio::volume::get();
+    if(vol < 0){
+        vol = -vol;
+    }
+    if(vol > 999){
+        vol = 999;
+    }
+
+    std::cout << std::setfill('0') << std::setw(s.w-1) << vol << "% ";
+}
+
+void refresh_play_button(){
+    auto s = UIelements::toggle.space;
+    mv(s.x,s.y);
+    std::cout << std::setw(s.w-1) << (audio::playing() ? "⏵" : "⏸") << ' ';
+}
+
 void refresh_UIelements(){
-    UIelements::settings.space.fill("S");
-    UIelements::time_played.space.fill("T");
-    UIelements::volume.space.fill("V");
-    UIelements::toggle.space.fill("C");
+    refresh_settings();
+    refresh_time_played();
+    refresh_volume();
+    refresh_play_button();
+    //UIelements::time_played.space.fill("T");
+    //UIelements::volume.space.fill("V");
+    //UIelements::toggle.space.fill("C");
 }
 void refresh_playbar(){
-    UIelements::playbar.space.fill("&");
+    UIelements::playbar.space.fill("─");
 }
 void refresh_element_sizes(){
     current_file.space = wm::Space(0,0, wm::WIDTH, 0);
@@ -76,11 +132,11 @@ void refresh_element_sizes(){
     UIelements::time_played.space   =   wm::Space(UIelements::settings.space.x -1 -UIelements::time_played_alloc,   wm::HEIGHT, UIelements::time_played_alloc,  0);
     UIelements::volume.space        =   wm::Space(UIelements::time_played.space.x-1-UIelements::volume_alloc,       wm::HEIGHT, UIelements::volume_alloc,       0);
     UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
-    UIelements::playbar.space       =   wm::Space(0,                                                                wm::HEIGHT, UIelements::toggle.space.x-1,   0);
+    UIelements::playbar.space       =   wm::Space(0,                                                                wm::HEIGHT, UIelements::toggle.space.x-2,   0);
 }
 //veri expensiv
 void refresh_all(){
-    clear_scr();
+    clear_all();
     refresh_element_sizes();
     refresh_currently_playing();
     refresh_playlist();
@@ -124,10 +180,11 @@ void handle_mouse(wm::MOUSE_INPUT m){
 
 }
 
+
 void handle_input(int ch){
     //std::cout<< std::hex <<  std::setw(4*2) << ch;
     if(wm::resize_event){
-        
+        handle_resize();
     }
     if(is_mouse(ch)){
         handle_mouse(wm::parse_mouse(ch));
@@ -137,21 +194,24 @@ void handle_input(int ch){
     auto c = (char)ch;
     if(c == 'n'){
         load_file(pl.next());
+        refresh_currently_playing();
+        refresh_playlist();
+        refresh_playbar();
     }
 }
 
 int main(int argc, char const *argv[])
 {
     init(argc, argv);
-
+    refresh_all();
     while (true) {
         int ch = wm::getch();
         mv(0,0);
         handle_input(ch);
         if(ch == (int)'q'){
+            clear_all()
             break;
         }
-        refresh_all(); 
     }
 
     deinit();
