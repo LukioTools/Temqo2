@@ -6,12 +6,16 @@
 #include "lib/wm/def.hpp"
 #include "lib/wm/globals.hpp"
 #include "lib/wm/mouse.hpp"
+#include "lib/wm/position.hpp"
 #include "lib/wm/space.hpp"
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <thread>
 
 audio::Playlist pl;
+
+wm::Position mpos;
 
 wm::Element current_file;
 wm::Element input_field;
@@ -183,15 +187,13 @@ void handle_resize(){
     wm::resize_event = false;
 }
 void handle_mouse(wm::MOUSE_INPUT m){
-
+    mpos = m.pos;
 }
 
 
 void handle_input(int ch){
     //std::cout<< std::hex <<  std::setw(4*2) << ch;
-    if(wm::resize_event){
-        handle_resize();
-    }
+    
     if(is_mouse(ch)){
         handle_mouse(wm::parse_mouse(ch));
         return;
@@ -204,11 +206,32 @@ void handle_input(int ch){
     }
 }
 
+std::chrono::duration sleep_for = std::chrono::milliseconds(200);
+bool refrehs_thread_alive = true;
+void refrehs_thread(){
+    while(refrehs_thread_alive){
+        if(audio::stopped()){
+            load_file(pl.next());
+        }
+        if(wm::resize_event){
+            handle_resize();
+        }
+        refresh_time_played();
+        refresh_playbar();
+        std::this_thread::sleep_for(sleep_for);
+    }
+    
+}
+
 int main(int argc, char const *argv[])
 {
     init(argc, argv);
     refresh_all();
+    std::thread thr(refrehs_thread);
     while (true) {
+        if(wm::resize_event){
+            handle_resize();
+        }
         int ch = wm::getch();
         mv(0,0);
         handle_input(ch);
@@ -217,8 +240,9 @@ int main(int argc, char const *argv[])
             break;
         }
     }
-
+    refrehs_thread_alive = false;
     deinit();
+    thr.join();
     return 0;
 }
 
