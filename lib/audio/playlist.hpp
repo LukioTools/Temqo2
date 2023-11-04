@@ -7,13 +7,15 @@
 #include <thread>
 #include <vector>
 #include <filesystem>
-#include "scandir.hpp"
-#include "vlc.hpp"
 #include <algorithm>
 #include <random>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <regex>
+
+#include "scandir.hpp"
+#include "sfml.hpp"
+
 namespace audio
 {
     #define path_cfg "Path"
@@ -263,7 +265,7 @@ namespace audio
                 return -1;
             }
             out << "\n[" current_index_cfg "] = " << current_index << "\n";
-            out << "\n[" current_time_cfg "] = " << audio_vlc::played::get_s().count() << "\n";
+            out << "\n[" current_time_cfg "] = " << audio::position::get<std::ratio<1,1>>().count() << "\n";
             out<<"\n[" folder_cfg "]\n";
             for (auto e : folders)
             {

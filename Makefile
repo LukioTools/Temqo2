@@ -3,7 +3,7 @@ CXX ?= g++                              # FILL: the compiler
 CFLAGS := -Wall                 # FILL: compile flags
 CXXFLAGS := -Wall               # FILL: compile flags
 
-DEPENDENCIES := -lsfml-audio # -ltag -lvlc -lfreeimage #-lm -pthread 
+DEPENDENCIES := -lsfml-audio -lsfml-system # -ltag -lvlc -lfreeimage #-lm -pthread 
 
 
 # compile macros

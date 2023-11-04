@@ -1,8 +1,13 @@
-/*
-#include "lib/audio/audio.hpp"
+#include "lib/audio/playlist.hpp"
+#include "lib/audio/sfml.hpp"
 #include "lib/path/filename.hpp"
 #include "lib/wm/core.hpp"
+#include "lib/wm/def.hpp"
+#include "lib/wm/globals.hpp"
+#include "lib/wm/mouse.hpp"
+#include "lib/wm/space.hpp"
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 
 audio::Playlist pl;
@@ -12,7 +17,6 @@ wm::Element input_field;
 
 wm::Element playlist;
 wm::Element cover_art;
-wm::Element playbar;
 
 namespace UIelements
 {
@@ -24,6 +28,8 @@ namespace UIelements
     wm::Element time_played;
     wm::Element volume;
     wm::Element toggle;
+    /// @brief allo rest of the ui space
+    wm::Element playbar;
 } // namespace UIelements
 
 
@@ -35,13 +41,28 @@ bool title_filename_only = true;
 
 void load_file(std::string filepath){
     cover_valid = false;
-    audio_vlc::load(filepath.c_str());
+    audio::load(filepath);
     set_title(
         (title_filename_only ? path::filename(filepath) : filepath).c_str()
     );
-    audio_vlc::play();
+    audio::control::play();
 }
 
+void refresh_playlist(){
+    playlist.space.fill("P");
+}
+void refresh_currently_playing(){
+    current_file.space.fill("?");
+}
+void refresh_UIelements(){
+    UIelements::settings.space.fill("S");
+    UIelements::time_played.space.fill("T");
+    UIelements::volume.space.fill("V");
+    UIelements::toggle.space.fill("C");
+}
+void refresh_playbar(){
+    UIelements::playbar.space.fill("&");
+}
 void refresh_element_sizes(){
     current_file.space = wm::Space(0,0, wm::WIDTH, 0);
     input_field.space =  wm::Space(0, wm::HEIGHT-1, wm::WIDTH, 0);
@@ -55,13 +76,26 @@ void refresh_element_sizes(){
     UIelements::time_played.space   =   wm::Space(UIelements::settings.space.x -1 -UIelements::time_played_alloc,   wm::HEIGHT, UIelements::time_played_alloc,  0);
     UIelements::volume.space        =   wm::Space(UIelements::time_played.space.x-1-UIelements::volume_alloc,       wm::HEIGHT, UIelements::volume_alloc,       0);
     UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
+    UIelements::playbar.space       =   wm::Space(0,                                                                wm::HEIGHT, UIelements::toggle.space.x-1,   0);
 }
+//veri expensiv
+void refresh_all(){
+    clear_scr();
+    refresh_element_sizes();
+    refresh_currently_playing();
+    refresh_playlist();
+    refresh_UIelements();
+    refresh_playbar();
+}
+
+
 void deinit() {
-    audio_vlc::stop();
-    audio_vlc::deinit();
+    audio::control::pause();
     wm::deinit();
 }
 void csig(int sig){
+    audio::control::pause();
+    wm::deinit();
     exit(0);
 }
 
@@ -73,37 +107,54 @@ void init(int argc, char const *argv[]){
     //window thingies
     wm::init();
     refresh_element_sizes();
+    use_attr(cursor_invisible);
 
     //playlist
     const char *filename = argc > 2 ? argv[2] : "playlist.pls";
     auto seek_to = pl.use(filename);
     //audio server
-    audio_vlc::init();
-    load_file(pl.current().c_str());
-    audio_vlc::seek::abs(std::chrono::seconds(seek_to));
+    load_file(pl.current());
+    audio::seek::abs(std::chrono::seconds(seek_to));
 }
+void handle_resize(){
+    refresh_all();
+    wm::resize_event = false;
+}
+void handle_mouse(wm::MOUSE_INPUT m){
 
+}
 
 void handle_input(int ch){
-    std::cout<< std::hex << ch;
+    //std::cout<< std::hex <<  std::setw(4*2) << ch;
+    if(wm::resize_event){
+        
+    }
+    if(is_mouse(ch)){
+        handle_mouse(wm::parse_mouse(ch));
+        return;
+    }
+    
+    auto c = (char)ch;
+    if(c == 'n'){
+        load_file(pl.next());
+    }
 }
 
-*/
-#include "lib/audio/sfml.hpp"
-#include <chrono>
-#include <iostream>
+int main(int argc, char const *argv[])
+{
+    init(argc, argv);
 
-int main() {
-    // Create an instance of sf::SoundBuffer to hold the audio data
-    auto s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    audio::load("stardust.mp3");
-    auto c = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    std::cout << "Loading took: " << c-s << " nanoseconds\n";
-    audio::control::play();
+    while (true) {
+        int ch = wm::getch();
+        mv(0,0);
+        handle_input(ch);
+        if(ch == (int)'q'){
+            break;
+        }
+        refresh_all(); 
+    }
 
-    getchar();
-
-    audio::control::pause();
-
+    deinit();
     return 0;
 }
+
