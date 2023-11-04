@@ -1,5 +1,6 @@
 #include "lib/audio/playlist.hpp"
 #include "lib/audio/sfml.hpp"
+#include "lib/cfg/config.hpp"
 #include "lib/path/filename.hpp"
 #include "lib/wm/clip.hpp"
 #include "lib/wm/core.hpp"
@@ -15,7 +16,33 @@
 
 audio::Playlist pl;
 
-wm::Position mpos;
+wm::Position mpos = {0,0};
+
+
+//COLORS
+cfg::RGB warning_color_fg = {150, 60, 60};
+cfg::RGB warning_color_bg = {0, 0, 0};
+cfg::RGB hilight_color_fg = {20, 30, 20};
+cfg::RGB hilight_color_bg = {200,200,200};
+cfg::RGB hover_color_bg = {60,60,60};
+cfg::RGB hover_color_fg = {222,222,222};
+cfg::RGB progress_bar_color_played_bg = {0,0,0};
+cfg::RGB progress_bar_color_played_fg = {255,0,0};
+cfg::RGB progress_bar_color_remaining_bg = {0,0,0};
+cfg::RGB progress_bar_color_remaining_fg = {200,200,200};
+cfg::RGB border_color_fg = {193,119,1};
+cfg::RGB border_color_bg = {0,0,0};
+
+
+//char/strings
+std::string progres_bar_char_first = "├";
+std::string progres_bar_char_center = "─";
+std::string progres_bar_char_last = "┤";
+std::string progres_bar_char_cursor = "•";
+
+//ease of use
+int arrowkey_scroll_sensitivity = 1;
+int mouse_scroll_sensitivity = 3;
 
 wm::Element current_file;
 wm::Element input_field;
@@ -29,11 +56,16 @@ namespace UIelements
     int time_played_alloc = 11;
     int volume_alloc = 4;
     int toggle_alloc = 1;
+    bool settings_hover = false;
+    bool time_played_hover = false;
+    bool volume_hover = false;
+    bool toggle_hover = false;
     wm::Element settings;
     wm::Element time_played;
     wm::Element volume;
     wm::Element toggle;
     /// @brief allo rest of the ui space
+    bool playbar_hover = false;
     wm::Element playbar;
 } // namespace UIelements
 
@@ -48,7 +80,7 @@ bool title_filename_only = true;
 
 
 void refresh_playlist(){
-    playlist.space.fill("P");
+    playlist.space.box();
 }
 void refresh_currently_playing(){
     std::string c = currently_playing_filename_only? path::filename(pl.current()): pl.current();
@@ -62,7 +94,15 @@ void refresh_currently_playing(){
 void refresh_settings(){
     auto pe = UIelements::settings.space;
     mv(pe.x, pe.y);
+    auto inside = UIelements::settings_hover;
+
+    if(inside){
+        use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
+    }
     std::cout <<  "⚙ ";
+    if(inside){
+        use_attr(attr_reset);
+    }
 }
 #define leading_zero(n) ((n < 10) ? "0" : "") << n
 void refresh_time_played(){
@@ -77,10 +117,17 @@ void refresh_time_played(){
     auto psec = ps-pm*60; 
     auto tsec = ts-tm*60;
 
+    bool inside = UIelements::time_played_hover;
+    if(inside){
+        use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
+    }
     std::cout 
     << leading_zero(pm) << ':' << leading_zero(psec) 
     << '/' 
     << leading_zero(tm) << ':' << leading_zero(tsec);
+    if(inside){
+        use_attr(attr_reset);
+    }
 }
 #undef leading_zero
 
@@ -94,14 +141,30 @@ void refresh_volume(){
     if(vol > 999){
         vol = 999;
     }
+    bool inside = UIelements::volume_hover;
+    if(inside){
+        use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
+    }
+    std::cout << std::setfill('0') << std::setw(s.w-1) << vol << '%';
+    if(inside){
+        use_attr(attr_reset);
+    }
+    std::cout<< ' ';
 
-    std::cout << std::setfill('0') << std::setw(s.w-1) << vol << "% ";
 }
 
 void refresh_play_button(){
     auto s = UIelements::toggle.space;
     mv(s.x,s.y);
-    std::cout << std::setw(s.w-1) << (audio::playing() ? "⏵" : "⏸") << ' ';
+    bool inside = UIelements::toggle_hover;
+    if(inside){
+        use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
+    }
+    std::cout << std::setw(s.w-1) << (audio::playing() ? "⏵" : "⏸");
+    if(inside){
+        use_attr(attr_reset);
+    }
+    std::cout<< ' ';
 }
 
 void refresh_UIelements(){
@@ -183,11 +246,28 @@ void init(int argc, char const *argv[]){
     audio::seek::abs(std::chrono::seconds(seek_to));
 }
 void handle_resize(){
-    refresh_all();
     wm::resize_event = false;
+    refresh_all();
 }
 void handle_mouse(wm::MOUSE_INPUT m){
     mpos = m.pos;
+    if(UIelements::settings.space.inside(m.pos) != UIelements::settings_hover){
+        UIelements::settings_hover = UIelements::settings.space.inside(m.pos);
+        refresh_settings();
+    }
+    if(UIelements::time_played.space.inside(m.pos) != UIelements::time_played_hover){
+        UIelements::time_played_hover = UIelements::time_played.space.inside(m.pos);
+        refresh_time_played();
+    }
+    if(UIelements::volume.space.inside(m.pos) != UIelements::volume_hover){
+        UIelements::volume_hover = UIelements::volume.space.inside(m.pos);
+        refresh_volume();
+    }
+    if(UIelements::toggle.space.inside(m.pos) != UIelements::toggle_hover){
+        UIelements::toggle_hover = UIelements::toggle.space.inside(m.pos);
+        refresh_play_button();
+    }
+
 }
 
 
@@ -206,10 +286,15 @@ void handle_input(int ch){
     }
 }
 
-std::chrono::duration sleep_for = std::chrono::milliseconds(200);
+std::chrono::duration sleep_for = std::chrono::milliseconds(1000/10);
 bool refrehs_thread_alive = true;
+bool in_getch = false;
 void refrehs_thread(){
     while(refrehs_thread_alive){
+        if(!in_getch){
+            std::this_thread::sleep_for(sleep_for);
+            continue;
+        }
         if(audio::stopped()){
             load_file(pl.next());
         }
@@ -232,7 +317,9 @@ int main(int argc, char const *argv[])
         if(wm::resize_event){
             handle_resize();
         }
+        in_getch= true;
         int ch = wm::getch();
+        in_getch= false;
         mv(0,0);
         handle_input(ch);
         if(ch == (int)'q'){
