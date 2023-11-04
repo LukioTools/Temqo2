@@ -77,19 +77,48 @@ bool playlist_filename_only = true;
 bool currently_playing_filename_only = true;
 bool title_filename_only = true;
 
+int playlist_display_offset = 0;
+int playlist_cursor_offset = 0;
 
+size_t playlist_clamp(long i){
+    while (i < 0)
+    {
+        i += pl.files.size();
+    }
+    if (i >= pl.files.size())
+    {
+        i = i % pl.files.size();
+    }
+    return i;
+}
 
 void refresh_playlist(){
+    //display the elements
     auto s = playlist.wSpace();
-    for (size_t i = 0; i <= s.h; i++)
+    playlist_cursor_offset = playlist_clamp(playlist_cursor_offset);
+    for (size_t index = 0; index <= s.h; index++)
     {
+        auto i = playlist_clamp(playlist_display_offset+index);
         mv(s.x, s.y+i);
         auto str = pl[i];
         if(playlist_filename_only) str = path::filename(str);
         wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
-        std::cout << str;
-    }
+        wm::pad(str, s.width(), wm::PAD_TYPE::PAD_RIGHT);
 
+        if(i == playlist_cursor_offset){
+            use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
+        }
+        if(i == pl.current_index){
+            use_attr(color_bg_rgb( hilight_color_bg) << color_fg_rgb(hilight_color_fg));
+        }
+
+        std::cout  << str;
+
+        if(i == playlist_cursor_offset){
+            use_attr(attr_reset);
+        }
+    }
+    //draw the borders
     {
         auto s= playlist.space;
         std::string b;
