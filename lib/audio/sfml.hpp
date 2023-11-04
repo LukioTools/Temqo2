@@ -5,11 +5,12 @@
 
 namespace audio
 {
-    sf::SoundBuffer current_buffer;
-    sf::Sound player;
 
+
+    sf::Sound player;
+    sf::SoundBuffer current_buffer;
     //returns true if couldnt load
-    inline bool load(const std::string& filename){
+    inline bool load(std::string filename){
         auto res =  current_buffer.loadFromFile(filename);
         if(res == false){
             return true;

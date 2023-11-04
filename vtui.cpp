@@ -228,7 +228,7 @@ void refresh_UIelements(){
     //UIelements::toggle.space.fill("C");
 }
 void refresh_playbar(){
-    //UIelements::playbar.space.fill("─");
+    UIelements::playbar.space.fill("─");
 }
 void refresh_element_sizes(){
     current_file.space = wm::Space(0,0, wm::WIDTH, 0);
@@ -257,14 +257,21 @@ void refresh_all(){
 }
 
 void load_file(std::string filepath){
+    
     cover_valid = false;
     audio::load(filepath);
+
     set_title(
         (title_filename_only ? path::filename(filepath) : filepath).c_str()
     );
-    audio::control::play();
+    playlist_cursor_offset = pl.current_index;
+    playlist_display_offset = pl.current_index;
+
+    //audio::load(filepath);
     refresh_currently_playing();
     refresh_playlist();
+
+    audio::control::play();
     refresh_playbar();
     refresh_UIelements();
 }
@@ -295,8 +302,8 @@ void init(int argc, char const *argv[]){
     auto seek_to = pl.use(filename);
     //audio server
     load_file(pl.current());
-    //playlist_cursor_offset = pl.current_index;
-    //playlist_display_offset = pl.current_index;
+    playlist_cursor_offset = pl.current_index;
+    playlist_display_offset = pl.current_index;
     audio::seek::abs(std::chrono::seconds(seek_to));
 }
 void handle_resize(){
@@ -306,11 +313,11 @@ void handle_resize(){
 void handle_mouse(wm::MOUSE_INPUT m){
     mpos = m.pos;
     if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
-        playlist_cursor_offset--;
+        //playlist_cursor_offset--;
         refresh_playlist();
     }
     else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
-        playlist_cursor_offset++;
+        //playlist_cursor_offset++;
         refresh_playlist();
     }
 
@@ -333,7 +340,8 @@ void handle_mouse(wm::MOUSE_INPUT m){
 
 }
 
-
+std::thread* thr;
+bool go_kil = false;
 void handle_input(int ch){
     //std::cout<< std::hex <<  std::setw(4*2) << ch;
     
@@ -344,12 +352,12 @@ void handle_input(int ch){
     
     auto c = (char)ch;
     if(c == 'n'){
+
         load_file(pl.next());
-        
     }
 }
 
-std::chrono::duration sleep_for = std::chrono::milliseconds(1000/10);
+std::chrono::duration sleep_for = std::chrono::milliseconds(100);
 bool refrehs_thread_alive = true;
 bool in_getch = false;
 void refrehs_thread(){
