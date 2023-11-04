@@ -76,12 +76,14 @@ namespace UIelements
 } // namespace UIelements
 
 
+bool enable_cover = true;
 bool cover_valid = false;
 std::string covert_img_path;
 
 bool playlist_filename_only = true;
 bool currently_playing_filename_only = true;
 bool title_filename_only = true;
+
 
 int playlist_display_offset = 0;
 int playlist_cursor_offset = 0;
@@ -137,10 +139,12 @@ void refresh_playlist(){
         {
             b+="─";
         }
+        use_attr(color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg));
         mv(s.x, s.y);
         std::cout << b;
         mv(s.x, s.y+s.h);
-        std::cout << b;
+        std::cout << b << attr_reset;
+        
     }
     
 }
@@ -336,25 +340,7 @@ void csig(int sig){
     exit(0);
 }
 
-void init(int argc, char const *argv[]){
-    //signals
-    atexit(deinit);
-    signal(SIGINT, csig);
 
-    //window thingies
-    wm::init();
-    refresh_element_sizes();
-    use_attr(cursor_invisible);
-
-    //playlist
-    const char *filename = argc > 2 ? argv[2] : "playlist.pls";
-    auto seek_to = pl.use(filename);
-    //audio server
-    load_file(pl.current());
-    playlist_cursor_offset = pl.current_index;
-    playlist_display_offset = pl.current_index;
-    audio::seek::abs(std::chrono::seconds(seek_to));
-}
 void handle_resize(){
     wm::resize_event = false;
     refresh_all();
@@ -500,6 +486,113 @@ void refrehs_thread(){
     
 }
 
+void configuraton(){
+    cfg::add_config_inline("HilightColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        hilight_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        hilight_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
+    });
+    cfg::add_config_inline("WarnColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        warning_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        warning_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
+    });
+    cfg::add_config_inline("HoverColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        hover_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        hover_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
+    });
+    cfg::add_config_inline("BorderColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        border_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        border_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); 
+    });
+    ///Playlist
+    cfg::add_config_inline("PlaylistFilenameOnly", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        playlist_filename_only = cfg::parse_bool(str);
+    });
+    cfg::add_config_inline("PlayingFilenameOnly", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        currently_playing_filename_only = cfg::parse_bool(str);
+    });
+    cfg::add_config_inline("TitleFilenameOnly", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        title_filename_only = cfg::parse_bool(str);
+    });
+
+    ///Progress Bar
+    cfg::add_config_inline("ProgresBarPlayedColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        progress_bar_color_played_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        progress_bar_color_played_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
+    });
+    cfg::add_config_inline("ProgresBarRemainingColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        progress_bar_color_remaining_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        progress_bar_color_remaining_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
+    });
+    cfg::add_config_inline("ProgresBarCursorColor", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        progress_bar_color_cursor_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
+        progress_bar_color_cursor_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1));
+    });
+
+    //i hope this works
+    cfg::add_config_inline("ProgresBarChar", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        auto f      = cfg::get_bracket_contents(str, &idx, 0    );
+        auto c      = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto l      = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto curs   = cfg::get_bracket_contents(str, &idx, idx+1);
+        progres_bar_char_first = (f.length()>0) ? f : progres_bar_char_first;
+        progres_bar_char_center = (c.length()>0) ? c : progres_bar_char_center;
+        progres_bar_char_last = (l.length()>0) ? l : progres_bar_char_last;
+        progres_bar_char_cursor = (curs.length()>0) ? curs : progres_bar_char_cursor;
+    });
+
+    ///MISC
+    cfg::add_config_inline("CoverArt", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        enable_cover = cfg::parse_bool(str);
+    });
+    cfg::add_config_inline("Volume", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        auto vol = std::stoi(str);
+        audio::volume::set(vol);
+    });
+    
+}
+void init(int argc, char const *argv[]){
+    //signals
+    atexit(deinit);
+    signal(SIGINT, csig);
+
+    //window thingies
+    wm::init();
+    refresh_element_sizes();
+    use_attr(cursor_invisible);
+    //config
+    cfg::parse("temqo.cfg");
+    //playlist
+    const char *filename = argc > 2 ? argv[2] : "playlist.pls";
+    auto seek_to = pl.use(filename);
+    //"⤭" shall be used to add a shuffle feature
+    //audio server
+    load_file(pl.current());
+    playlist_cursor_offset = pl.current_index;
+    playlist_display_offset = pl.current_index;
+    audio::seek::abs(std::chrono::seconds(seek_to));
+}
+
 int main(int argc, char const *argv[])
 {
     init(argc, argv);
@@ -520,6 +613,7 @@ int main(int argc, char const *argv[])
         }
     }
     refrehs_thread_alive = false;
+    pl.save();
     deinit();
     thr.join();
     return 0;
