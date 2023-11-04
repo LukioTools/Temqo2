@@ -99,7 +99,7 @@ void refresh_playlist(){
     for (size_t index = 0; index <= s.h; index++)
     {
         auto i = playlist_clamp(playlist_display_offset+index);
-        mv(s.x, s.y+i);
+        mv(s.x, s.y+index);
         auto str = pl[i];
         if(playlist_filename_only) str = path::filename(str);
         wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
@@ -112,11 +112,9 @@ void refresh_playlist(){
             use_attr(color_bg_rgb( hilight_color_bg) << color_fg_rgb(hilight_color_fg));
         }
 
-        std::cout  << str;
+        std::cout  << str << attr_reset;
 
-        if(i == playlist_cursor_offset){
-            use_attr(attr_reset);
-        }
+        
     }
     //draw the borders
     {
@@ -297,8 +295,8 @@ void init(int argc, char const *argv[]){
     auto seek_to = pl.use(filename);
     //audio server
     load_file(pl.current());
-    playlist_cursor_offset = pl.current_index;
-    playlist_display_offset = pl.current_index;
+    //playlist_cursor_offset = pl.current_index;
+    //playlist_display_offset = pl.current_index;
     audio::seek::abs(std::chrono::seconds(seek_to));
 }
 void handle_resize(){
@@ -307,6 +305,15 @@ void handle_resize(){
 }
 void handle_mouse(wm::MOUSE_INPUT m){
     mpos = m.pos;
+    if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+        playlist_display_offset--;
+        refresh_playlist();
+    }
+    else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+        playlist_display_offset++;
+        refresh_playlist();
+    }
+
     if(UIelements::settings.space.inside(m.pos) != UIelements::settings_hover){
         UIelements::settings_hover = UIelements::settings.space.inside(m.pos);
         refresh_settings();
