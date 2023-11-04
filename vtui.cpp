@@ -260,16 +260,16 @@ void refresh_playbar(){
     use_attr(color_bg_rgb(progress_bar_color_played_bg) << color_fg_rgb(progress_bar_color_played_fg));
     for (size_t i = 0; i < s.width(); i++)
     {
-        if(i == 0){
+        if(i == idx){
+            use_attr(attr_reset << color_bg_rgb(progress_bar_color_cursor_bg) << color_fg_rgb(progress_bar_color_cursor_fg));
+            std::cout << progres_bar_char_cursor;
+            use_attr(attr_reset << color_bg_rgb(progress_bar_color_remaining_bg) << color_fg_rgb(progress_bar_color_remaining_fg));
+        }
+        else if(i == 0){
             std::cout << progres_bar_char_first;
         }
         else if(i == s.width()-1){
             std::cout << progres_bar_char_last;
-        }
-        else if(i == idx){
-            use_attr(attr_reset << color_bg_rgb(progress_bar_color_cursor_bg) << color_fg_rgb(progress_bar_color_cursor_fg));
-            std::cout << progres_bar_char_cursor;
-            use_attr(attr_reset << color_bg_rgb(progress_bar_color_remaining_bg) << color_fg_rgb(progress_bar_color_remaining_fg));
         }
         else{
             std::cout << progres_bar_char_center;
