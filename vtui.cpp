@@ -306,11 +306,11 @@ void handle_resize(){
 void handle_mouse(wm::MOUSE_INPUT m){
     mpos = m.pos;
     if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
-        playlist_display_offset--;
+        playlist_cursor_offset--;
         refresh_playlist();
     }
     else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
-        playlist_display_offset++;
+        playlist_cursor_offset++;
         refresh_playlist();
     }
 
