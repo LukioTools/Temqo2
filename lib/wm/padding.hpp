@@ -4,30 +4,30 @@
 namespace wm
 {
     struct Padding{
-        unsigned char t = 1;
-        unsigned char b = 1;
-        unsigned char l = 2;
-        unsigned char r = 2;
+        unsigned char t = 0;
+        unsigned char b = 0;
+        unsigned char l = 0;
+        unsigned char r = 0;
 
-        void pad(){
-            t = 1;
-            b = 1;
-            l = 2;
-            r = 2;
+        Padding(){
+            t = 0;
+            b = 0;
+            l = 0;
+            r = 0;
         }
-        void pad(unsigned char v){
+        Padding(unsigned char v){
             t = v;
             b = v;
             l = v;
             r = v;
         }
-        void pad(unsigned char tb, unsigned char lr){
+        Padding(unsigned char tb, unsigned char lr){
             t = tb;
             b = tb;
             l = lr;
             r = lr;
         }
-        void pad(unsigned char _t, unsigned char _b, unsigned char _l,unsigned char _r){
+        Padding(unsigned char _t, unsigned char _b, unsigned char _l,unsigned char _r){
             t = _t;
             b = _b;
             l = _l;

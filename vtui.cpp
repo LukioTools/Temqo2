@@ -80,8 +80,32 @@ bool title_filename_only = true;
 
 
 void refresh_playlist(){
-    playlist.space.box();
+    auto s = playlist.wSpace();
+    for (size_t i = 0; i <= s.h; i++)
+    {
+        mv(s.x, s.y+i);
+        auto str = pl[i];
+        if(playlist_filename_only) str = path::filename(str);
+        wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
+        std::cout << str;
+    }
+
+    {
+        auto s= playlist.space;
+        std::string b;
+        for (size_t i = 0; i < s.width(); i++)
+        {
+            b+="─";
+        }
+        mv(s.x, s.y);
+        std::cout << b;
+        mv(s.x, s.y+s.h);
+        std::cout << b;
+    }
+    
 }
+
+
 void refresh_currently_playing(){
     std::string c = currently_playing_filename_only? path::filename(pl.current()): pl.current();
     auto s = current_file.aSpace();
@@ -177,13 +201,14 @@ void refresh_UIelements(){
     //UIelements::toggle.space.fill("C");
 }
 void refresh_playbar(){
-    UIelements::playbar.space.fill("─");
+    //UIelements::playbar.space.fill("─");
 }
 void refresh_element_sizes(){
     current_file.space = wm::Space(0,0, wm::WIDTH, 0);
-    input_field.space =  wm::Space(0, wm::HEIGHT-1, wm::WIDTH, 0);
+    input_field.space =  wm::Space(0, wm::HEIGHT, wm::WIDTH, 0);
     
     playlist.space = wm::Space(0,1, wm::WIDTH, wm::HEIGHT-2);
+    playlist.pad = {1,1,0,0};
     //implement album cover
 
 
