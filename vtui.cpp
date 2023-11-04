@@ -41,14 +41,7 @@ bool playlist_filename_only = true;
 bool currently_playing_filename_only = true;
 bool title_filename_only = true;
 
-void load_file(std::string filepath){
-    cover_valid = false;
-    audio::load(filepath);
-    set_title(
-        (title_filename_only ? path::filename(filepath) : filepath).c_str()
-    );
-    audio::control::play();
-}
+
 
 void refresh_playlist(){
     playlist.space.fill("P");
@@ -144,6 +137,19 @@ void refresh_all(){
     refresh_playbar();
 }
 
+void load_file(std::string filepath){
+    cover_valid = false;
+    audio::load(filepath);
+    set_title(
+        (title_filename_only ? path::filename(filepath) : filepath).c_str()
+    );
+    audio::control::play();
+    refresh_currently_playing();
+    refresh_playlist();
+    refresh_playbar();
+    refresh_UIelements();
+}
+
 
 void deinit() {
     audio::control::pause();
@@ -194,9 +200,7 @@ void handle_input(int ch){
     auto c = (char)ch;
     if(c == 'n'){
         load_file(pl.next());
-        refresh_currently_playing();
-        refresh_playlist();
-        refresh_playbar();
+        
     }
 }
 
