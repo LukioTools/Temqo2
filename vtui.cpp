@@ -5,6 +5,7 @@
 #include "lib/wm/clip.hpp"
 #include "lib/wm/core.hpp"
 #include "lib/wm/def.hpp"
+#include "lib/wm/getch.hpp"
 #include "lib/wm/globals.hpp"
 #include "lib/wm/mouse.hpp"
 #include "lib/wm/position.hpp"
@@ -12,24 +13,29 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <string>
 #include <thread>
 
 audio::Playlist pl;
 
 wm::Position mpos = {0,0};
 
+float volume_shift = 5.f;
+float volume_reset = 100.f;
 
 //COLORS
 cfg::RGB warning_color_fg = {150, 60, 60};
 cfg::RGB warning_color_bg = {0, 0, 0};
 cfg::RGB hilight_color_fg = {20, 30, 20};
 cfg::RGB hilight_color_bg = {200,200,200};
-cfg::RGB hover_color_bg = {60,60,60};
 cfg::RGB hover_color_fg = {222,222,222};
-cfg::RGB progress_bar_color_played_bg = {0,0,0};
+cfg::RGB hover_color_bg = {60,60,60};
 cfg::RGB progress_bar_color_played_fg = {255,0,0};
-cfg::RGB progress_bar_color_remaining_bg = {0,0,0};
+cfg::RGB progress_bar_color_played_bg = {0,0,0};
 cfg::RGB progress_bar_color_remaining_fg = {200,200,200};
+cfg::RGB progress_bar_color_remaining_bg = {0,0,0};
+cfg::RGB progress_bar_color_cursor_fg = {255,255,255};
+cfg::RGB progress_bar_color_cursor_bg = {0,0,0};
 cfg::RGB border_color_fg = {193,119,1};
 cfg::RGB border_color_bg = {0,0,0};
 
@@ -91,6 +97,12 @@ size_t playlist_clamp(long i){
     }
     return i;
 }
+size_t playlist_st_index(){
+    return playlist_clamp(playlist_display_offset);
+}
+size_t playlist_last_index(){
+    return playlist_clamp(playlist_display_offset+playlist.wSpace().h);
+}
 
 void refresh_playlist(){
     //display the elements
@@ -102,6 +114,7 @@ void refresh_playlist(){
         mv(s.x, s.y+index);
         auto str = pl[i];
         if(playlist_filename_only) str = path::filename(str);
+        str = std::to_string(i)+ ' ' +str;
         wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
         wm::pad(str, s.width(), wm::PAD_TYPE::PAD_RIGHT);
 
@@ -130,6 +143,18 @@ void refresh_playlist(){
         std::cout << b;
     }
     
+}
+
+void refresh_display_offset(){
+    auto idx =playlist_clamp(playlist_cursor_offset);
+    auto fst = playlist_st_index();
+    auto lst = playlist_last_index();
+    if(idx < fst){
+        playlist_display_offset -=fst-idx;
+    }
+    if(idx > lst){
+        playlist_display_offset -=lst-idx;
+    }
 }
 
 
@@ -228,7 +253,29 @@ void refresh_UIelements(){
     //UIelements::toggle.space.fill("C");
 }
 void refresh_playbar(){
-    UIelements::playbar.space.fill("─");
+    auto d = audio::position::get_d();
+    auto s = UIelements::playbar.space;
+    auto idx = static_cast<int>(s.w*d);
+    mv(s.x, s.y);
+    use_attr(color_bg_rgb(progress_bar_color_played_bg) << color_fg_rgb(progress_bar_color_played_fg));
+    for (size_t i = 0; i < s.width(); i++)
+    {
+        if(i == 0){
+            std::cout << progres_bar_char_first;
+        }
+        else if(i == s.width()-1){
+            std::cout << progres_bar_char_last;
+        }
+        else if(i == idx){
+            use_attr(attr_reset << color_bg_rgb(progress_bar_color_cursor_bg) << color_fg_rgb(progress_bar_color_cursor_fg));
+            std::cout << progres_bar_char_cursor;
+            use_attr(attr_reset << color_bg_rgb(progress_bar_color_remaining_bg) << color_fg_rgb(progress_bar_color_remaining_fg));
+        }
+        else{
+            std::cout << progres_bar_char_center;
+        }
+    }
+    use_attr(attr_reset);
 }
 void refresh_element_sizes(){
     current_file.space = wm::Space(0,0, wm::WIDTH, 0);
@@ -249,6 +296,7 @@ void refresh_element_sizes(){
 //veri expensiv
 void refresh_all(){
     clear_all();
+    use_attr(cursor_invisible);
     refresh_element_sizes();
     refresh_currently_playing();
     refresh_playlist();
@@ -259,18 +307,19 @@ void refresh_all(){
 void load_file(std::string filepath){
     
     cover_valid = false;
-    audio::load(filepath);
+    std::thread thr(audio::load,filepath);
 
     set_title(
         (title_filename_only ? path::filename(filepath) : filepath).c_str()
     );
     playlist_cursor_offset = pl.current_index;
-    playlist_display_offset = pl.current_index;
+    refresh_display_offset();
 
     //audio::load(filepath);
     refresh_currently_playing();
     refresh_playlist();
 
+    thr.join();
     audio::control::play();
     refresh_playbar();
     refresh_UIelements();
@@ -310,16 +359,12 @@ void handle_resize(){
     wm::resize_event = false;
     refresh_all();
 }
+
+
+
 void handle_mouse(wm::MOUSE_INPUT m){
     mpos = m.pos;
-    if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
-        //playlist_cursor_offset--;
-        refresh_playlist();
-    }
-    else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
-        //playlist_cursor_offset++;
-        refresh_playlist();
-    }
+    
 
     if(UIelements::settings.space.inside(m.pos) != UIelements::settings_hover){
         UIelements::settings_hover = UIelements::settings.space.inside(m.pos);
@@ -333,15 +378,84 @@ void handle_mouse(wm::MOUSE_INPUT m){
         UIelements::volume_hover = UIelements::volume.space.inside(m.pos);
         refresh_volume();
     }
+    if(UIelements::volume.space.inside(m.pos)){
+        if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+            audio::volume::shift(volume_shift);
+        }
+        else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+            audio::volume::shift(-volume_shift);
+        }
+        else if(m.btn == wm::MOUSE_BTN::M_LEFT){
+            audio::volume::set(volume_reset);
+        }
+        refresh_volume();
+    }
     if(UIelements::toggle.space.inside(m.pos) != UIelements::toggle_hover){
         UIelements::toggle_hover = UIelements::toggle.space.inside(m.pos);
         refresh_play_button();
     }
+    if(UIelements::toggle_hover && m.btn == wm::MOUSE_BTN::M_LEFT){
+        audio::control::toggle();
+        refresh_play_button();
+    }
+    if(UIelements::playbar.space.inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
+        auto delta = static_cast<double>(m.pos.x)/static_cast<double>(UIelements::playbar.space.width());
+        audio::seek::abs(delta);
+        refresh_time_played();
+        refresh_playbar();
+    }
+    
+    if(playlist.wSpace().inside(m.pos)){
+        if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+            playlist_cursor_offset-=mouse_scroll_sensitivity;
+            refresh_display_offset();
+        }
+        else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+            playlist_cursor_offset+=mouse_scroll_sensitivity;
+            refresh_display_offset();
+        }
+        else{
+            auto s = playlist.wSpace();
+            auto i = m.pos.y - s.y;
+            playlist_cursor_offset = playlist_clamp(playlist_display_offset+i);
+            refresh_display_offset();
+            if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                pl.current_index = playlist_cursor_offset;
+                load_file(pl.current());
+            }
+        }
+
+        
+        refresh_playlist();
+    }
 
 }
 
-std::thread* thr;
-bool go_kil = false;
+void handle_arrow_key(wm::KEY k){
+    switch (k) {
+        case wm::K_UP:
+            playlist_cursor_offset-=arrowkey_scroll_sensitivity;
+            refresh_display_offset();
+            refresh_playlist();
+            break;
+        case wm::K_DOWN:
+            playlist_cursor_offset+=arrowkey_scroll_sensitivity;
+            refresh_display_offset();
+            refresh_playlist();
+            break;
+        case wm::K_RIGHT:
+            audio::seek::rel(std::chrono::seconds(5));
+            break;
+        case wm::K_LEFT:
+            audio::seek::rel(std::chrono::seconds(-5));
+            break;
+        default:
+            return;
+    }
+
+    
+}
+
 void handle_input(int ch){
     //std::cout<< std::hex <<  std::setw(4*2) << ch;
     
@@ -349,11 +463,18 @@ void handle_input(int ch){
         handle_mouse(wm::parse_mouse(ch));
         return;
     }
+    if(auto k = wm::is_key(ch)){
+        handle_arrow_key(k);
+        return;
+    }
     
     auto c = (char)ch;
     if(c == 'n'){
-
         load_file(pl.next());
+    }
+    else if(c== '\n'){
+        pl.current_index = playlist_clamp(playlist_cursor_offset);
+        load_file(pl.current());
     }
 }
 
@@ -384,6 +505,7 @@ int main(int argc, char const *argv[])
     init(argc, argv);
     refresh_all();
     std::thread thr(refrehs_thread);
+    use_attr(cursor_invisible);
     while (true) {
         if(wm::resize_event){
             handle_resize();
@@ -391,7 +513,6 @@ int main(int argc, char const *argv[])
         in_getch= true;
         int ch = wm::getch();
         in_getch= false;
-        mv(0,0);
         handle_input(ch);
         if(ch == (int)'q'){
             clear_all()
