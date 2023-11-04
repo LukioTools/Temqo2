@@ -1,11 +1,7 @@
+/*
 #include "lib/audio/audio.hpp"
-#include "lib/audio/vlc.hpp"
 #include "lib/path/filename.hpp"
 #include "lib/wm/core.hpp"
-#include "lib/wm/getch.hpp"
-#include "lib/wm/globals.hpp"
-#include "lib/wm/init.hpp"
-#include "lib/wm/space.hpp"
 #include <cstdlib>
 #include <iostream>
 
@@ -43,14 +39,7 @@ void load_file(std::string filepath){
     set_title(
         (title_filename_only ? path::filename(filepath) : filepath).c_str()
     );
-        //refresh the shit
-    while (true) {
-        std::cout<< audio_vlc::mediaPlayer.willPlay() << std::endl;
-        if(!audio_vlc::mediaPlayer.willPlay()){
-            audio_vlc::play();
-            break;
-        }
-    }
+    audio_vlc::play();
 }
 
 void refresh_element_sizes(){
@@ -99,18 +88,22 @@ void handle_input(int ch){
     std::cout<< std::hex << ch;
 }
 
-int main(int argc, char const *argv[])
-{
-    init(argc, argv);
-    while (true) {
-        audio_vlc::play();
-        auto ch = wm::getch();
-        if(ch == (int) 'q')
-            break;
-        mv(0,0);
-        std::cout<<( audio_vlc::playing() ? "Playing\n" : "Stopped\n");
-        handle_input(ch);
-    }
-    deinit();
+*/
+#include "lib/audio/sfml.hpp"
+#include <chrono>
+#include <iostream>
+
+int main() {
+    // Create an instance of sf::SoundBuffer to hold the audio data
+    auto s = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    audio::load("stardust.mp3");
+    auto c = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    std::cout << "Loading took: " << c-s << " nanoseconds\n";
+    audio::control::play();
+
+    getchar();
+
+    audio::control::pause();
+
     return 0;
 }

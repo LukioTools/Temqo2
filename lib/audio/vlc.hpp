@@ -2,6 +2,7 @@
 
 #include <bits/chrono.h>
 #include <chrono>
+#include <iostream>
 #include <vlcpp/Instance.hpp>
 #include <vlcpp/vlc.hpp>
 
@@ -10,6 +11,11 @@ namespace audio_vlc
     VLC::Instance instance;
     VLC::MediaPlayer mediaPlayer;
     VLC::Media currentMedia;
+
+    void medChanged(VLC::MediaPtr medptr){
+        std::cout<< "Media Changed\n";
+        mediaPlayer.play();
+    }
 
     
     inline int load(const char* path){
@@ -133,6 +139,7 @@ namespace audio_vlc
     inline int init(){
         instance = VLC::Instance(0, nullptr);
         mediaPlayer = VLC::MediaPlayer(instance);
+        mediaPlayer.eventManager().onMediaChanged(medChanged);
         return 0;
     }
 
