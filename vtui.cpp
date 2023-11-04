@@ -297,6 +297,8 @@ void init(int argc, char const *argv[]){
     auto seek_to = pl.use(filename);
     //audio server
     load_file(pl.current());
+    playlist_cursor_offset = pl.current_index;
+    playlist_display_offset = pl.current_index;
     audio::seek::abs(std::chrono::seconds(seek_to));
 }
 void handle_resize(){
