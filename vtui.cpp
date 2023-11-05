@@ -372,7 +372,9 @@ void refresh_all(){
     refresh_playlist();
     refresh_UIelements();
     refresh_playbar();
-    refresh_coverart();
+    try{
+        refresh_coverart();
+    }catch(...){}
 }
 
 void load_file(std::string filepath){
@@ -686,7 +688,9 @@ void refrehs_thread(){
             handle_resize();
         }
         if(!cover_art_valid){
-            refresh_coverart();
+            try{
+                refresh_coverart();
+            }catch(...){}
         }
         refresh_time_played();
         refresh_playbar();
