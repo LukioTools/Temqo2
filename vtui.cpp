@@ -522,6 +522,7 @@ namespace hcr
     std::regex save_playlist("^p?l?save *$");
     std::regex saveto_playlist("^p?l?saveto .*$");
     std::regex use_config("^useco?n?fi?g .*$");
+    std::regex goto_config("^got?o? .*$");
 } // namespace hcr
 
 
@@ -545,6 +546,11 @@ void handle_command(){
         }
         else if(std::regex_match(input, hcr::use_config)){
             cfg::parse(input.substr(input.find_first_of(' ')+1));
+        }
+        else if (std::regex_match(input, hcr::goto_config)) {
+            playlist_cursor_offset = std::stoi(input.substr(input.find_first_of(' ')+1));
+            pl.current_index = playlist_clamp(playlist_cursor_offset);
+            load_file(pl.current());
         }
     }
     catch(...){
