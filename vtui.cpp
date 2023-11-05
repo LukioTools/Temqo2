@@ -18,7 +18,14 @@
 
 audio::Playlist pl;
 
+enum INPUT_MODE : char{
+    DEFAULT = 'D',
+    COMMAND = 'C',
+} current_mode = DEFAULT;
+
+
 wm::Position mpos = {0,0};
+std::string input;
 
 float volume_shift = 5.f;
 float volume_reset = 100.f;
@@ -252,9 +259,6 @@ void refresh_UIelements(){
     refresh_time_played();
     refresh_volume();
     refresh_play_button();
-    //UIelements::time_played.space.fill("T");
-    //UIelements::volume.space.fill("V");
-    //UIelements::toggle.space.fill("C");
 }
 void refresh_playbar(){
     auto d = audio::position::get_d();
@@ -438,13 +442,78 @@ void handle_arrow_key(wm::KEY k){
         default:
             return;
     }
+}
 
-    
+void update_input(){
+
+}
+
+void handle_command(){
+
+}
+
+
+void handle_char(int ch){
+    auto c = (char)ch;
+    if (current_mode == DEFAULT) //yea the mode shit
+    {
+        switch (c) {
+            case 'n':
+                load_file(pl.next());
+                break;
+            case '\n':
+                pl.current_index = playlist_clamp(playlist_cursor_offset);
+                load_file(pl.current());
+                break;
+
+                //switch to command mode
+            case '/':
+                input = '/';
+                current_mode = INPUT_MODE::COMMAND;
+                break;
+            case ':':
+                input = ':';
+                current_mode = INPUT_MODE::COMMAND;
+                break;
+            case 'i':
+                input = "";
+                current_mode = INPUT_MODE::COMMAND;
+                break;
+            default:
+                break;
+        }
+    }
+    else if(current_mode == COMMAND){
+        switch (c) {
+            case '\n':
+                handle_command();
+                input = "";
+                current_mode = DEFAULT;
+                break;
+            case '\b':
+            case static_cast<char>(127):
+                if(input.length() > 0){
+                    input.pop_back();
+                    update_input();
+                }
+                break;
+            default:
+                input+=c;
+                update_input();
+                break;
+        }
+    }
+
 }
 
 void handle_input(int ch){
     //std::cout<< std::hex <<  std::setw(4*2) << ch;
-    
+    if (ch == 0x1b1b)
+    {
+        input = "";
+        current_mode = INPUT_MODE::DEFAULT;
+        return;
+    }
     if(is_mouse(ch)){
         handle_mouse(wm::parse_mouse(ch));
         return;
@@ -453,15 +522,12 @@ void handle_input(int ch){
         handle_arrow_key(k);
         return;
     }
+    if(ch > 0 && ch < 255){
+        handle_char(ch);
+    }
+
     
-    auto c = (char)ch;
-    if(c == 'n'){
-        load_file(pl.next());
-    }
-    else if(c== '\n'){
-        pl.current_index = playlist_clamp(playlist_cursor_offset);
-        load_file(pl.current());
-    }
+    
 }
 
 std::chrono::duration sleep_for = std::chrono::milliseconds(100);
