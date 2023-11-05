@@ -1,4 +1,5 @@
 #include "lib/audio/playlist.hpp"
+#include "lib/audio/extract_img.hpp"
 #include "lib/audio/sfml.hpp"
 #include "lib/cfg/config.hpp"
 #include "lib/path/filename.hpp"
@@ -13,6 +14,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <regex>
 #include <string>
 #include <thread>
 
@@ -20,6 +22,7 @@ audio::Playlist pl;
 
 enum INPUT_MODE : char{
     DEFAULT = 'D',
+    SEARCH = 'S',
     COMMAND = 'C',
 } current_mode = DEFAULT;
 
@@ -29,7 +32,7 @@ std::string input;
 
 float volume_shift = 5.f;
 float volume_reset = 100.f;
-
+bool exit_mainloop = false;
 //COLORS
 cfg::RGB warning_color_fg = {150, 60, 60};
 cfg::RGB warning_color_bg = {0, 0, 0};
@@ -84,7 +87,8 @@ namespace UIelements
 
 
 bool enable_cover = true;
-bool cover_valid = false;
+bool cover_file_valid = false;
+bool cover_art_valid = false;
 std::string covert_img_path;
 
 bool playlist_filename_only = true;
@@ -94,6 +98,7 @@ bool title_filename_only = true;
 
 int playlist_display_offset = 0;
 int playlist_cursor_offset = 0;
+double playlist_width = 0.5;
 
 size_t playlist_clamp(long i){
     while (i < 0)
@@ -168,6 +173,42 @@ void refresh_display_offset(){
     }
 }
 
+void refresh_coverart_img(){
+    auto res = audio::extra::extractAlbumCoverTo(pl.current(), TMP_OUT);
+    covert_img_path = (res == 0) ? TMP_OUT : "";
+    cover_file_valid = true;
+}
+
+void refresh_coverart(){
+    cover_art_valid = true;
+    use_attr(color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg));
+    cover_art.space.box("─","─",nullptr, "│" , "┬", nullptr, "┴", nullptr);
+    use_attr(attr_reset);
+    if(!cover_file_valid){
+        refresh_coverart_img();
+    }
+    if(covert_img_path.length() == 0){
+        return;
+    }
+    auto s = cover_art.wSpace();
+    auto cover_ansi = audio::extra::getImg(covert_img_path, s.width(), s.height() + 1);
+    
+    std::ostringstream out;
+#define clamp_1(val) (val == 0) ? 1 : val
+    for (size_t iy = 0; iy <= s.height(); iy++)
+    {
+        out << mv_str(s.x, s.y + iy);
+        for (size_t ix = 0; ix < s.width(); ix++)
+        {
+            auto rgb = cover_ansi->get(ix + s.width() * iy);
+
+            out << color_bg_str(clamp_1(rgb.r), clamp_1(rgb.g), clamp_1(rgb.b)) << ' ' << attr_reset;
+        }
+    }
+    delete cover_ansi;
+    std::cout << out.str();
+    return;
+}
 
 void refresh_currently_playing(){
     std::string c = currently_playing_filename_only? path::filename(pl.current()): pl.current();
@@ -261,36 +302,57 @@ void refresh_UIelements(){
     refresh_play_button();
 }
 void refresh_playbar(){
-    auto d = audio::position::get_d();
-    auto s = UIelements::playbar.space;
-    auto idx = static_cast<int>(s.w*d);
-    mv(s.x, s.y);
-    use_attr(color_bg_rgb(progress_bar_color_played_bg) << color_fg_rgb(progress_bar_color_played_fg));
-    for (size_t i = 0; i < s.width(); i++)
-    {
-        if(i == idx){
-            use_attr(attr_reset << color_bg_rgb(progress_bar_color_cursor_bg) << color_fg_rgb(progress_bar_color_cursor_fg));
-            std::cout << progres_bar_char_cursor;
-            use_attr(attr_reset << color_bg_rgb(progress_bar_color_remaining_bg) << color_fg_rgb(progress_bar_color_remaining_fg));
+    if(current_mode == INPUT_MODE::DEFAULT){
+        auto d = audio::position::get_d();
+        auto s = UIelements::playbar.space;
+        auto idx = static_cast<int>(s.w*d);
+        mv(s.x, s.y);
+        use_attr(color_bg_rgb(progress_bar_color_played_bg) << color_fg_rgb(progress_bar_color_played_fg));
+        for (size_t i = 0; i < s.width(); i++)
+        {
+            if(i == idx){
+                use_attr(attr_reset << color_bg_rgb(progress_bar_color_cursor_bg) << color_fg_rgb(progress_bar_color_cursor_fg));
+                std::cout << progres_bar_char_cursor;
+                use_attr(attr_reset << color_bg_rgb(progress_bar_color_remaining_bg) << color_fg_rgb(progress_bar_color_remaining_fg));
+            }
+            else if(i == 0){
+                std::cout << progres_bar_char_first;
+            }
+            else if(i == s.width()-1){
+                std::cout << progres_bar_char_last;
+            }
+            else{
+                std::cout << progres_bar_char_center;
+            }
         }
-        else if(i == 0){
-            std::cout << progres_bar_char_first;
-        }
-        else if(i == s.width()-1){
-            std::cout << progres_bar_char_last;
-        }
-        else{
-            std::cout << progres_bar_char_center;
-        }
+        use_attr(attr_reset);
     }
-    use_attr(attr_reset);
+    else if(current_mode == INPUT_MODE::COMMAND){
+        auto s = UIelements::playbar.space;
+        auto str = ':'+input;
+        wm::clip(str, s.w, wm::SPLICE_TYPE::BEGIN_DOTS);
+        wm::pad(str,s.w,wm::PAD_TYPE::PAD_RIGHT);
+        mv(s.x, s.y);
+        std::cout << str;
+    }
+    else if(current_mode == INPUT_MODE::SEARCH){
+        auto s = UIelements::playbar.space;
+        auto str = '/'+input;
+        wm::clip(str, s.w, wm::SPLICE_TYPE::BEGIN_DOTS);
+        wm::pad(str,s.w,wm::PAD_TYPE::PAD_RIGHT);
+        mv(s.x, s.y);
+        std::cout << str;
+    }
+
 }
 void refresh_element_sizes(){
     current_file.space = wm::Space(0,0, wm::WIDTH, 0);
     input_field.space =  wm::Space(0, wm::HEIGHT, wm::WIDTH, 0);
     
-    playlist.space = wm::Space(0,1, wm::WIDTH, wm::HEIGHT-2);
+    playlist.space = wm::Space(0,1, wm::WIDTH*playlist_width, wm::HEIGHT-2);
     playlist.pad = {1,1,0,0};
+    cover_art.space = wm::Space(playlist.space.w,1, wm::WIDTH-playlist.space.w+1, wm::HEIGHT-2);
+    cover_art.pad = {1,1,1,0};
     //implement album cover
 
 
@@ -310,11 +372,13 @@ void refresh_all(){
     refresh_playlist();
     refresh_UIelements();
     refresh_playbar();
+    refresh_coverart();
 }
 
 void load_file(std::string filepath){
     
-    cover_valid = false;
+    cover_file_valid = false;
+    cover_art_valid = false;
     std::thread thr(audio::load,filepath);
 
     set_title(
@@ -347,6 +411,7 @@ void csig(int sig){
 
 void handle_resize(){
     wm::resize_event = false;
+    cover_art_valid = false;
     refresh_all();
 }
 
@@ -448,34 +513,89 @@ void update_input(){
 
 }
 
+namespace hcr
+{
+    std::regex add_to_playlist("^p?l?add .*$");
+    std::regex use_playlist("^p?l?use .*$");
+    std::regex save_playlist("^p?l?save *$");
+    std::regex saveto_playlist("^p?l?saveto .*$");
+    std::regex use_config("^useco?n?fi?g .*$");
+} // namespace hcr
+
+
 void handle_command(){
-
+    try{
+        if(input.length() == 0){
+            return;
+        }
+        if(std::regex_match(input, hcr::save_playlist)){
+            pl.save();
+        }
+        else if(std::regex_match(input, hcr::saveto_playlist)){
+            pl.save(input.substr(input.find_first_of(' ')+1));
+        }
+        else if(std::regex_match(input, hcr::add_to_playlist)){
+            pl.add(input.substr(input.find_first_of(' ')+1));
+        }
+        else if(std::regex_match(input, hcr::use_playlist)){
+            pl.save();
+            pl.use(input.substr(input.find_first_of(' ')+1));
+        }
+        else if(std::regex_match(input, hcr::use_config)){
+            cfg::parse(input.substr(input.find_first_of(' ')+1));
+        }
+    }
+    catch(...){
+        return;
+    }
 }
+void handle_search(){
+    size_t index = std::string::npos;
+    std::string out = pl.find_insensitive(input, &index);
 
-
+    if(out.length() == 0 || index == std::string::npos){
+        return;
+    }
+    playlist_cursor_offset = index;
+    refresh_display_offset();
+    refresh_playlist();
+}
+//add the next found to the search shit
 void handle_char(int ch){
     auto c = (char)ch;
     if (current_mode == DEFAULT) //yea the mode shit
     {
         switch (c) {
+            case 'q':
+                exit_mainloop = true;
+                break;
             case 'n':
                 load_file(pl.next());
+                break;
+            case 'b':
+                load_file(pl.prev());
+                break;
+            case 'c':
+                audio::control::toggle();
+                break;
+            case '+':
+                audio::volume::shift(volume_shift);
+                break;
+            case '-':
+                audio::volume::shift(-volume_shift);
                 break;
             case '\n':
                 pl.current_index = playlist_clamp(playlist_cursor_offset);
                 load_file(pl.current());
                 break;
-
                 //switch to command mode
+            
             case '/':
-                input = '/';
-                current_mode = INPUT_MODE::COMMAND;
-                break;
-            case ':':
-                input = ':';
-                current_mode = INPUT_MODE::COMMAND;
+                input = "";
+                current_mode = INPUT_MODE::SEARCH;
                 break;
             case 'i':
+            case ':':
                 input = "";
                 current_mode = INPUT_MODE::COMMAND;
                 break;
@@ -494,15 +614,35 @@ void handle_char(int ch){
             case static_cast<char>(127):
                 if(input.length() > 0){
                     input.pop_back();
-                    update_input();
                 }
                 break;
             default:
                 input+=c;
-                update_input();
                 break;
         }
     }
+    else if (current_mode == SEARCH){
+        switch (c) {
+            case '\n':
+                pl.current_index = playlist_clamp(playlist_cursor_offset);
+                load_file(pl.current());
+                input = "";
+                current_mode = DEFAULT;
+                break;
+            case '\b':
+            case static_cast<char>(127):
+                if(input.length() > 0){
+                    input.pop_back();
+                }
+                handle_search();
+                break;
+            default:
+                input+=c;
+                handle_search();
+                break;
+        }
+    }
+    refresh_playbar();
 
 }
 
@@ -544,6 +684,9 @@ void refrehs_thread(){
         }
         if(wm::resize_event){
             handle_resize();
+        }
+        if(!cover_art_valid){
+            refresh_coverart();
         }
         refresh_time_played();
         refresh_playbar();
@@ -666,7 +809,7 @@ int main(int argc, char const *argv[])
     refresh_all();
     std::thread thr(refrehs_thread);
     use_attr(cursor_invisible);
-    while (true) {
+    while (!exit_mainloop) {
         if(wm::resize_event){
             handle_resize();
         }
@@ -674,13 +817,13 @@ int main(int argc, char const *argv[])
         int ch = wm::getch();
         in_getch= false;
         handle_input(ch);
-        if(ch == (int)'q'){
-            clear_all()
-            break;
-        }
+
     }
     refrehs_thread_alive = false;
-    pl.save();
+    try{
+        pl.save();
+    }
+    catch(...){}
     deinit();
     thr.join();
     return 0;
