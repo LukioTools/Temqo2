@@ -581,6 +581,7 @@ void init(int argc, char const *argv[]){
     refresh_element_sizes();
     use_attr(cursor_invisible);
     //config
+    configuraton();
     cfg::parse("temqo.cfg");
     //playlist
     const char *filename = argc > 2 ? argv[2] : "playlist.pls";
