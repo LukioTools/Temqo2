@@ -58,7 +58,7 @@ namespace audio
             return 1;
         }
 
-        inline ascii_img::load_image_t* getImg(std::string filename, int x, int y){
+        inline ascii_img::load_image_t* getImg(std::string filename, unsigned int x, unsigned int y){
             auto r = ascii_img::load_image(filename, x, y);
             if(r->size() != x*y){
                 delete r;
