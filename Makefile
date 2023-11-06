@@ -1,7 +1,7 @@
 CC ?= g++                               # FILL: the compiler
 CXX ?= g++                              # FILL: the compiler
 CFLAGS := -Wall                 		# FILL: compile flags
-CXXFLAGS := -Wall    -Ofast				# FILL: compile flags
+CXXFLAGS := -Wall    				# FILL: compile flags
 
 DEPENDENCIES := -ltag -lfreeimage -lsfml-audio -lsfml-system # -ltag -lvlc -lfreeimage #-lm -pthread 
 

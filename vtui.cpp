@@ -17,6 +17,9 @@
 #include <regex>
 #include <string>
 #include <thread>
+#include <vector>
+#include "custom/time_played.hpp"
+
 
 audio::Playlist pl;
 
@@ -66,23 +69,37 @@ wm::Element input_field;
 wm::Element playlist;
 wm::Element cover_art;
 
+void refresh_time_played_default();
+void refresh_time_played_remaining();
+
+TimePlayed tp(
+    {
+        {11, refresh_time_played_default},
+        {12, refresh_time_played_remaining},
+    }
+);
+
+
+
+
+
 namespace UIelements
 {
     int settings_alloc = 1;
-    int time_played_alloc = 11;
     int volume_alloc = 4;
     int toggle_alloc = 1;
     bool settings_hover = false;
-    bool time_played_hover = false;
     bool volume_hover = false;
     bool toggle_hover = false;
     wm::Element settings;
-    wm::Element time_played;
     wm::Element volume;
     wm::Element toggle;
-    /// @brief allo rest of the ui space
+    /// @brief alloc rest of the ui space
     bool playbar_hover = false;
     wm::Element playbar;
+
+
+
 } // namespace UIelements
 
 
@@ -232,9 +249,11 @@ void refresh_settings(){
         use_attr(attr_reset);
     }
 }
+
 #define leading_zero(n) ((n < 10) ? "0" : "") << n
-void refresh_time_played(){
-    auto s  =UIelements::time_played.space;
+///alloc 11
+void refresh_time_played_default(){
+    wm::Space s  = tp;
     mv(s.x,s.y);
     auto ps = audio::position::get<std::ratio<1,1>>().count();
     auto ts = audio::duration::get<std::ratio<1,1>>().count();
@@ -245,19 +264,51 @@ void refresh_time_played(){
     auto psec = ps-pm*60; 
     auto tsec = ts-tm*60;
 
-    bool inside = UIelements::time_played_hover;
-    if(inside){
+    if(tp.hover){
         use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
     }
     std::cout 
     << leading_zero(pm) << ':' << leading_zero(psec) 
     << '/' 
     << leading_zero(tm) << ':' << leading_zero(tsec);
-    if(inside){
+    if(tp.hover){
         use_attr(attr_reset);
     }
 }
+///alloc 12?
+void refresh_time_played_remaining(){
+    wm::Space s  = tp;
+    mv(s.x,s.y);
+    auto ps = audio::position::get<std::ratio<1,1>>().count();
+    auto ts = audio::duration::get<std::ratio<1,1>>().count();
+    auto diff = ts-ps; //difference in seconds
+    //abs time
+    auto tm = ts/60;
+    auto tsec = ts-tm*60;
+
+    auto totaldiffminutes = diff/60;
+    auto totaldiffseconds = diff - (totaldiffminutes*60);
+
+    if(tp.hover){
+        use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg));
+    }
+    std::cout 
+    << '-' << leading_zero(totaldiffminutes) << ':' << leading_zero(totaldiffseconds) 
+    << '/' 
+    << leading_zero(tm) << ':' << leading_zero(tsec);
+    if(tp.hover){
+        use_attr(attr_reset);
+    }
+}
+
 #undef leading_zero
+
+void refresh_time_played(){
+    auto e = tp.current();
+    if(e.callback){
+        e.callback();
+    }
+}
 
 void refresh_volume(){
     auto s = UIelements::volume.space;
@@ -358,8 +409,8 @@ void refresh_element_sizes(){
 
     //order is important
     UIelements::settings.space      =   wm::Space(wm::WIDTH - UIelements::settings_alloc,                           wm::HEIGHT, UIelements::settings_alloc,     0);
-    UIelements::time_played.space   =   wm::Space(UIelements::settings.space.x -1 -UIelements::time_played_alloc,   wm::HEIGHT, UIelements::time_played_alloc,  0);
-    UIelements::volume.space        =   wm::Space(UIelements::time_played.space.x-1-UIelements::volume_alloc,       wm::HEIGHT, UIelements::volume_alloc,       0);
+    tp                              =   wm::Space(UIelements::settings.space.x -1 - tp.current().alloc_size,    wm::HEIGHT, tp.current().alloc_size,  0);
+    UIelements::volume.space        =   wm::Space(tp.space.x-1-UIelements::volume_alloc,       wm::HEIGHT, UIelements::volume_alloc,       0);
     UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
     UIelements::playbar.space       =   wm::Space(0,                                                                wm::HEIGHT, UIelements::toggle.space.x-2,   0);
 }
@@ -427,8 +478,8 @@ void handle_mouse(wm::MOUSE_INPUT m){
         UIelements::settings_hover = UIelements::settings.space.inside(m.pos);
         refresh_settings();
     }
-    if(UIelements::time_played.space.inside(m.pos) != UIelements::time_played_hover){
-        UIelements::time_played_hover = UIelements::time_played.space.inside(m.pos);
+    if(tp.space.inside(m.pos) != tp.hover){
+        tp.hover = !tp.hover;
         refresh_time_played();
     }
     if(UIelements::volume.space.inside(m.pos) != UIelements::volume_hover){
@@ -459,6 +510,14 @@ void handle_mouse(wm::MOUSE_INPUT m){
         auto delta = static_cast<double>(m.pos.x)/static_cast<double>(UIelements::playbar.space.width());
         audio::seek::abs(delta);
         refresh_time_played();
+        refresh_playbar();
+    }
+    if(tp.space.inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
+        tp.next();
+        mv(0, tp.space.y);
+        clear_row();
+        refresh_element_sizes();
+        refresh_UIelements();
         refresh_playbar();
     }
     

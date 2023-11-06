@@ -40,6 +40,9 @@ namespace wm
         inline operator Space(){
             return space;
         }
+        inline operator Padding(){
+            return pad;
+        }
         bool not_valid(){
             return false;
         }
