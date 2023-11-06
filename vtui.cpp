@@ -105,11 +105,12 @@ size_t playlist_clamp(long i){
     {
         i += pl.files.size();
     }
-    if (i >= pl.files.size())
+    size_t e = static_cast<size_t>(i);
+    if (e >= pl.files.size())
     {
-        i = i % pl.files.size();
+        e = e % pl.files.size();
     }
-    return i;
+    return e;
 }
 size_t playlist_st_index(){
     return playlist_clamp(playlist_display_offset);
@@ -132,7 +133,7 @@ void refresh_playlist(){
         wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
         wm::pad(str, s.width(), wm::PAD_TYPE::PAD_RIGHT);
 
-        if(i == playlist_cursor_offset){
+        if(i == static_cast<unsigned int>(playlist_cursor_offset)){
             use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
         }
         if(i == pl.current_index){
@@ -305,7 +306,7 @@ void refresh_playbar(){
     if(current_mode == INPUT_MODE::DEFAULT){
         auto d = audio::position::get_d();
         auto s = UIelements::playbar.space;
-        auto idx = static_cast<int>(s.w*d);
+        auto idx = static_cast<unsigned int>(s.w*d);
         mv(s.x, s.y);
         use_attr(color_bg_rgb(progress_bar_color_played_bg) << color_fg_rgb(progress_bar_color_played_fg));
         for (size_t i = 0; i < s.width(); i++)
@@ -318,7 +319,7 @@ void refresh_playbar(){
             else if(i == 0){
                 std::cout << progres_bar_char_first;
             }
-            else if(i == s.width()-1){
+            else if(i == static_cast<unsigned long>(s.width()-1)){
                 std::cout << progres_bar_char_last;
             }
             else{

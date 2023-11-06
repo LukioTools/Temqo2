@@ -59,8 +59,8 @@ namespace ascii_img
         public:
             size_t x;
             size_t y;
-            u_char channels;
             u_char* data;
+            u_char channels;
 
             /** 
              * @param index index of the value to be gotten

@@ -202,7 +202,7 @@ namespace audio
             use_file = playlist_file;
             if(!in)
                 return -1;
-            unsigned long long time;
+            unsigned long long time = 0;
             std::string line;
             bool add_ = false;
             while (std::getline(in, line)) {
