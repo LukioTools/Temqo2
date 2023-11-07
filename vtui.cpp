@@ -19,6 +19,7 @@
 #include <thread>
 #include <vector>
 #include "custom/time_played.hpp"
+#include "custom/button_array.hpp"
 
 
 audio::Playlist pl;
@@ -81,6 +82,22 @@ TimePlayed tp(
 
 
 
+ButtonArray<> playback_control(
+    {
+        {
+            [](){std::cout << 'B'; } , 1
+        },
+        {
+            [](){std::cout << (audio::playing() ? "⏵" : "⏸"); } , 1
+        },
+        {
+            [](){std::cout << 'N'; } , 1
+        },
+        {
+            [](){std::cout << 'S'; } , 1
+        },
+    }
+);
 
 
 namespace UIelements
@@ -101,6 +118,7 @@ namespace UIelements
 
 
 } // namespace UIelements
+
 
 
 bool enable_cover = true;
@@ -333,25 +351,31 @@ void refresh_volume(){
 
 }
 
-void refresh_play_button(){
-    auto s = UIelements::toggle.space;
-    mv(s.x,s.y);
-    bool inside = UIelements::toggle_hover;
-    if(inside){
-        use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
-    }
-    std::cout << std::setw(s.w-1) << (audio::playing() ? "⏵" : "⏸");
-    if(inside){
-        use_attr(attr_reset);
-    }
-    std::cout<< ' ';
+//void refresh_play_button(){
+//    auto s = UIelements::toggle.space;
+//    mv(s.x,s.y);
+//    bool inside = UIelements::toggle_hover;
+//    if(inside){
+//        use_attr(color_bg_rgb( hover_color_bg) << color_fg_rgb(hover_color_fg));
+//    }
+//    std::cout << std::setw(s.w-1) << (audio::playing() ? "⏵" : "⏸");
+//    if(inside){
+//        use_attr(attr_reset);
+//    }
+//    std::cout<< ' ';
+//}
+
+void refresh_controls(){
+    playback_control.draw();
 }
+
 
 void refresh_UIelements(){
     refresh_settings();
     refresh_time_played();
     refresh_volume();
-    refresh_play_button();
+    //refresh_play_button();
+    refresh_controls();
 }
 void refresh_playbar(){
     if(current_mode == INPUT_MODE::DEFAULT){
@@ -414,6 +438,8 @@ void refresh_element_sizes(){
     UIelements::volume.space        =   wm::Space(tp.space.x-1-UIelements::volume_alloc,       wm::HEIGHT, UIelements::volume_alloc,       0);
     UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
     UIelements::playbar.space       =   wm::Space(0,                                                                wm::HEIGHT, UIelements::toggle.space.x-2,   0);
+
+    playback_control.pos            =   {static_cast<unsigned short>(UIelements::toggle.space.x-1), static_cast<unsigned short>(wm::HEIGHT)};
 }
 //veri expensiv
 void refresh_all(){
@@ -501,11 +527,13 @@ void handle_mouse(wm::MOUSE_INPUT m){
     }
     if(UIelements::toggle.space.inside(m.pos) != UIelements::toggle_hover){
         UIelements::toggle_hover = UIelements::toggle.space.inside(m.pos);
-        refresh_play_button();
+        refresh_controls();
+        //refresh_play_button();
     }
     if(UIelements::toggle_hover && m.btn == wm::MOUSE_BTN::M_LEFT){
         audio::control::toggle();
-        refresh_play_button();
+        refresh_controls();
+        //refresh_play_button();
     }
     if(UIelements::playbar.space.inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
         auto delta = static_cast<double>(m.pos.x)/static_cast<double>(UIelements::playbar.space.width());
