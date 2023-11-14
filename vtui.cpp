@@ -278,9 +278,9 @@ void refresh_playlist()
         auto i = playlist_clamp(playlist_display_offset + index);
         mv(s.x, s.y + index);
         //clean the row
-        {
-            std::string clrstr(' ', s.width());
-            std::cout << attr_reset << clrstr ;
+        { //    TEMPORARY SOLUTION IS NOT A FIX PLZ FIX CLIP AND PAD FUNCTIONS
+            std::string clrstr(s.width(), ' ');
+            std::cout << attr_reset << clrstr;
         }
         
         
@@ -292,11 +292,7 @@ void refresh_playlist()
         wm::pad(str, s.width() - i_str.length(), wm::PAD_TYPE::PAD_RIGHT);
 
         
-        
-        
         str = i_str + str;
-
-
 
         if (i == static_cast<unsigned int>(playlist_cursor_offset))
         {
