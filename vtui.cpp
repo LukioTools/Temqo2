@@ -277,6 +277,13 @@ void refresh_playlist()
     {
         auto i = playlist_clamp(playlist_display_offset + index);
         mv(s.x, s.y + index);
+        //clean the row
+        {
+            std::string clrstr(' ', s.width());
+            std::cout << attr_reset << clrstr ;
+        }
+        
+        
         auto str = pl[i];
         if (playlist_filename_only)
             str = path::filename(str);
@@ -284,7 +291,12 @@ void refresh_playlist()
         wm::clip(str, s.width() - i_str.length(), wm::SPLICE_TYPE::BEGIN_DOTS);
         wm::pad(str, s.width() - i_str.length(), wm::PAD_TYPE::PAD_RIGHT);
 
+        
+        
+        
         str = i_str + str;
+
+
 
         if (i == static_cast<unsigned int>(playlist_cursor_offset))
         {
@@ -294,7 +306,9 @@ void refresh_playlist()
         {
             use_attr(color_bg_rgb(hilight_color_bg) << color_fg_rgb(hilight_color_fg));
         }
+        
 
+        mv(s.x, s.y + index);
         std::cout << str << attr_reset;
     }
     // draw the borders
