@@ -1,4 +1,5 @@
 #include "../lib/wm/element.hpp"
+#include "../lib/wm/mouse.hpp"
 #include <initializer_list>
 #include <iostream>
 #include <string>
@@ -6,7 +7,7 @@
 
 struct ButtonArrayElement
 {
-    void(*draw)(bool inside);//the function that prints out the data //plz use the whole space as not to induse any oddities
+    void(*draw)(bool inside, wm::MOUSE_INPUT m);//the function that prints out the data //plz use the whole space as not to induse any oddities
     short alloc;
 };
 
@@ -18,7 +19,8 @@ private:
 public:
     wm::Position pos; // position to start printing
 
-    void draw(wm::Position mpos){
+    void draw(wm::MOUSE_INPUT m){
+        auto mpos = m.pos;
         unsigned int offset = 0;
         bool same_height = mpos.y == pos.y;
 
@@ -35,9 +37,11 @@ public:
                 continue;
             offset+=e.alloc;
             //std::cout << i;
-            e.draw(same_height && inside_x_axis);
+            e.draw(same_height && inside_x_axis, m);
         }
     }
+
+    
 
     size_t width(){
         size_t out  = 0;
