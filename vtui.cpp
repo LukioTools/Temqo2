@@ -194,7 +194,7 @@ ButtonArrayElement volume = {
         int vol = std::abs((int)audio::volume::get());
         vol = vol > 999 ? 999 : vol;
         std::cout << std::setfill('0') << std::setw(3) << vol << '%' << ' ';
-        
+
         if (inside)
         {
             use_attr(attr_reset);
@@ -280,9 +280,11 @@ void refresh_playlist()
         auto str = pl[i];
         if (playlist_filename_only)
             str = path::filename(str);
-        str = std::to_string(i) + ' ' + str;
-        wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
-        wm::pad(str, s.width(), wm::PAD_TYPE::PAD_RIGHT);
+        auto i_str = std::to_string(i);
+        wm::clip(str, s.width() - i_str.length(), wm::SPLICE_TYPE::BEGIN_DOTS);
+        wm::pad(str, s.width() - i_str.length(), wm::PAD_TYPE::PAD_RIGHT);
+
+        str = i_str + str;
 
         if (i == static_cast<unsigned int>(playlist_cursor_offset))
         {
