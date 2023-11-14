@@ -9,10 +9,11 @@ struct ButtonArrayElement
 {
     void(*draw)(bool inside, wm::MOUSE_INPUT m);//the function that prints out the data //plz use the whole space as not to induse any oddities
     short alloc;
+    short group = 0;
+    unsigned int id = 0;
 };
 
-template<typename T = ButtonArrayElement>
-class ButtonArray : public std::vector<T>
+class ButtonArray : public std::vector<ButtonArrayElement>
 {
 private:
     
@@ -26,28 +27,99 @@ public:
 
         for (size_t i = 0; i < this->size(); i++)
         {
-            T e = this->at(i);
-            auto poffset = pos.x+offset;
-
-
-            bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
-
-            mv(poffset, pos.y);
+            ButtonArrayElement e = this->at(i);
             if(!e.draw)
                 continue;
+
+            auto poffset = pos.x+offset;
+            bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
+            
             offset+=e.alloc;
             //std::cout << i;
+            mv(poffset, pos.y);
             e.draw(same_height && inside_x_axis, m);
         }
     }
 
+    void drawByGroup(short group, wm::MOUSE_INPUT m){
+        auto mpos = m.pos;
+        unsigned int offset = 0;
+        bool same_height = mpos.y == pos.y;
+
+        for (size_t i = 0; i < this->size(); i++)
+        {
+            ButtonArrayElement e = this->at(i);
+            if(!e.draw)
+                continue;
+
+            auto poffset = pos.x+offset;
+            bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
+
+            offset+=e.alloc;
+
+            //std::cout << i;
+            if(e.group == group){
+
+                mv(poffset, pos.y);
+                e.draw(same_height && inside_x_axis, m);
+            }
+        }
+    }
+
+    void drawById(unsigned int id, wm::MOUSE_INPUT m){
+        auto mpos = m.pos;
+        unsigned int offset = 0;
+        bool same_height = mpos.y == pos.y;
+
+        for (size_t i = 0; i < this->size(); i++)
+        {
+            ButtonArrayElement e = this->at(i);
+            if(!e.draw)
+                continue;
+
+            auto poffset = pos.x+offset;
+            bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
+
+            offset+=e.alloc;
+            //std::cout << i;
+            if(e.id == id){
+                
+                mv(poffset, pos.y);
+                e.draw(same_height && inside_x_axis, m);
+            }
+        }
+    }
+
+    void getInGroup(short group, void(fn)(ButtonArrayElement& bae)){
+        if(!fn){
+            return;
+        }
+        for (size_t i = 0; i < this->size(); i++)
+        {
+            ButtonArrayElement e = this->at(i);
+            if(e.group == group)
+                fn(e);
+        }
+    }
+
+    void getInId(unsigned int id, void(fn)(ButtonArrayElement& bae)){
+        if(!fn){
+            return;
+        }
+        for (size_t i = 0; i < this->size(); i++)
+        {
+            ButtonArrayElement e = this->at(i);
+            if(e.id == id)
+                fn(e);
+        }
+    }
     
 
     size_t width(){
         size_t out  = 0;
         for (size_t i = 0; i < this->size(); i++)
         {
-            T e = this->at(i);
+            ButtonArrayElement e = this->at(i);
             out += e.alloc;
         }
         return out;
@@ -69,7 +141,7 @@ public:
 
 
     ButtonArray(){};
-    ButtonArray(std::initializer_list<T> ls): std::vector<T>(ls){}
+    ButtonArray(std::initializer_list<ButtonArrayElement> ls): std::vector<ButtonArrayElement>(ls){}
     ~ButtonArray() {}
 };
 

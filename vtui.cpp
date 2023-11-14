@@ -17,6 +17,7 @@
 #include <regex>
 #include <string>
 #include <thread>
+#include <valarray>
 #include <vector>
 #include "custom/time_played.hpp"
 #include "custom/button_array.hpp"
@@ -82,30 +83,37 @@ TimePlayed tp(
 
 bool playback_control_inside = false;
 
+
+std::string prev_char = "⏮";
+std::string next_char = "⏭";
+std::string shuffle_char = "⤮";
+std::string toggle_playing_char = "▶";
+std::string toggle_stopped_char = "⏸";
+
 ButtonArrayElement prev = {
     [](bool inside, wm::MOUSE_INPUT m)
     {
-        auto ch = "⏮ ";
         if (inside)
         {
-            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << ch << attr_reset;
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << prev_char  <<  " " << attr_reset;
             if (m.btn == wm::M_LEFT)
             {
                 load_file(pl.prev());
             }
         }
         else
-            std::cout << ch;
+            std::cout << prev_char << " ";
     },
-    2};
+    2,
+    1,
+    1};
 
 ButtonArrayElement next = {
     [](bool inside, wm::MOUSE_INPUT m)
     {
-        auto ch = "⏭ ";
         if (inside)
         {
-            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << ch << attr_reset;
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << next_char << " "<< attr_reset;
 
             if (m.btn == wm::M_LEFT)
             {
@@ -113,27 +121,33 @@ ButtonArrayElement next = {
             }
         }
         else
-            std::cout << ch;
+            std::cout << next_char << " ";
     },
-    2};
+    2,
+    1,
+    2,
+    };
 
-ButtonArrayElement shuffle = {[](bool inside, wm::MOUSE_INPUT m)
-                              {
-                                  auto ch = "⤮";
-                                  if (inside)
-                                  {
-                                      std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << ch << attr_reset;
+ButtonArrayElement shuffle = {
+    [](bool inside, wm::MOUSE_INPUT m)
+    {
+        if (inside)
+        {
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << shuffle_char << " " << attr_reset;
 
-                                      if (m.btn == wm::M_LEFT)
-                                      {
-                                          pl.shuffle();
-                                          refresh_playlist();
-                                      }
-                                  }
-                                  else
-                                      std::cout << ch;
-                              },
-                              1};
+            if (m.btn == wm::M_LEFT)
+            {
+                pl.shuffle();
+                refresh_playlist();
+            }
+        }
+        else
+            std::cout << shuffle_char << " ";
+    },
+    2,
+    1,
+    3,
+    };
 
 ButtonArrayElement toggle = { // playbutton
     [](bool inside, wm::MOUSE_INPUT m)
@@ -147,29 +161,71 @@ ButtonArrayElement toggle = { // playbutton
 
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg);
         }
-        auto ch = audio::playing() ? "⏵" : "⏸";
-        std::cout << ch << attr_reset;
+        auto ch =  audio::playing() ? toggle_playing_char : toggle_stopped_char;
+        std::cout << ch << " " << attr_reset;
     },
-    1};
+    2,
+    1,
+    4,
+    };
+#define volume_id 5
+ButtonArrayElement volume = {
+    [](bool inside, wm::MOUSE_INPUT m){
 
-ButtonArray<ButtonArrayElement>
+            //functionality
+        if(inside){
+            use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg));
+
+            if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
+            {
+                audio::volume::shift(volume_shift);
+            }
+            else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
+            {
+                audio::volume::shift(-volume_shift);
+            }
+            else if (m.btn == wm::MOUSE_BTN::M_LEFT)
+            {
+                audio::volume::set(volume_reset);
+            }
+        }
+
+            //drawing
+        int vol = std::abs((int)audio::volume::get());
+        vol = vol > 999 ? 999 : vol;
+        std::cout << std::setfill('0') << std::setw(3) << vol << '%' << ' ';
+        
+        if (inside)
+        {
+            use_attr(attr_reset);
+        }
+    },
+    5,
+    2,
+    volume_id,
+};
+
+
+
+ButtonArray
     playback_control({
         prev,
         toggle,
         next,
         shuffle,
+        volume,
     });
 
 namespace UIelements
 {
     int settings_alloc = 1;
-    int volume_alloc = 4;
+    //int volume_alloc = 4;
     // int toggle_alloc = 1;
     bool settings_hover = false;
-    bool volume_hover = false;
+    //bool volume_hover = false;
     // bool toggle_hover = false;
     wm::Element settings;
-    wm::Element volume;
+    //wm::Element volume;
     // wm::Element toggle;
     /// @brief alloc rest of the ui space
     bool playbar_hover = false;
@@ -406,32 +462,6 @@ void refresh_time_played()
     }
 }
 
-void refresh_volume()
-{
-    auto s = UIelements::volume.space;
-    mv(s.x, s.y);
-    int vol = (int)audio::volume::get();
-    if (vol < 0)
-    {
-        vol = -vol;
-    }
-    if (vol > 999)
-    {
-        vol = 999;
-    }
-    bool inside = UIelements::volume_hover;
-    if (inside)
-    {
-        use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg));
-    }
-    std::cout << std::setfill('0') << std::setw(s.w - 1) << vol << '%';
-    if (inside)
-    {
-        use_attr(attr_reset);
-    }
-    std::cout << ' ';
-}
-
 // void refresh_play_button(){
 //     auto s = UIelements::toggle.space;
 //     mv(s.x,s.y);
@@ -460,7 +490,7 @@ void refresh_UIelements()
 {
     refresh_settings();
     refresh_time_played();
-    refresh_volume();
+    //refresh_volume();
     // refresh_play_button();
     refresh_controls();
 }
@@ -529,10 +559,10 @@ void refresh_element_sizes()
     // order is important
     UIelements::settings.space = wm::Space(wm::WIDTH - UIelements::settings_alloc, wm::HEIGHT, UIelements::settings_alloc, 0);
     tp = wm::Space(UIelements::settings.space.x - 1 - tp.current().alloc_size, wm::HEIGHT, tp.current().alloc_size, 0);
-    UIelements::volume.space = wm::Space(tp.space.x - 1 - UIelements::volume_alloc, wm::HEIGHT, UIelements::volume_alloc, 0);
+    //UIelements::volume.space = wm::Space(tp.space.x - 1 - UIelements::volume_alloc, wm::HEIGHT, UIelements::volume_alloc, 0);
     // UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
 
-    playback_control.pos = {static_cast<unsigned short>(UIelements::volume.space.x - 1 - playback_control.width()), static_cast<unsigned short>(wm::HEIGHT)};
+    playback_control.pos = {static_cast<unsigned short>(tp.space.x - playback_control.width()), static_cast<unsigned short>(wm::HEIGHT)};
     UIelements::playbar.space = wm::Space(0, wm::HEIGHT, playback_control.pos.x - 1, 0);
 
     log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
@@ -611,27 +641,27 @@ void handle_mouse(wm::MOUSE_INPUT m)
         tp.hover = !tp.hover;
         refresh_time_played();
     }
-    if (UIelements::volume.space.inside(m.pos) != UIelements::volume_hover)
-    {
-        UIelements::volume_hover = UIelements::volume.space.inside(m.pos);
-        refresh_volume();
-    }
-    if (UIelements::volume.space.inside(m.pos))
-    {
-        if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
-        {
-            audio::volume::shift(volume_shift);
-        }
-        else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
-        {
-            audio::volume::shift(-volume_shift);
-        }
-        else if (m.btn == wm::MOUSE_BTN::M_LEFT)
-        {
-            audio::volume::set(volume_reset);
-        }
-        refresh_volume();
-    }
+    //if (UIelements::volume.space.inside(m.pos) != UIelements::volume_hover)
+    //{
+    //    UIelements::volume_hover = UIelements::volume.space.inside(m.pos);
+    //    refresh_volume();
+    //}
+    //if (UIelements::volume.space.inside(m.pos))
+    //{
+    //    if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
+    //    {
+    //        audio::volume::shift(volume_shift);
+    //    }
+    //    else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
+    //    {
+    //        audio::volume::shift(-volume_shift);
+    //    }
+    //    else if (m.btn == wm::MOUSE_BTN::M_LEFT)
+    //    {
+    //        audio::volume::set(volume_reset);
+    //    }
+    //    refresh_volume();
+    //}
     // if(UIelements::toggle.space.inside(m.pos) != UIelements::toggle_hover){
     //     UIelements::toggle_hover = UIelements::toggle.space.inside(m.pos);
     //     refresh_controls();
@@ -809,9 +839,12 @@ void handle_char(int ch)
             break;
         case '+':
             audio::volume::shift(volume_shift);
+            //playback_control.draw({mpos, wm::M_NONE, true});
+            playback_control.drawById(volume_id, {mpos, wm::M_NONE, true});
             break;
         case '-':
             audio::volume::shift(-volume_shift);
+            playback_control.drawById(volume_id, {mpos, wm::M_NONE, true});
             break;
         case '\n':
             pl.current_index = playlist_clamp(playlist_cursor_offset);
