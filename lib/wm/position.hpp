@@ -11,6 +11,10 @@ namespace wm
             stream << '(' << pos.x << ", " <<pos.y << ')';
             return stream;
         };
+
+        //bool inside(wm::Position){
+        //    
+        //}
     };
     
 } // namespace wm

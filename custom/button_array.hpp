@@ -6,7 +6,7 @@
 
 struct ButtonArrayElement
 {
-    void(*draw)(void);//the function that prints out the data //plz use the whole space as not to induse any oddities
+    void(*draw)(bool inside);//the function that prints out the data //plz use the whole space as not to induse any oddities
     short alloc;
 };
 
@@ -18,17 +18,48 @@ private:
 public:
     wm::Position pos; // position to start printing
 
-    void draw(){
+    void draw(wm::Position mpos){
         unsigned int offset = 0;
+        bool same_height = mpos.y == pos.y;
+
         for (size_t i = 0; i < this->size(); i++)
         {
-            mv(pos.x+offset, pos.y);
             T e = this->at(i);
+            auto poffset = pos.x+offset;
+
+
+            bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
+
+            mv(poffset, pos.y);
             if(!e.draw)
                 continue;
             offset+=e.alloc;
-            e.draw();
+            //std::cout << i;
+            e.draw(same_height && inside_x_axis);
         }
+    }
+
+    size_t width(){
+        size_t out  = 0;
+        for (size_t i = 0; i < this->size(); i++)
+        {
+            T e = this->at(i);
+            out += e.alloc;
+        }
+        return out;
+    }
+
+    bool inside(wm::Position p){
+        if(p.y != pos.y){
+            return false;
+        }
+        if(p.x < pos.x){
+            return false;
+        }
+        if(p.x > pos.x+width()){
+            return false;
+        }
+        return true;
     }
 
 

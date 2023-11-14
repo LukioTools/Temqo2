@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fstream>
+std::ofstream log_t("/dev/pts/4");
 
 #include "padding.hpp"
 #include "space.hpp"
