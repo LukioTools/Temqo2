@@ -115,47 +115,49 @@ ButtonArrayElement next = {
         else
             std::cout << ch;
     },
-    2
-};
+    2};
 
 ButtonArrayElement shuffle = {[](bool inside, wm::MOUSE_INPUT m)
-         {
-             auto ch = "⤮";
-             if (inside)
-             {
-                 std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << ch << attr_reset;
+                              {
+                                  auto ch = "⤮";
+                                  if (inside)
+                                  {
+                                      std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << ch << attr_reset;
 
-                 if (m.btn == wm::M_LEFT)
-                 {
-                     pl.shuffle();
-                     refresh_playlist();
-                 }
-             }
-             else
-                 std::cout << ch;
-         },
-         1};
+                                      if (m.btn == wm::M_LEFT)
+                                      {
+                                          pl.shuffle();
+                                          refresh_playlist();
+                                      }
+                                  }
+                                  else
+                                      std::cout << ch;
+                              },
+                              1};
 
-ButtonArrayElement toggle = {// playbutton
-         [](bool inside, wm::MOUSE_INPUT m)
-         {
-             if (inside)
-             {
-                 if (m.btn == wm::M_LEFT)
-                 {
-                     audio::control::toggle();
-                 }
+ButtonArrayElement toggle = { // playbutton
+    [](bool inside, wm::MOUSE_INPUT m)
+    {
+        if (inside)
+        {
+            if (m.btn == wm::M_LEFT)
+            {
+                audio::control::toggle();
+            }
 
-                 std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg);
-             }
-             auto ch = audio::playing() ? "⏵" : "⏸";
-             std::cout << ch << attr_reset;
-         },
-         1};
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg);
+        }
+        auto ch = audio::playing() ? "⏵" : "⏸";
+        std::cout << ch << attr_reset;
+    },
+    1};
 
 ButtonArray<ButtonArrayElement>
     playback_control({
-        prev, toggle, next, shuffle,
+        prev,
+        toggle,
+        next,
+        shuffle,
     });
 
 namespace UIelements
