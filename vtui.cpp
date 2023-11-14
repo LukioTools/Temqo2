@@ -280,7 +280,7 @@ void refresh_playlist()
         auto str = pl[i];
         if (playlist_filename_only)
             str = path::filename(str);
-        auto i_str = std::to_string(i);
+        auto i_str = std::to_string(i) + ' ';
         wm::clip(str, s.width() - i_str.length(), wm::SPLICE_TYPE::BEGIN_DOTS);
         wm::pad(str, s.width() - i_str.length(), wm::PAD_TYPE::PAD_RIGHT);
 
