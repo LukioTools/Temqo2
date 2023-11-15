@@ -2,6 +2,7 @@
 #include "lib/audio/extract_img.hpp"
 #include "lib/audio/sfml.hpp"
 #include "lib/cfg/config.hpp"
+#include "lib/cfg/parsers.hpp"
 #include "lib/path/filename.hpp"
 #include "lib/wm/clip.hpp"
 #include "lib/wm/core.hpp"
@@ -1047,8 +1048,7 @@ void configuraton()
         progress_bar_color_cursor_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
 
     // i hope this works
-    cfg::add_config_inline("ProgresBarChar", [](std::string line)
-                           {
+    cfg::add_config_inline("ProgresBarChar", [](std::string line){
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         auto f      = cfg::get_bracket_contents(str, &idx, 0    );
@@ -1070,6 +1070,23 @@ void configuraton()
         auto str = cfg::parse_inline(line);
         auto vol = std::stoi(str);
         audio::volume::set(vol); });
+
+    cfg::add_config_inline("MediaControlChar", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        auto play = cfg::get_bracket_contents(str, &idx, 0);
+        auto stop = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto prev = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto next = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto shuffle = cfg::get_bracket_contents(str, &idx, idx+1);
+        toggle_playing_char = (play.length()>0) ? play : toggle_playing_char;
+        toggle_stopped_char = (stop.length()>0) ? stop : toggle_stopped_char;
+        prev_char = (prev.length()>0) ? prev : prev_char;
+        next_char = (next.length()>0) ? next : prev_char;
+        shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char;
+
+
+    });
 }
 void init(int argc, char const *argv[])
 {
