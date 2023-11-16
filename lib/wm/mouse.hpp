@@ -3,16 +3,14 @@
 #include <sys/types.h>
 #include "position.hpp"
 #include "def.hpp"
-
+#include "../../custom/enum.hpp"
 
 
 
 namespace wm 
 {
     ///!!NOT GUARANTEED!!///
-    enum MOUSE_BTN : unsigned char{
-        M_UNDEFINED = 0,
-        M_NONE = '\x42',
+    ENUM(MOUSE_BTN, unsigned char, M_UNDEFINED = 0, M_NONE = '\x42',
         M_RELEASE = '\x22',
         M_LEFT = '\x1f',
         M_MIDDLE = '\x20',
@@ -21,22 +19,35 @@ namespace wm
         M_SCRL_DOWN = '\x60',
         M_LEFT_HILIGHT = '\x3f',
         M_MIDDLE_HILIGHT = '\x40',
-        M_RIGHT_HILIGHT = '\x41',
-    };
+        M_RIGHT_HILIGHT = '\x41');
+
+    //enum MOUSE_BTN : unsigned char{
+    //    M_UNDEFINED = 0,
+    //    M_NONE = '\x42',
+    //    M_RELEASE = '\x22',
+    //    M_LEFT = '\x1f',
+    //    M_MIDDLE = '\x20',
+    //    M_RIGHT = '\x21',
+    //    M_SCRL_UP = '\x5F',
+    //    M_SCRL_DOWN = '\x60',
+    //    M_LEFT_HILIGHT = '\x3f',
+    //    M_MIDDLE_HILIGHT = '\x40',
+    //    M_RIGHT_HILIGHT = '\x41',
+    //};
 
     inline std::string to_str(wm::MOUSE_BTN btn) noexcept{
-        switch (btn) {
-            CASE_STR(wm::M_UNDEFINED);
-            CASE_STR(wm::M_NONE);
-            CASE_STR(wm::M_RELEASE);
-            CASE_STR(wm::M_LEFT);
-            CASE_STR(wm::M_MIDDLE);
-            CASE_STR(wm::M_RIGHT);
-            CASE_STR(wm::M_SCRL_UP);
-            CASE_STR(wm::M_SCRL_DOWN);
-            CASE_STR(wm::M_LEFT_HILIGHT);
-            CASE_STR(wm::M_MIDDLE_HILIGHT);
-            CASE_STR(wm::M_RIGHT_HILIGHT);
+        switch (btn.get()) {
+            CASE_STR(MOUSE_BTN::M_UNDEFINED);
+            CASE_STR(MOUSE_BTN::M_NONE);
+            CASE_STR(MOUSE_BTN::M_RELEASE);
+            CASE_STR(MOUSE_BTN::M_LEFT);
+            CASE_STR(MOUSE_BTN::M_MIDDLE);
+            CASE_STR(MOUSE_BTN::M_RIGHT);
+            CASE_STR(MOUSE_BTN::M_SCRL_UP);
+            CASE_STR(MOUSE_BTN::M_SCRL_DOWN);
+            CASE_STR(MOUSE_BTN::M_LEFT_HILIGHT);
+            CASE_STR(MOUSE_BTN::M_MIDDLE_HILIGHT);
+            CASE_STR(MOUSE_BTN::M_RIGHT_HILIGHT);
             default:
                 return "UNKNOWN";
         }

@@ -3,7 +3,6 @@
 #include <string>
 #include <iostream>
 
-
 #define ENUM(cname, dataType, ...)                                                    \
     class cname                                                                       \
     {                                                                                 \
@@ -61,6 +60,14 @@
             }                                                                         \
             return false;                                                             \
         }                                                                             \
+                                                                                      \
+        bool operator==(EnumType a) { return this->get() == a; }                      \
+        bool operator==(dataType a) { return this->get() == (EnumType)a; }            \
+        bool operator==(std::string a) { return this->get() == cname(a).get(); }      \
+                                                                                      \
+        cname(EnumType a) { load(a); }                                                \
+        cname(dataType a) { load(a); }                                                \
+        cname(std::string a) { load(a); }                                             \
         cname() {}                                                                    \
         ~cname() {}                                                                   \
     }

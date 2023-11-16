@@ -7,6 +7,6 @@
 #include "mouse.hpp"
 #include "padding.hpp"
 #include "position.hpp"
-#include "print.hpp"
+//#include "print.hpp"
 #include "resize.hpp"
 #include "space.hpp"

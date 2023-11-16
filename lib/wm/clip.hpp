@@ -1,16 +1,11 @@
 #pragma once
+#include "../../custom/enum.hpp"
+
 
 #include <string>
 namespace wm
 {
-    enum SPLICE_TYPE: unsigned char
-    {
-        CUSTOM,
-        END_CUT,
-        END_DOTS,
-        BEGIN_CUT,
-        BEGIN_DOTS,
-    };
+    ENUM(SPLICE_TYPE, unsigned char, CUSTOM, END_CUT, END_DOTS, BEGIN_CUT, BEGIN_DOTS);
 
     namespace clip_functions
     {
@@ -44,32 +39,25 @@ namespace wm
         if(str_ref.length() <= width){
             return;
         }
-        switch (st)
+        switch (st.get())
         {
-        case END_DOTS:
+        case SPLICE_TYPE::END_DOTS:
             clip_functions::end_dots(str_ref, width);
             break;
-        case BEGIN_CUT:
+        case SPLICE_TYPE::BEGIN_CUT:
             clip_functions::beg_cut(str_ref, width);
             break;
-        case BEGIN_DOTS:
+        case SPLICE_TYPE::BEGIN_DOTS:
             clip_functions::beg_dots(str_ref, width);
             break;
-        case END_CUT:
+        case SPLICE_TYPE::END_CUT:
         default:
             clip_functions::end_cut(str_ref, width);
             break;
         }
     }
 
-    enum PAD_TYPE : unsigned char
-    {
-        PAD_CUSTOM,
-        PAD_RIGHT,
-        PAD_LEFT,
-        PAD_CENTER,
-    };
-
+    ENUM(PAD_TYPE,  unsigned char, PAD_CUSTOM, PAD_RIGHT, PAD_LEFT, PAD_CENTER);
 
     namespace pad_functions
     {
@@ -95,10 +83,10 @@ namespace wm
     inline void pad(std::string& str, unsigned int width, PAD_TYPE pt){
         if(str.length() >= width){
         }
-        switch (pt) {
-            case PAD_RIGHT: return pad_functions::right(str, width);
-            case PAD_LEFT: return pad_functions::left(str, width);
-            case PAD_CENTER: return pad_functions::center(str, width);
+        switch (pt.get()) {
+            case PAD_TYPE::PAD_RIGHT: return pad_functions::right(str, width);
+            case PAD_TYPE::PAD_LEFT: return pad_functions::left(str, width);
+            case PAD_TYPE::PAD_CENTER: return pad_functions::center(str, width);
             default:
                 return;
         }

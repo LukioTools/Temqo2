@@ -97,7 +97,7 @@ ButtonArrayElement prev = {
         if (inside)
         {
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << prev_char  <<  " " << attr_reset;
-            if (m.btn == wm::M_LEFT)
+            if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
                 load_file(pl.prev());
             }
@@ -116,7 +116,7 @@ ButtonArrayElement next = {
         {
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << next_char << " "<< attr_reset;
 
-            if (m.btn == wm::M_LEFT)
+            if (m.btn == wm:: MOUSE_BTN::M_LEFT)
             {
                 load_file(pl.next());
             }
@@ -136,7 +136,7 @@ ButtonArrayElement shuffle = {
         {
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << shuffle_char << " " << attr_reset;
 
-            if (m.btn == wm::M_LEFT)
+            if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
                 pl.shuffle();
                 refresh_playlist();
@@ -155,7 +155,7 @@ ButtonArrayElement toggle = { // playbutton
     {
         if (inside)
         {
-            if (m.btn == wm::M_LEFT)
+            if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
                 audio::control::toggle();
             }
@@ -494,7 +494,7 @@ void refresh_time_played()
 
 void refresh_controls()
 {
-    playback_control.draw({mpos, wm::M_NONE, true});
+    playback_control.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
 }
 
 void refresh_controls(wm::MOUSE_INPUT m)
@@ -856,11 +856,11 @@ void handle_char(int ch)
         case '+':
             audio::volume::shift(volume_shift);
             //playback_control.draw({mpos, wm::M_NONE, true});
-            playback_control.drawById(volume_id, {mpos, wm::M_NONE, true});
+            playback_control.drawById(volume_id, {mpos, wm::MOUSE_BTN::M_NONE, true});
             break;
         case '-':
             audio::volume::shift(-volume_shift);
-            playback_control.drawById(volume_id, {mpos, wm::M_NONE, true});
+            playback_control.drawById(volume_id, {mpos, wm::MOUSE_BTN::M_NONE, true});
             break;
         case '\n':
             pl.current_index = playlist_clamp(playlist_cursor_offset);
@@ -1092,13 +1092,7 @@ void configuraton()
     cfg::add_config_inline("PlaylistClipType", [](std::string line){
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
-        playlist_clip = cfg::parse_enum<wm::SPLICE_TYPE, wm::SPLICE_TYPE::BEGIN_DOTS>(
-            cfg::get_bracket_contents(str, &idx, 0), 
-            [](const std::string& parse)->wm::SPLICE_TYPE{
-            return wm::SPLICE_TYPE::BEGIN_DOTS;
-        });
-
-
+        playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0));
     });
 }
 void init(int argc, char const *argv[])
