@@ -64,7 +64,3 @@
         cname() {}                                                                    \
         ~cname() {}                                                                   \
     }
-
-ENUM(Enumerator, unsigned char, HELL, BOI, YEA, HOW, YOU, ARE, DOING)
-a;
-Enumerator::EnumType c = Enumerator::EnumType::ENUM_COUNT;
