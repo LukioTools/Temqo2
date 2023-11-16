@@ -2,6 +2,7 @@
 
 #include <ostream>
 #include <regex>
+#include <stdexcept>
 #include <string>
 namespace cfg
 {
@@ -35,6 +36,18 @@ namespace cfg
             return os;
         }
     }; 
+
+    template<typename EnumT, EnumT def = 0>
+    EnumT parse_enum(std::string str, EnumT(*parese_str)(const std::string&)){
+        try{
+            return EnumT(std::stol(str));
+        }
+        catch(const std::invalid_argument&){
+            if(parese_str)
+                return parese_str(str);
+        };
+        return def;
+    };
     
     RGB parse_rgb(std::string bracket_contents){
         auto first = bracket_contents.find_first_of(',');

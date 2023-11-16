@@ -268,6 +268,9 @@ size_t playlist_last_index()
 {
     return playlist_clamp(playlist_display_offset + playlist.wSpace().h);
 }
+wm::SPLICE_TYPE playlist_clip = wm::SPLICE_TYPE::BEGIN_DOTS;
+wm::PAD_TYPE playlist_pad = wm::PAD_TYPE::PAD_RIGHT;
+
 
 void refresh_playlist()
 {
@@ -289,8 +292,8 @@ void refresh_playlist()
         if (playlist_filename_only)
             str = path::filename(str);
         auto i_str = std::to_string(i) + ' ';
-        wm::clip(str, s.width() - i_str.length(), wm::SPLICE_TYPE::BEGIN_DOTS);
-        wm::pad(str, s.width() - i_str.length(), wm::PAD_TYPE::PAD_RIGHT);
+        wm::clip(str, s.width() - i_str.length(), playlist_clip);
+        wm::pad(str, s.width() - i_str.length(), playlist_pad);
 
         
         str = i_str + str;
@@ -1084,6 +1087,16 @@ void configuraton()
         prev_char = (prev.length()>0) ? prev : prev_char;
         next_char = (next.length()>0) ? next : prev_char;
         shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char;
+    });
+
+    cfg::add_config_inline("PlaylistClipType", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        playlist_clip = cfg::parse_enum<wm::SPLICE_TYPE, wm::SPLICE_TYPE::BEGIN_DOTS>(
+            cfg::get_bracket_contents(str, &idx, 0), 
+            [](const std::string& parse)->wm::SPLICE_TYPE{
+            return wm::SPLICE_TYPE::BEGIN_DOTS;
+        });
 
 
     });
