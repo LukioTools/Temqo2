@@ -9,7 +9,7 @@
         std::string convertEnumToString(dataType value) const                         \
         {                                                                             \
             static const char *enumStrings[] = {#__VA_ARGS__};                        \
-            static const char *UNKNOWN = "UNKNOWN";                                   \
+            static const char *UNKNOWN = #cname"::UNKNOWN";                                   \
             int index = value - 1;                                                    \
             return (index >= 0 && index < ENUM_COUNT) ? enumStrings[index] : UNKNOWN; \
         }                                                                             \
@@ -27,7 +27,7 @@
         void operator=(std::string a) { this->load(a); }                              \
         std::string to_string()                                                       \
         {                                                                             \
-            return convertEnumToString(num);                                          \
+            return this->convertEnumToString(num);                                          \
         }                                                                             \
         bool load(dataType a)                                                         \
         {                                                                             \
@@ -65,9 +65,9 @@
         bool operator==(dataType a) { return this->get() == (EnumType)a; }            \
         bool operator==(std::string a) { return this->get() == cname(a).get(); }      \
                                                                                       \
-        cname(EnumType a) { load(a); }                                                \
-        cname(dataType a) { load(a); }                                                \
-        cname(std::string a) { load(a); }                                             \
+        cname(EnumType a) { this->load(a); }                                                \
+        cname(dataType a) { this->load(a); }                                                \
+        cname(std::string a) { this->load(a); }                                             \
         cname() {}                                                                    \
         ~cname() {}                                                                   \
     }
