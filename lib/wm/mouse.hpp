@@ -34,7 +34,6 @@ namespace wm
     //    M_MIDDLE_HILIGHT = '\x40',
     //    M_RIGHT_HILIGHT = '\x41',
     //};
-
     inline std::string to_str(wm::MOUSE_BTN btn) noexcept{
         switch (btn.get()) {
             CASE_STR(MOUSE_BTN::M_UNDEFINED);
@@ -66,7 +65,10 @@ namespace wm
     static MOUSE_INPUT parse_mouse(int input) noexcept{
         auto ptr = reinterpret_cast<unsigned char*>(&input);
         char checksum = static_cast<char>(ptr[0]);
-        MOUSE_BTN btn = static_cast<MOUSE_BTN>(ptr[1]);
+        MOUSE_BTN btn(ptr[1]);
+        if(!(btn == ptr[1])){
+            btn.force(ptr[1]);
+        }
         u_char x = ptr[2];
         u_char y = ptr[3];
         return {x,y,btn,checksum == '\xFF'};

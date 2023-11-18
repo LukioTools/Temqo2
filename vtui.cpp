@@ -268,7 +268,7 @@ size_t playlist_last_index()
 {
     return playlist_clamp(playlist_display_offset + playlist.wSpace().h);
 }
-wm::SPLICE_TYPE playlist_clip = wm::SPLICE_TYPE::BEGIN_DOTS;
+wm::SPLICE_TYPE playlist_clip = wm::SPLICE_TYPE::BEGIN_CUT;
 wm::PAD_TYPE playlist_pad = wm::PAD_TYPE::PAD_RIGHT;
 
 

@@ -2,18 +2,11 @@
 
 #include <string>
 #include <iostream>
+#include <map>
 
 #define ENUM(cname, dataType, ...)                                                    \
     class cname                                                                       \
     {                                                                                 \
-        std::string convertEnumToString(dataType value) const                         \
-        {                                                                             \
-            static const char *enumStrings[] = {#__VA_ARGS__};                        \
-            static const char *UNKNOWN = #cname"::UNKNOWN";                                   \
-            int index = value - 1;                                                    \
-            return (index >= 0 && index < ENUM_COUNT) ? enumStrings[index] : UNKNOWN; \
-        }                                                                             \
-                                                                                      \
     public:                                                                           \
         enum EnumType : dataType                                                      \
         {                                                                             \
@@ -22,13 +15,12 @@
         };                                                                            \
         EnumType num;                                                                 \
         EnumType get() { return num; }                                                \
-        void operator=(EnumType a) { this->load(a); }                                 \
-        void operator=(dataType a) { this->load(a); }                                 \
+        void operator=(EnumType a) { this->force(a); }                                \
+        void operator=(dataType a) { this->force(a); }                                \
         void operator=(std::string a) { this->load(a); }                              \
-        std::string to_string()                                                       \
-        {                                                                             \
-            return this->convertEnumToString(num);                                          \
-        }                                                                             \
+                                                                                      \
+        void force(EnumType a) { this->num = a; }                                     \
+        void force(dataType a) { this->num = (EnumType)a; }                           \
         bool load(dataType a)                                                         \
         {                                                                             \
             if (a > ENUM_COUNT)                                                       \
@@ -65,9 +57,10 @@
         bool operator==(dataType a) { return this->get() == (EnumType)a; }            \
         bool operator==(std::string a) { return this->get() == cname(a).get(); }      \
                                                                                       \
-        cname(EnumType a) { this->load(a); }                                                \
-        cname(dataType a) { this->load(a); }                                                \
-        cname(std::string a) { this->load(a); }                                             \
+        cname(EnumType a) { this->force(a); }                                         \
+        cname(dataType a) { this->force(a); }                                         \
+        cname(std::string a) { this->load(a); }                                       \
         cname() {}                                                                    \
         ~cname() {}                                                                   \
     }
+
