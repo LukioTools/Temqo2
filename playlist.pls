@@ -1,7 +1,7 @@
 
-[CurrentIndex] = 131
+[CurrentIndex] = 83
 
-[CurrentTime] = 86
+[CurrentTime] = 60
 
 [Folder]
 ./
