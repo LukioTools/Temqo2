@@ -14,57 +14,28 @@ private:
     };
       
 
-    volatile bool locked = false;
-    std::queue<lock_t> queue;
+    volatile bool locked_b = false;
 public:
 
 
     //returns false if locking succeeded
-    bool lock(){
-        bool state = locked;
-        locked = true;
+    inline bool lock(){
+        bool state = locked_b;
+        locked_b = true;
         return state;
     }
-
-    //unlock called from other thread
-    void onUnlock(lock_t lc){
-        if(!locked){
-            if(!lock()){
-                lc.cb(lc.ptr);
-                return;
-            };
-        }
-        queue.push(lc);
+    inline bool locked(){
+        return locked_b;
     }
-    //waits for unlock
-    void onUnlockSync(){
-        if(!locked){
-            if(!lock()){
-                return;
-            };            
-        }
-        bool waitfor = true;
 
-        onUnlock({[](void* userdata){
-            *(bool*)userdata = false;
-        }, &waitfor});
-        while (waitfor)
-        {
+    inline void waitForLock(){
+        while (locked_b) {
             std::this_thread::sleep_for(std::chrono::microseconds(25));
         }
-        
-        return;
     }
 
-    void unlock(){
-        if(queue.size() == 0){
-            locked = false;
-            return;
-        }
-        lock_t l = queue.back();
-        queue.pop();
-        l.cb(l.ptr);
-        locked = false;
+    inline void unlock(){
+        locked_b = false;
     }
 
 

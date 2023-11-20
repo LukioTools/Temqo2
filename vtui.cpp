@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <regex>
 #include <string>
 #include <thread>
@@ -34,6 +35,8 @@ enum INPUT_MODE : char
 
 wm::Position mpos = {0, 0};
 std::string input;
+
+std::mutex rendering;
 
 float volume_shift = 5.f;
 float volume_reset = 100.f;
@@ -84,7 +87,6 @@ TimePlayed tp(
 
 bool playback_control_inside = false;
 
-
 std::string prev_char = "⏮";
 std::string next_char = "⏭";
 std::string shuffle_char = "⤮";
@@ -96,7 +98,7 @@ ButtonArrayElement prev = {
     {
         if (inside)
         {
-            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << prev_char  <<  " " << attr_reset;
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << prev_char << " " << attr_reset;
             if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
                 load_file(pl.prev());
@@ -114,9 +116,9 @@ ButtonArrayElement next = {
     {
         if (inside)
         {
-            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << next_char << " "<< attr_reset;
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << next_char << " " << attr_reset;
 
-            if (m.btn == wm:: MOUSE_BTN::M_LEFT)
+            if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
                 load_file(pl.next());
             }
@@ -127,7 +129,7 @@ ButtonArrayElement next = {
     2,
     1,
     2,
-    };
+};
 
 ButtonArrayElement shuffle = {
     [](bool inside, wm::MOUSE_INPUT m)
@@ -148,9 +150,10 @@ ButtonArrayElement shuffle = {
     2,
     1,
     3,
-    };
+};
 
-ButtonArrayElement toggle = { // playbutton
+ButtonArrayElement toggle = {
+    // playbutton
     [](bool inside, wm::MOUSE_INPUT m)
     {
         if (inside)
@@ -162,19 +165,20 @@ ButtonArrayElement toggle = { // playbutton
 
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg);
         }
-        auto ch =  audio::playing() ? toggle_playing_char : toggle_stopped_char;
+        auto ch = audio::playing() ? toggle_playing_char : toggle_stopped_char;
         std::cout << ch << " " << attr_reset;
     },
     2,
     1,
     4,
-    };
+};
 #define volume_id 5
 ButtonArrayElement volume = {
-    [](bool inside, wm::MOUSE_INPUT m){
-
-            //functionality
-        if(inside){
+    [](bool inside, wm::MOUSE_INPUT m)
+    {
+        // functionality
+        if (inside)
+        {
             use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg));
 
             if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
@@ -191,7 +195,7 @@ ButtonArrayElement volume = {
             }
         }
 
-            //drawing
+        // drawing
         int vol = std::abs((int)audio::volume::get());
         vol = vol > 999 ? 999 : vol;
         std::cout << std::setfill('0') << std::setw(3) << vol << '%' << ' ';
@@ -206,8 +210,6 @@ ButtonArrayElement volume = {
     volume_id,
 };
 
-
-
 ButtonArray
     playback_control({
         prev,
@@ -220,14 +222,14 @@ ButtonArray
 namespace UIelements
 {
     int settings_alloc = 1;
-    //int volume_alloc = 4;
-    // int toggle_alloc = 1;
+    // int volume_alloc = 4;
+    //  int toggle_alloc = 1;
     bool settings_hover = false;
-    //bool volume_hover = false;
-    // bool toggle_hover = false;
+    // bool volume_hover = false;
+    //  bool toggle_hover = false;
     wm::Element settings;
-    //wm::Element volume;
-    // wm::Element toggle;
+    // wm::Element volume;
+    //  wm::Element toggle;
     /// @brief alloc rest of the ui space
     bool playbar_hover = false;
     wm::Element playbar;
@@ -271,7 +273,6 @@ size_t playlist_last_index()
 wm::SPLICE_TYPE playlist_clip = wm::SPLICE_TYPE::BEGIN_CUT;
 wm::PAD_TYPE playlist_pad = wm::PAD_TYPE::PAD_RIGHT;
 
-
 void refresh_playlist()
 {
     // display the elements
@@ -281,13 +282,12 @@ void refresh_playlist()
     {
         auto i = playlist_clamp(playlist_display_offset + index);
         mv(s.x, s.y + index);
-        //clean the row
+        // clean the row
         //{ //    TEMPORARY SOLUTION IS NOT A FIX PLZ FIX CLIP AND PAD FUNCTIONS
-        //    std::string clrstr(s.width(), ' ');
-        //    std::cout << attr_reset << clrstr;
-        //}
-        
-        
+        //     std::string clrstr(s.width(), ' ');
+        //     std::cout << attr_reset << clrstr;
+        // }
+
         auto str = pl[i];
         if (playlist_filename_only)
             str = path::filename(str);
@@ -295,7 +295,6 @@ void refresh_playlist()
         wm::clip(str, s.width() - i_str.length(), playlist_clip);
         wm::pad(str, s.width() - i_str.length(), playlist_pad);
 
-        
         str = i_str + str;
 
         if (i == static_cast<unsigned int>(playlist_cursor_offset))
@@ -306,7 +305,6 @@ void refresh_playlist()
         {
             use_attr(color_bg_rgb(hilight_color_bg) << color_fg_rgb(hilight_color_fg));
         }
-        
 
         mv(s.x, s.y + index);
         std::cout << str << attr_reset;
@@ -506,8 +504,8 @@ void refresh_UIelements()
 {
     refresh_settings();
     refresh_time_played();
-    //refresh_volume();
-    // refresh_play_button();
+    // refresh_volume();
+    //  refresh_play_button();
     refresh_controls();
 }
 void refresh_playbar()
@@ -575,13 +573,13 @@ void refresh_element_sizes()
     // order is important
     UIelements::settings.space = wm::Space(wm::WIDTH - UIelements::settings_alloc, wm::HEIGHT, UIelements::settings_alloc, 0);
     tp = wm::Space(UIelements::settings.space.x - 1 - tp.current().alloc_size, wm::HEIGHT, tp.current().alloc_size, 0);
-    //UIelements::volume.space = wm::Space(tp.space.x - 1 - UIelements::volume_alloc, wm::HEIGHT, UIelements::volume_alloc, 0);
-    // UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
+    // UIelements::volume.space = wm::Space(tp.space.x - 1 - UIelements::volume_alloc, wm::HEIGHT, UIelements::volume_alloc, 0);
+    //  UIelements::toggle.space        =   wm::Space(UIelements::volume.space.x-1-UIelements::toggle_alloc,            wm::HEIGHT, UIelements::toggle_alloc,       0);
 
     playback_control.pos = {static_cast<unsigned short>(tp.space.x - playback_control.width()), static_cast<unsigned short>(wm::HEIGHT)};
     UIelements::playbar.space = wm::Space(0, wm::HEIGHT, playback_control.pos.x - 1, 0);
 
-    //log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
+    // log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
 }
 // veri expensiv
 void refresh_all()
@@ -657,37 +655,37 @@ void handle_mouse(wm::MOUSE_INPUT m)
         tp.hover = !tp.hover;
         refresh_time_played();
     }
-    //if (UIelements::volume.space.inside(m.pos) != UIelements::volume_hover)
+    // if (UIelements::volume.space.inside(m.pos) != UIelements::volume_hover)
     //{
-    //    UIelements::volume_hover = UIelements::volume.space.inside(m.pos);
-    //    refresh_volume();
-    //}
-    //if (UIelements::volume.space.inside(m.pos))
+    //     UIelements::volume_hover = UIelements::volume.space.inside(m.pos);
+    //     refresh_volume();
+    // }
+    // if (UIelements::volume.space.inside(m.pos))
     //{
-    //    if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
-    //    {
-    //        audio::volume::shift(volume_shift);
-    //    }
-    //    else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
-    //    {
-    //        audio::volume::shift(-volume_shift);
-    //    }
-    //    else if (m.btn == wm::MOUSE_BTN::M_LEFT)
-    //    {
-    //        audio::volume::set(volume_reset);
-    //    }
-    //    refresh_volume();
-    //}
-    // if(UIelements::toggle.space.inside(m.pos) != UIelements::toggle_hover){
-    //     UIelements::toggle_hover = UIelements::toggle.space.inside(m.pos);
-    //     refresh_controls();
-    //     //refresh_play_button();
+    //     if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
+    //     {
+    //         audio::volume::shift(volume_shift);
+    //     }
+    //     else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
+    //     {
+    //         audio::volume::shift(-volume_shift);
+    //     }
+    //     else if (m.btn == wm::MOUSE_BTN::M_LEFT)
+    //     {
+    //         audio::volume::set(volume_reset);
+    //     }
+    //     refresh_volume();
     // }
-    // if(UIelements::toggle_hover && m.btn == wm::MOUSE_BTN::M_LEFT){
-    //     audio::control::toggle();
-    //     refresh_controls();
-    //     //refresh_play_button();
-    // }
+    //  if(UIelements::toggle.space.inside(m.pos) != UIelements::toggle_hover){
+    //      UIelements::toggle_hover = UIelements::toggle.space.inside(m.pos);
+    //      refresh_controls();
+    //      //refresh_play_button();
+    //  }
+    //  if(UIelements::toggle_hover && m.btn == wm::MOUSE_BTN::M_LEFT){
+    //      audio::control::toggle();
+    //      refresh_controls();
+    //      //refresh_play_button();
+    //  }
     if (playback_control.inside(m.pos) || playback_control.inside(m.pos) != playback_control_inside)
     {
         playback_control_inside = playback_control.inside(m.pos);
@@ -855,7 +853,7 @@ void handle_char(int ch)
             break;
         case '+':
             audio::volume::shift(volume_shift);
-            //playback_control.draw({mpos, wm::M_NONE, true});
+            // playback_control.draw({mpos, wm::M_NONE, true});
             playback_control.drawById(volume_id, {mpos, wm::MOUSE_BTN::M_NONE, true});
             break;
         case '-':
@@ -956,37 +954,37 @@ void handle_input(int ch)
 
 std::chrono::duration sleep_for = std::chrono::milliseconds(100);
 bool refrehs_thread_alive = true;
+
 bool in_getch = false;
 void refrehs_thread()
 {
     while (refrehs_thread_alive)
     {
-        if (in_getch == false) // if currently rendering
+        if (in_getch)
         {
-            goto continue_;
-        }
-        if (audio::stopped())
-        {
-            load_file(pl.next());
-        }
-        if (wm::resize_event)
-        {
-            handle_resize();
-        }
-        if (!cover_art_valid)
-        {
-            try
+            std::lock_guard<std::mutex> lock(rendering);
+            if (audio::stopped())
             {
-                refresh_coverart();
+                load_file(pl.next());
             }
-            catch (...)
+            if (wm::resize_event)
             {
+                handle_resize();
             }
+            if (!cover_art_valid)
+            {
+                try
+                {
+                    refresh_coverart();
+                }
+                catch (...)
+                {
+                }
+            }
+            refresh_time_played();
+            refresh_playbar();
         }
-        refresh_time_played();
-        refresh_playbar();
 
-        continue_:
         std::this_thread::sleep_for(sleep_for);
     }
 }
@@ -1052,7 +1050,8 @@ void configuraton()
         progress_bar_color_cursor_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
 
     // i hope this works
-    cfg::add_config_inline("ProgresBarChar", [](std::string line){
+    cfg::add_config_inline("ProgresBarChar", [](std::string line)
+                           {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         auto f      = cfg::get_bracket_contents(str, &idx, 0    );
@@ -1075,7 +1074,8 @@ void configuraton()
         auto vol = std::stoi(str);
         audio::volume::set(vol); });
 
-    cfg::add_config_inline("MediaControlChar", [](std::string line){
+    cfg::add_config_inline("MediaControlChar", [](std::string line)
+                           {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         auto play = cfg::get_bracket_contents(str, &idx, 0);
@@ -1087,14 +1087,13 @@ void configuraton()
         toggle_stopped_char = (stop.length()>0) ? stop : toggle_stopped_char;
         prev_char = (prev.length()>0) ? prev : prev_char;
         next_char = (next.length()>0) ? next : prev_char;
-        shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char;
-    });
+        shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char; });
 
-    cfg::add_config_inline("PlaylistClipType", [](std::string line){
+    cfg::add_config_inline("PlaylistClipType", [](std::string line)
+                           {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
-        playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0));
-    });
+        playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); });
 }
 void init(int argc, char const *argv[])
 {
@@ -1135,7 +1134,10 @@ int main(int argc, char const *argv[])
         in_getch = true;
         int ch = wm::getch();
         in_getch = false;
-        handle_input(ch);
+        {
+            std::lock_guard<std::mutex> lock(rendering);
+            handle_input(ch);
+        }
     }
     refrehs_thread_alive = false;
     try
