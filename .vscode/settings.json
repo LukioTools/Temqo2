@@ -85,7 +85,9 @@
         "ranges": "cpp",
         "shared_mutex": "cpp",
         "*.ipp": "cpp",
-        "hash_set": "cpp"
+        "hash_set": "cpp",
+        "stack": "cpp",
+        "queue": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

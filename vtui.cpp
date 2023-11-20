@@ -282,10 +282,10 @@ void refresh_playlist()
         auto i = playlist_clamp(playlist_display_offset + index);
         mv(s.x, s.y + index);
         //clean the row
-        { //    TEMPORARY SOLUTION IS NOT A FIX PLZ FIX CLIP AND PAD FUNCTIONS
-            std::string clrstr(s.width(), ' ');
-            std::cout << attr_reset << clrstr;
-        }
+        //{ //    TEMPORARY SOLUTION IS NOT A FIX PLZ FIX CLIP AND PAD FUNCTIONS
+        //    std::string clrstr(s.width(), ' ');
+        //    std::cout << attr_reset << clrstr;
+        //}
         
         
         auto str = pl[i];
@@ -581,7 +581,7 @@ void refresh_element_sizes()
     playback_control.pos = {static_cast<unsigned short>(tp.space.x - playback_control.width()), static_cast<unsigned short>(wm::HEIGHT)};
     UIelements::playbar.space = wm::Space(0, wm::HEIGHT, playback_control.pos.x - 1, 0);
 
-    log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
+    //log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
 }
 // veri expensiv
 void refresh_all()
@@ -961,10 +961,9 @@ void refrehs_thread()
 {
     while (refrehs_thread_alive)
     {
-        if (!in_getch)
+        if (in_getch == false) // if currently rendering
         {
-            std::this_thread::sleep_for(sleep_for);
-            continue;
+            goto continue_;
         }
         if (audio::stopped())
         {
@@ -986,6 +985,8 @@ void refrehs_thread()
         }
         refresh_time_played();
         refresh_playbar();
+
+        continue_:
         std::this_thread::sleep_for(sleep_for);
     }
 }
