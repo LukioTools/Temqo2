@@ -1,5 +1,4 @@
 #pragma once
-#define _XOPEN_SOURCE
 #include "../../custom/enum.hpp"
 
 
@@ -70,7 +69,6 @@ namespace wm
             }
         }
         inline void beg_dots(std::wstring& str, unsigned char width){
-            auto w = correct_wswidth(str);
             beg_cut(str, width);
             str.replace(0, 3, L"...");
         }

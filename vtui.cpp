@@ -63,6 +63,12 @@ std::string progres_bar_char_center = "─";
 std::string progres_bar_char_last = "┤";
 std::string progres_bar_char_cursor = "•";
 
+bool cover_art_override = false;
+std::string cover_art_img_placeholder = "placeholder.png";
+
+
+std::string cfg_path = "temqo.cfg";
+
 // ease of use
 int arrowkey_scroll_sensitivity = 1;
 int mouse_scroll_sensitivity = 3;
@@ -273,6 +279,10 @@ size_t playlist_last_index()
 wm::SPLICE_TYPE playlist_clip = wm::SPLICE_TYPE::BEGIN_CUT;
 wm::PAD_TYPE playlist_pad = wm::PAD_TYPE::PAD_RIGHT;
 
+void refresh_configuration(){
+    cfg::parse(cfg_path);
+}
+
 void refresh_playlist()
 {
     // display the elements
@@ -340,10 +350,16 @@ void refresh_display_offset()
     }
 }
 
+
 void refresh_coverart_img()
 {
+    if(cover_art_override){
+        covert_img_path = cover_art_img_placeholder;
+        cover_file_valid = true;
+        return;
+    }
     auto res = audio::extra::extractAlbumCoverTo(pl.current(), TMP_OUT);
-    covert_img_path = (res == 0) ? TMP_OUT : "";
+    covert_img_path = (res == 0) ? TMP_OUT : cover_art_img_placeholder;
     cover_file_valid = true;
 }
 
@@ -848,6 +864,9 @@ void handle_char(int ch)
         case 'b':
             load_file(pl.prev());
             break;
+        case 'r':
+            refresh_configuration();
+            break;
         case 'c':
             audio::control::toggle();
             break;
@@ -1063,11 +1082,19 @@ void configuraton()
         progres_bar_char_last = (l.length()>0) ? l : progres_bar_char_last;
         progres_bar_char_cursor = (curs.length()>0) ? curs : progres_bar_char_cursor; });
 
-    /// MISC
-    cfg::add_config_inline("CoverArt", [](std::string line)
-                           {
+    /// CoverArt
+    cfg::add_config_inline("CoverArt", [](std::string line){
         auto str = cfg::parse_inline(line);
-        enable_cover = cfg::parse_bool(str); });
+        enable_cover = cfg::parse_bool(str); 
+    });
+    cfg::add_config_inline("CoverArtPlaceholder", [](std::string line){
+        auto str = cfg::parse_inline(line);
+        str = cfg::get_bracket_contents(str);
+        //log_t << "new placeholder: " << str << std::endl;
+        cover_file_valid = false;
+        cover_art_valid = false;
+        cover_art_img_placeholder = str;
+    });
     cfg::add_config_inline("Volume", [](std::string line)
                            {
         auto str = cfg::parse_inline(line);
@@ -1107,7 +1134,8 @@ void init(int argc, char const *argv[])
     use_attr(cursor_invisible);
     // config
     configuraton();
-    cfg::parse("temqo.cfg");
+    refresh_configuration();
+    //cfg::parse("temqo.cfg");
     // playlist
     const char *filename = argc > 2 ? argv[2] : "playlist.pls";
     auto seek_to = pl.use(filename);
@@ -1129,7 +1157,9 @@ int main(int argc, char const *argv[])
     {
         if (wm::resize_event)
         {
-            handle_resize();
+            std::lock_guard<std::mutex> lock(rendering);
+            if (wm::resize_event) //check that it is actually needed
+                handle_resize();
         }
         in_getch = true;
         int ch = wm::getch();
