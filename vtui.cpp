@@ -7,12 +7,14 @@
 #include "lib/wm/clip.hpp"
 #include "lib/wm/core.hpp"
 #include "lib/wm/def.hpp"
+#include "lib/wm/element.hpp"
 #include "lib/wm/getch.hpp"
 #include "lib/wm/globals.hpp"
 #include "lib/wm/mouse.hpp"
 #include "lib/wm/position.hpp"
 #include "lib/wm/space.hpp"
 #include <cstdlib>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
@@ -65,7 +67,7 @@ std::string progres_bar_char_cursor = "•";
 
 bool cover_art_override = false;
 std::string cover_art_img_placeholder = "placeholder.png";
-
+std::string playlist_file = "playlist.pls";
 
 std::string cfg_path = "temqo.cfg";
 
@@ -1122,7 +1124,7 @@ void configuraton()
         size_t idx = 0;
         playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); });
 }
-void init(int argc, char const *argv[])
+void init(int argc, char* const *argv)
 {
     // signals
     atexit(deinit);
@@ -1137,8 +1139,8 @@ void init(int argc, char const *argv[])
     refresh_configuration();
     //cfg::parse("temqo.cfg");
     // playlist
-    const char *filename = argc > 2 ? argv[2] : "playlist.pls";
-    auto seek_to = pl.use(filename);
+    
+    auto seek_to = pl.use(playlist_file);
     //"⤭" shall be used to add a shuffle feature
     // audio server
     load_file(pl.current());
@@ -1146,9 +1148,30 @@ void init(int argc, char const *argv[])
     playlist_display_offset = pl.current_index;
     audio::seek::abs(std::chrono::seconds(seek_to));
 }
+//parse the argumenst
+void input_args(int argc,  char * const *argv){
+    int option;
+    // Process command-line options using getopt
+    while ((option = getopt(argc, argv, "p:c:")) != -1) {
+        switch (option) {
+            case 'p':
+                if(std::filesystem::exists(optarg))
+                    playlist_file = optarg;
+                break;
+            case 'c':
+                if(std::filesystem::exists(optarg))
+                    cfg_path = optarg;
+                break;
+            default:
+                std::cerr << "Usage: " << argv[0] << "[-c config_file -p playlist_file]" << std::endl;
+                exit(1);
+        }
+    }
+}
 
-int main(int argc, char const *argv[])
+int main(int argc, char * const argv[])
 {
+    input_args(argc, argv);
     init(argc, argv);
     refresh_all();
     std::thread thr(refrehs_thread);

@@ -1,38 +1,43 @@
 
-
-#include <codecvt>
-#include <iostream>
-#include <locale>
-#include <ostream>
-#include <string>
-
-#include <thread>
-#include <mutex>
-
-std::mutex m;
-
-void ehh(){
-    std::lock_guard<std::mutex> lock(m);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    std::cout << "ehh finished\n";
-}
-
-
-int main(int argc, char const *argv[])
-{
-    std::thread thr(ehh);
-
-    std::cout << "Starting\n";
-    
-    
-    {
-        if(m.try_lock())
-        std::lock_guard<std::mutex> lock(m);
-        std::cout << "le main\n";
-    }
-
-
-    thr.join();
-        std::cout << "le exit\n";
-    return 0;
-}
+// Program to illustrate the getopt() 
+// function in C 
+  
+#include <stdio.h>  
+#include <unistd.h>  
+  
+int main(int argc, char *argv[])  
+{ 
+    int opt; 
+      
+    // put ':' in the starting of the 
+    // string so that program can  
+    //distinguish between '?' and ':'  
+    while((opt = getopt(argc, argv, "f:")) != -1)  
+    {  
+        switch(opt)  
+        {  
+            case 'i':  
+            case 'l':  
+            case 'r':  
+                printf("option: %c\n", opt);  
+                break;  
+            case 'f':  
+                printf("filename: %s\n", optarg);  
+                break;  
+            case ':':  
+                printf("option needs a value\n");  
+                break;  
+            case '?':  
+                printf("unknown option: %c\n", optopt); 
+                break;  
+        }  
+    }  
+      
+    // optind is for the extra arguments 
+    // which are not parsed 
+    for(; optind < argc; optind++){      
+        printf("extra arguments: %s\n", argv[optind]);  
+    } 
+      
+    return 0; 
+} 
