@@ -1163,7 +1163,7 @@ void input_args(int argc,  char * const *argv){
                     cfg_path = optarg;
                 break;
             default:
-                std::cerr << "Usage: " << argv[0] << "[-c config_file -p playlist_file]" << std::endl;
+                std::cerr << "Usage: " << argv[0] << " [-c config_file -p playlist_file]" << std::endl;
                 exit(1);
         }
     }
