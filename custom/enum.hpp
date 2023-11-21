@@ -17,7 +17,6 @@
         EnumType get() { return num; }                                                \
         void operator=(EnumType a) { this->force(a); }                                \
         void operator=(dataType a) { this->force(a); }                                \
-        void operator=(std::string a) { this->load(a); }                              \
                                                                                       \
         void force(EnumType a) { this->num = a; }                                     \
         void force(dataType a) { this->num = (EnumType)a; }                           \
@@ -39,27 +38,12 @@
             num = a;                                                                  \
             return true;                                                              \
         }                                                                             \
-        bool load(std::string a)                                                      \
-        {                                                                             \
-            static const char *enumStrings[] = {#__VA_ARGS__};                        \
-            for (size_t i = 0; i < ENUM_COUNT; i++)                                   \
-            {                                                                         \
-                if (enumStrings[i] == a)                                              \
-                {                                                                     \
-                    num = (EnumType)i;                                                \
-                    return true;                                                      \
-                }                                                                     \
-            }                                                                         \
-            return false;                                                             \
-        }                                                                             \
                                                                                       \
         bool operator==(EnumType a) { return this->get() == a; }                      \
         bool operator==(dataType a) { return this->get() == (EnumType)a; }            \
-        bool operator==(std::string a) { return this->get() == cname(a).get(); }      \
                                                                                       \
         cname(EnumType a) { this->force(a); }                                         \
         cname(dataType a) { this->force(a); }                                         \
-        cname(std::string a) { this->load(a); }                                       \
         cname() {}                                                                    \
         ~cname() {}                                                                   \
     }

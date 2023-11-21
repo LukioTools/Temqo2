@@ -94,13 +94,34 @@ TimePlayed tp(
     });
 
 bool playback_control_inside = false;
+bool looping = false;
 
 std::string prev_char = "⏮";
 std::string next_char = "⏭";
 std::string shuffle_char = "⤮";
-std::string sorted_char = "⥤";
+std::string sorted_char = "⇉";
+std::string loop_on_char = "🗘";
+std::string loop_off_char = "🡢";
 std::string toggle_playing_char = "▶";
 std::string toggle_stopped_char = "⏸";
+
+ENUM(IDS,unsigned int,
+NO_ID,
+PREV,
+NEXT,
+SHUFFLE,
+TOGGLE,
+LOOP,
+VOLUME
+);
+
+ENUM(GROUPS,short,
+UNGROUPED,
+MEDIA_CONTROLS,
+VOLUME
+);
+
+
 
 ButtonArrayElement prev = {
     [](bool inside, wm::MOUSE_INPUT m)
@@ -117,8 +138,9 @@ ButtonArrayElement prev = {
             std::cout << prev_char << " ";
     },
     2,
-    1,
-    1};
+    GROUPS::MEDIA_CONTROLS,
+    IDS::PREV
+};
 
 ButtonArrayElement next = {
     [](bool inside, wm::MOUSE_INPUT m)
@@ -136,8 +158,8 @@ ButtonArrayElement next = {
             std::cout << next_char << " ";
     },
     2,
-    1,
-    2,
+    GROUPS::MEDIA_CONTROLS,
+    IDS::NEXT
 };
 
 ButtonArrayElement shuffle = {
@@ -163,8 +185,8 @@ ButtonArrayElement shuffle = {
             std::cout << out_char << " ";
     },
     2,
-    1,
-    3,
+    GROUPS::MEDIA_CONTROLS,
+    IDS::SHUFFLE
 };
 
 ButtonArrayElement toggle = {
@@ -187,7 +209,27 @@ ButtonArrayElement toggle = {
     1,
     4,
 };
-#define volume_id 5
+
+ButtonArrayElement loop = {
+    [](bool inside, wm::MOUSE_INPUT m){
+        auto& use_char = looping? loop_on_char : loop_off_char;
+        if(inside){
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << use_char << " " << attr_reset;
+            if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                //loop one song
+                looping = !looping;
+                log_t << "click " << (looping ? "true" : "false") << std::endl;
+
+            }
+        }else{
+            std::cout << use_char << " " << attr_reset;
+        }
+    },
+    2,
+    GROUPS::MEDIA_CONTROLS,
+    IDS::LOOP
+};
+
 ButtonArrayElement volume = {
     [](bool inside, wm::MOUSE_INPUT m)
     {
@@ -221,9 +263,11 @@ ButtonArrayElement volume = {
         }
     },
     5,
-    2,
-    volume_id,
+    GROUPS::VOLUME,
+    IDS::VOLUME
 };
+
+
 
 ButtonArray
     playback_control({
@@ -231,6 +275,7 @@ ButtonArray
         toggle,
         next,
         shuffle,
+        loop,
         volume,
     });
 
@@ -906,11 +951,11 @@ void handle_char(int ch)
         case '+':
             audio::volume::shift(volume_shift);
             // playback_control.draw({mpos, wm::M_NONE, true});
-            playback_control.drawById(volume_id, {mpos, wm::MOUSE_BTN::M_NONE, true});
+            playback_control.drawById(IDS::VOLUME, {mpos, wm::MOUSE_BTN::M_NONE, true});
             break;
         case '-':
             audio::volume::shift(-volume_shift);
-            playback_control.drawById(volume_id, {mpos, wm::MOUSE_BTN::M_NONE, true});
+            playback_control.drawById(IDS::VOLUME, {mpos, wm::MOUSE_BTN::M_NONE, true});
             break;
         case '\n':
             pl.current_index = playlist_clamp(playlist_cursor_offset);
@@ -1149,11 +1194,11 @@ void configuraton()
         next_char = (next.length()>0) ? next : prev_char;
         shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char; });
 
-    cfg::add_config_inline("PlaylistClipType", [](std::string line)
-                           {
+    cfg::add_config_inline("PlaylistClipType", [](std::string line){
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
-        playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); });
+        //playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); //decommisioned fuck the preprocessor
+    });
 }
 void init(int argc, char* const *argv)
 {
