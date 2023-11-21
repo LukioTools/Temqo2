@@ -287,6 +287,8 @@ void refresh_configuration(){
 
 void refresh_playlist()
 {
+    if(playlist.aSpace().width() < 5 || playlist.aSpace().height() < 5)
+        return;
     // display the elements
     auto s = playlist.wSpace();
     playlist_cursor_offset = playlist_clamp(playlist_cursor_offset);
@@ -371,6 +373,9 @@ void refresh_coverart()
     use_attr(color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg));
     cover_art.space.box("─", "─", nullptr, "│", "┬", nullptr, "┴", nullptr);
     use_attr(attr_reset);
+    //dont waste time
+    if(cover_art.aSpace().width() < 3 || cover_art.aSpace().height() < 3)
+        return;
     if (!cover_file_valid)
     {
         refresh_coverart_img();
@@ -583,7 +588,7 @@ void refresh_element_sizes()
     input_field.space = wm::Space(0, wm::HEIGHT, wm::WIDTH, 0);
 
     playlist.space = wm::Space(0, 1, wm::WIDTH * playlist_width, wm::HEIGHT - 2);
-    playlist.pad = {1, 1, 0, 0};
+    playlist.pad = {1, 1, 0, 1};
     cover_art.space = wm::Space(playlist.space.w, 1, wm::WIDTH - playlist.space.w + 1, wm::HEIGHT - 2);
     cover_art.pad = {1, 1, 1, 0};
     // implement album cover
@@ -658,6 +663,9 @@ void handle_resize()
     cover_art_valid = false;
     refresh_all();
 }
+
+bool resize_drag = false;
+wm::Position drag_start = {0,0};
 
 void handle_mouse(wm::MOUSE_INPUT m)
 {
@@ -753,6 +761,18 @@ void handle_mouse(wm::MOUSE_INPUT m)
         }
 
         refresh_playlist();
+    }
+
+    if(playlist.aSpace().end().x == m.pos.x && m.btn == wm::MOUSE_BTN::M_LEFT){
+        resize_drag = true;
+        drag_start = m.pos;
+    }
+    if(resize_drag && m.btn == wm::MOUSE_BTN::M_RELEASE){
+        auto drag_end = m.pos;
+        playlist_width = static_cast<double>(drag_end.x)/static_cast<double>(wm::WIDTH);
+        wm::resize_event = true;
+        resize_drag = false;
+        drag_start = {0,0};
     }
 }
 
@@ -1152,7 +1172,7 @@ void init(int argc, char* const *argv)
 void input_args(int argc,  char * const *argv){
     int option;
     // Process command-line options using getopt
-    while ((option = getopt(argc, argv, "p:c:")) != -1) {
+    while ((option = getopt(argc, argv, "p:c:d:")) != -1) {
         switch (option) {
             case 'p':
                 if(std::filesystem::exists(optarg))
@@ -1162,8 +1182,14 @@ void input_args(int argc,  char * const *argv){
                 if(std::filesystem::exists(optarg))
                     cfg_path = optarg;
                 break;
+            case 'd':
+                if(std::filesystem::exists(optarg)){
+                    log_t = std::ofstream(optarg);
+                    log_t << argv[0] << " Logging..." << std::endl;
+                }
+                break;
             default:
-                std::cerr << "Usage: " << argv[0] << " [-c config_file -p playlist_file]" << std::endl;
+                std::cerr << "Usage: " << argv[0] << " [-c config_file -p playlist_file -d debug_file/stream]" << std::endl;
                 exit(1);
         }
     }
@@ -1202,5 +1228,6 @@ int main(int argc, char * const argv[])
     }
     deinit();
     thr.join();
+    log_t << "\ec" << std::endl;
     return 0;
 }
