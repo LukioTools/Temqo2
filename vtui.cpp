@@ -98,6 +98,7 @@ bool playback_control_inside = false;
 std::string prev_char = "⏮";
 std::string next_char = "⏭";
 std::string shuffle_char = "⤮";
+std::string sorted_char = "⥤";
 std::string toggle_playing_char = "▶";
 std::string toggle_stopped_char = "⏸";
 
@@ -142,18 +143,24 @@ ButtonArrayElement next = {
 ButtonArrayElement shuffle = {
     [](bool inside, wm::MOUSE_INPUT m)
     {
+        auto out_char = (pl.sorted() ? sorted_char : shuffle_char);
         if (inside)
         {
-            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << shuffle_char << " " << attr_reset;
+            std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << out_char << " " << attr_reset;
 
             if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
-                pl.shuffle();
+                if(pl.sorted())
+                {
+                    pl.new_seed();
+                    pl.shuffle();
+                }
+                else pl.sort();
                 refresh_playlist();
             }
         }
         else
-            std::cout << shuffle_char << " ";
+            std::cout << out_char << " ";
     },
     2,
     1,
@@ -288,42 +295,45 @@ void refresh_configuration(){
 void refresh_playlist()
 {
     if(playlist.aSpace().width() < 5 || playlist.aSpace().height() < 5)
-        return;
+        goto draw_boxes;
     // display the elements
-    auto s = playlist.wSpace();
-    playlist_cursor_offset = playlist_clamp(playlist_cursor_offset);
-    for (size_t index = 0; index <= s.h; index++)
     {
-        auto i = playlist_clamp(playlist_display_offset + index);
-        mv(s.x, s.y + index);
-        // clean the row
-        //{ //    TEMPORARY SOLUTION IS NOT A FIX PLZ FIX CLIP AND PAD FUNCTIONS
-        //     std::string clrstr(s.width(), ' ');
-        //     std::cout << attr_reset << clrstr;
-        // }
-
-        auto str = pl[i];
-        if (playlist_filename_only)
-            str = path::filename(str);
-        auto i_str = std::to_string(i) + ' ';
-        wm::clip(str, s.width() - i_str.length(), playlist_clip);
-        wm::pad(str, s.width() - i_str.length(), playlist_pad);
-
-        str = i_str + str;
-
-        if (i == static_cast<unsigned int>(playlist_cursor_offset))
+        auto s = playlist.wSpace();
+        playlist_cursor_offset = playlist_clamp(playlist_cursor_offset);
+        for (size_t index = 0; index <= s.h; index++)
         {
-            use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg));
-        }
-        if (i == pl.current_index)
-        {
-            use_attr(color_bg_rgb(hilight_color_bg) << color_fg_rgb(hilight_color_fg));
-        }
+            auto i = playlist_clamp(playlist_display_offset + index);
+            mv(s.x, s.y + index);
+            // clean the row
+            //{ //    TEMPORARY SOLUTION IS NOT A FIX PLZ FIX CLIP AND PAD FUNCTIONS
+            //     std::string clrstr(s.width(), ' ');
+            //     std::cout << attr_reset << clrstr;
+            // }
 
-        mv(s.x, s.y + index);
-        std::cout << str << attr_reset;
+            auto str = pl[i];
+            if (playlist_filename_only)
+                str = path::filename(str);
+            auto i_str = std::to_string(i) + ' ';
+            wm::clip(str, s.width() - i_str.length(), playlist_clip);
+            wm::pad(str, s.width() - i_str.length(), playlist_pad);
+
+            str = i_str + str;
+
+            if (i == static_cast<unsigned int>(playlist_cursor_offset))
+            {
+                use_attr(color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg));
+            }
+            if (i == pl.current_index)
+            {
+                use_attr(color_bg_rgb(hilight_color_bg) << color_fg_rgb(hilight_color_fg));
+            }
+
+            mv(s.x, s.y + index);
+            std::cout << str << attr_reset;
+        }
     }
     // draw the borders
+    draw_boxes:
     {
         auto s = playlist.space;
         std::string b;
@@ -755,8 +765,12 @@ void handle_mouse(wm::MOUSE_INPUT m)
             refresh_display_offset();
             if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
-                pl.current_index = playlist_cursor_offset;
-                load_file(pl.current());
+                if(playlist.aSpace().width() < 5 || playlist.aSpace().height() < 5){
+
+                }else{
+                    pl.current_index = playlist_cursor_offset;
+                    load_file(pl.current());
+                }
             }
         }
 
@@ -765,14 +779,11 @@ void handle_mouse(wm::MOUSE_INPUT m)
 
     if(playlist.aSpace().end().x == m.pos.x && m.btn == wm::MOUSE_BTN::M_LEFT){
         resize_drag = true;
-        drag_start = m.pos;
     }
     if(resize_drag && m.btn == wm::MOUSE_BTN::M_RELEASE){
-        auto drag_end = m.pos;
-        playlist_width = static_cast<double>(drag_end.x)/static_cast<double>(wm::WIDTH);
+        playlist_width = static_cast<double>(m.pos.x)/static_cast<double>(wm::WIDTH); //its that simple
         wm::resize_event = true;
         resize_drag = false;
-        drag_start = {0,0};
     }
 }
 
@@ -1161,6 +1172,9 @@ void init(int argc, char* const *argv)
     // playlist
     
     auto seek_to = pl.use(playlist_file);
+    if(pl.seed){
+        pl.shuffle();
+    }
     //"⤭" shall be used to add a shuffle feature
     // audio server
     load_file(pl.current());
