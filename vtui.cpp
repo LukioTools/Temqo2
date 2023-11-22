@@ -218,8 +218,6 @@ ButtonArrayElement loop = {
             if(m.btn == wm::MOUSE_BTN::M_LEFT){
                 //loop one song
                 looping = !looping;
-                log_t << "click " << (looping ? "true" : "false") << std::endl;
-
             }
         }else{
             std::cout << use_char << " " << attr_reset;
@@ -1062,7 +1060,10 @@ void refrehs_thread()
             std::lock_guard<std::mutex> lock(rendering);
             if (audio::stopped())
             {
-                load_file(pl.next());
+                if(looping)
+                    load_file(pl.current()); //seek to start if stopped
+                else
+                    load_file(pl.next());
             }
             if (wm::resize_event)
             {
@@ -1217,12 +1218,15 @@ void init(int argc, char* const *argv)
     // playlist
     
     auto seek_to = pl.use(playlist_file);
-    if(pl.seed){
-        pl.shuffle();
+    
+    if(pl.files.size()){
+        //"⤭" shall be used to add a shuffle feature
+        if(pl.seed){
+            pl.shuffle();
+        }
+        // audio server
+        load_file(pl.current());
     }
-    //"⤭" shall be used to add a shuffle feature
-    // audio server
-    load_file(pl.current());
     playlist_cursor_offset = pl.current_index;
     playlist_display_offset = pl.current_index;
     audio::seek::abs(std::chrono::seconds(seek_to));
