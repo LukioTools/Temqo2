@@ -438,10 +438,12 @@ void refresh_coverart()
         return;
     }
     auto s = cover_art.wSpace();
-    auto cover_ansi = audio::extra::getImg(covert_img_path, s.width(), s.height() + 1);
+    ascii_img::load_image_t * cover_ansi = audio::extra::getImg(covert_img_path, s.width(), s.height() + 1);
 
     std::ostringstream out;
+
 #define clamp_1(val) (val == 0) ? 1 : val
+
     for (size_t iy = 0; iy <= s.height(); iy++)
     {
         out << mv_str(s.x, s.y + iy);
@@ -452,7 +454,8 @@ void refresh_coverart()
             out << color_bg_str(clamp_1(rgb.r), clamp_1(rgb.g), clamp_1(rgb.b)) << ' ' << attr_reset;
         }
     }
-    delete cover_ansi;
+    if(cover_ansi)
+        delete cover_ansi;
     std::cout << out.str();
     return;
 }
@@ -1060,10 +1063,8 @@ void refrehs_thread()
             std::lock_guard<std::mutex> lock(rendering);
             if (audio::stopped())
             {
-                if(looping)
-                    load_file(pl.current()); //seek to start if stopped
-                else
-                    load_file(pl.next());
+                if(looping) load_file(pl.current()); //seek to start if stopped
+                else load_file(pl.next());
             }
             if (wm::resize_event)
             {
@@ -1071,13 +1072,9 @@ void refrehs_thread()
             }
             if (!cover_art_valid)
             {
-                try
-                {
+                try {
                     refresh_coverart();
-                }
-                catch (...)
-                {
-                }
+                } catch (...){}
             }
             refresh_time_played();
             refresh_playbar();

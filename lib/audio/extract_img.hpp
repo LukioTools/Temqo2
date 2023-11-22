@@ -12,7 +12,6 @@
 #include <FreeImage.h>  // You need to have FreeImage installed.
 
 #include "../ansi/ascii_img2.hpp"
-#include "../wm/def.hpp"
 
 #define TMP_OUT "tmp.png"
 
