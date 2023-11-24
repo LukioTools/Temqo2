@@ -2,3 +2,4 @@
 *.cfg
 *.png
 *.mp3
+cache/*

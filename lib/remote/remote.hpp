@@ -2,11 +2,17 @@
 
 
 
+#include <boost/algorithm/string/trim.hpp>
 #include <cstdlib>
+#include <curl/curl.h>
+#include <curl/easy.h>
 #include <filesystem>
 #include <iostream>
+#include <regex>
 #include <string>
 #include <vector>
+#include "../path/filename.hpp"
+
 inline int system_ffmpeg(std::string i, std::string o){
     if(std::filesystem::exists(o)){
         return -1;
@@ -14,68 +20,132 @@ inline int system_ffmpeg(std::string i, std::string o){
     return system(("ffmpeg -nostats -loglevel panic -hide_banner -i " + i + " " + o).c_str());
 }
 
-#include <sndfile.h>
-#include <lame/lame.h>
 
-inline int convertAudioToMP3(const char* inputFilename, const char* outputFilename) {
-    // Initialize the input file
-    SF_INFO input_info = {};
-    SNDFILE* infile = sf_open(inputFilename, SFM_READ, &input_info);
-    if (!infile) {
-        std::cerr << "Failed to open input file: " << inputFilename << std::endl;
-        return 1;
+CURL* curl = nullptr;
+FILE* file = nullptr;
+std::regex ftp_regex("^ftp://.*@.*/.*$");
+std::regex sftp_regex("^sftp://.*@.*/.*$");
+std::regex is_supportted("^.*\\.mp3$");
+std::string private_key_path = "/home/pikku/.ssh/albert";
+
+
+static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+    size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+    return written;
+}
+static size_t write_to_string(void *ptr, size_t size, size_t nmemb, void *str){
+    static_cast<std::stringstream*>(str)->write((const char*) ptr, nmemb);
+    return nmemb;
+}
+
+//returns read error if could not read from file
+CURLcode fetch_sftp(){
+    curl_easy_setopt(curl, CURLOPT_SSH_AUTH_TYPES, CURLSSH_AUTH_ANY);
+    curl_easy_setopt(curl, CURLOPT_SSH_PRIVATE_KEYFILE,  private_key_path.c_str());
+    return curl_easy_perform(curl);
+}
+
+CURLcode fetch_ftp(){
+    return curl_easy_perform(curl);
+}
+
+
+CURLcode fetch_dir(const std::string& url, std::vector<std::string>& files, std::regex valid_files = std::regex(".*")){
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_string);
+    std::stringstream str;
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &str);
+    curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 1L);  // Only retrieve filenames
+
+
+    CURLcode ret = CURLcode::CURLE_OK;
+
+    if(std::regex_match(url, sftp_regex)){
+        ret = fetch_sftp();
     }
-    std::cout << "hello" << std::endl;
-
-    // Initialize the MP3 output file
-    lame_global_flags* lame = lame_init();
-    lame_set_in_samplerate(lame, input_info.samplerate);
-    lame_set_out_samplerate(lame, input_info.samplerate);
-    lame_set_num_channels(lame, input_info.channels);
-    lame_set_brate(lame, 128); // Bitrate (e.g., 128 kbps)
-    lame_set_quality(lame, 2); // 2 is good quality, 7 is low quality
-    lame_set_mode(lame, STEREO);
-    lame_set_VBR(lame, vbr_default);
-    lame_set_findReplayGain(lame, 1);
-
-    lame_init_params(lame);
-
-    FILE* outfile = fopen(outputFilename, "wb");
-    if (!outfile) {
-        std::cerr << "Failed to open output file." << std::endl;
-        sf_close(infile);
-        lame_close(lame);
-        return 1;
+    else if(std::regex_match(url, ftp_regex)){
+        ret = fetch_ftp();
+    }
+    else{
+        ret = curl_easy_perform(curl);
     }
 
-    // Initialize buffer for reading audio data
-    const int buffer_size = 8192;
-    std::vector<short> buffer(buffer_size * input_info.channels);
+    //while (std::getline(str, line)) {
+    //    std::cout << "Line: " << line << std::endl;
+    //    
+    //    
+    //    auto file = line.substr(line.find_last_of(' ')); 
+    //    if(line.size() > 0)
+    //        if(line[0] == 'd')
+    //            file=+'/';
 
-    while (true) {
-        int read_count = sf_readf_short(infile, buffer.data(), buffer_size);
-        if (read_count <= 0) {
-            break;
+    //    boost::trim(file);
+
+
+    //    std::cout << "Parsed Line: " << file << std::endl;
+    //    if(std::regex_match(file, valid_files))
+    //        files.push_back(file);
+    //}
+    files.push_back(str.str());
+
+    return ret;
+}
+
+
+inline CURLcode fetch_init(std::string url, std::string dest_dir, std::string* dest_file = nullptr){
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+    
+
+    auto fname = path::filename(url);
+    auto fdest = (dest_dir + fname);
+    if(dest_file)
+        *dest_file = fdest; 
+
+    file = fopen(fdest.c_str(), "wb");
+    if(!file) {
+        return CURLcode::CURLE_READ_ERROR;
+    }
+
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+    return CURLcode::CURLE_OK;
+}
+
+
+CURLcode fetch(std::string url, std::string dest_dir = "./cache/", std::string* dest_file = nullptr){
+    CURLcode ret = CURLcode::CURLE_UNSUPPORTED_PROTOCOL;
+
+    {
+        auto code = fetch_init(url, dest_dir, dest_file);
+        if(code != CURLcode::CURLE_OK){
+            return code;
         }
-
-        int write_count = lame_encode_buffer_interleaved(lame, buffer.data(), read_count, (unsigned char*) buffer.data(), buffer_size);
-        if (write_count > 0) {
-            fwrite(buffer.data(), sizeof(short), write_count, outfile);
-        }
     }
 
-
-    int flush_count = lame_encode_flush(lame, (unsigned char*) buffer.data(), buffer_size);
-    if (flush_count > 0) {
-        fwrite(buffer.data(), sizeof(short), flush_count, outfile);
+    if(std::regex_match(url, sftp_regex)){
+        ret = fetch_sftp();
+    }
+    else if(std::regex_match(url, ftp_regex)){
+        ret = fetch_ftp();
     }
 
-    // Clean up
-    fclose(outfile);
-    sf_close(infile);
-    lame_close(lame);
+    fclose(file);
+    return ret;
+}
 
-    std::cout << "Audio conversion to MP3 successful." << std::endl;
+int r_init(){
+    curl =  curl_easy_init();
+    #if defined (VERBOSE) 
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    #else
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
+    #endif
 
+    return 0;
+}
+
+int r_deinit(){
+    curl_easy_cleanup(curl);
     return 0;
 }
