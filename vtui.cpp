@@ -1126,58 +1126,58 @@ void refrehs_thread()
 
 void configuraton()
 {
-    cfg::add_config_inline("HilightColor", [](std::string line)
+    cfg::add_config_inline("HilightColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         hilight_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         hilight_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
-    cfg::add_config_inline("WarnColor", [](std::string line)
+    cfg::add_config_inline("WarnColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         warning_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         warning_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
-    cfg::add_config_inline("HoverColor", [](std::string line)
+    cfg::add_config_inline("HoverColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         hover_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         hover_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
-    cfg::add_config_inline("BorderColor", [](std::string line)
+    cfg::add_config_inline("BorderColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         border_color_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         border_color_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
     /// Playlist
-    cfg::add_config_inline("PlaylistFilenameOnly", [](std::string line)
+    cfg::add_config_inline("PlaylistFilenameOnly", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         playlist_filename_only = cfg::parse_bool(str); });
-    cfg::add_config_inline("PlayingFilenameOnly", [](std::string line)
+    cfg::add_config_inline("PlayingFilenameOnly", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         currently_playing_filename_only = cfg::parse_bool(str); });
-    cfg::add_config_inline("TitleFilenameOnly", [](std::string line)
+    cfg::add_config_inline("TitleFilenameOnly", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         title_filename_only = cfg::parse_bool(str); });
 
     /// Progress Bar
-    cfg::add_config_inline("ProgresBarPlayedColor", [](std::string line)
+    cfg::add_config_inline("ProgresBarPlayedColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         progress_bar_color_played_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         progress_bar_color_played_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
-    cfg::add_config_inline("ProgresBarRemainingColor", [](std::string line)
+    cfg::add_config_inline("ProgresBarRemainingColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         progress_bar_color_remaining_fg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, 0    ));
         progress_bar_color_remaining_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
-    cfg::add_config_inline("ProgresBarCursorColor", [](std::string line)
+    cfg::add_config_inline("ProgresBarCursorColor", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
@@ -1185,7 +1185,7 @@ void configuraton()
         progress_bar_color_cursor_bg = cfg::parse_rgb(cfg::get_bracket_contents(str, &idx, idx+1)); });
 
     // i hope this works
-    cfg::add_config_inline("ProgresBarChar", [](std::string line)
+    cfg::add_config_inline("ProgresBarChar", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
@@ -1199,11 +1199,11 @@ void configuraton()
         progres_bar_char_cursor = (curs.length()>0) ? curs : progres_bar_char_cursor; });
 
     /// CoverArt
-    cfg::add_config_inline("CoverArt", [](std::string line){
+    cfg::add_config_inline("CoverArt", [](const std::string& line){
         auto str = cfg::parse_inline(line);
         enable_cover = cfg::parse_bool(str); 
     });
-    cfg::add_config_inline("CoverArtPlaceholder", [](std::string line){
+    cfg::add_config_inline("CoverArtPlaceholder", [](const std::string& line){
         auto str = cfg::parse_inline(line);
         str = cfg::get_bracket_contents(str);
         ////log_t << "new placeholder: " << str << std::endl;
@@ -1211,13 +1211,14 @@ void configuraton()
         cover_art_valid = false;
         cover_art_img_placeholder = str;
     });
-    cfg::add_config_inline("Volume", [](std::string line)
+    cfg::add_config_inline("CoverArtOverride", [](const std::string& line){});
+    cfg::add_config_inline("Volume", [](const std::string& line)
                            {
         auto str = cfg::parse_inline(line);
         auto vol = std::stoi(str);
         audio::volume::set(vol); });
 
-    cfg::add_config_inline("MediaControlChar", [](std::string line){
+    cfg::add_config_inline("MediaControlChar", [](const std::string& line){
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         auto play = cfg::get_bracket_contents(str, &idx, 0);
@@ -1238,7 +1239,7 @@ void configuraton()
         loop_off_char = (loop_off.length()>0) ? loop_off : loop_on_char; 
     });
 
-    cfg::add_config_inline("PlaylistClipType", [](std::string line){
+    cfg::add_config_inline("PlaylistClipType", [](const std::string& line){
         //auto str = cfg::parse_inline(line);
         //size_t idx = 0;
         //playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); //decommisioned fuck the preprocessor

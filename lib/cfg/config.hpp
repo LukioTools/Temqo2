@@ -10,7 +10,7 @@
 
 namespace cfg
 {
-    typedef void(*ConfigCallback)(std::string input);
+    typedef void(*ConfigCallback)(const std::string& line);
 
     struct InlineConfiguration
     {
@@ -29,10 +29,10 @@ namespace cfg
     inline void add_config(InlineConfiguration il){
         il_cfg.push_back(il);
     }
-    inline void add_config_inline(std::string name, ConfigCallback cb){
+    inline void add_config_inline(const std::string& name, ConfigCallback cb){
         il_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\] *=.*$"), cb});
     }
-    inline void add_config_multiline(std::string name, ConfigCallback cb){
+    inline void add_config_multiline(const std::string&  name, ConfigCallback cb){
         il_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\].*"), cb});
     }
     inline void add_config(MultilineConfiguration ml){
@@ -40,7 +40,7 @@ namespace cfg
     }
     std::regex comment_regex("^ *(#|\\/\\/).*$");
 
-    inline void parse(std::string filename){
+    inline void parse(const std::string& filename){
         if(!std::filesystem::exists(filename))
             return;
             
