@@ -8,6 +8,11 @@
 #include <variant>
 #include <vector>
 
+#define CONFIG_REGEX_PREPEND "^ *\\[ *"
+#define CONFIG_REGEX_APPEND " *\\] *=.*$"
+#define ADD_CONFIG_INLINE(name, cb) cfg::il_cfg.push_back({std::regex(CONFIG_REGEX_PREPEND name CONFIG_REGEX_APPEND), cb})
+#define ADD_CONFIG_MULTILINE(name, cb) cfg::ml_cfg.push_back({std::regex(CONFIG_REGEX_PREPEND name CONFIG_REGEX_APPEND), cb})
+
 namespace cfg
 {
     typedef void(*ConfigCallback)(const std::string& line);
@@ -33,7 +38,7 @@ namespace cfg
         il_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\] *=.*$"), cb});
     }
     inline void add_config_multiline(const std::string&  name, ConfigCallback cb){
-        il_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\].*"), cb});
+        ml_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\].*"), cb});
     }
     inline void add_config(MultilineConfiguration ml){
         ml_cfg.push_back(ml);
