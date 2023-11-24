@@ -18,6 +18,10 @@ exec:
 	@echo "Executing: ./$(OUT_NAME)"
 	@./$(OUT_NAME) -d /dev/pts/4
 
+new:
+	c++ vtui.cpp -I./bin/SFML-2.6.1/include -Wl,-rpath,./bin/SFML-2.6.1/lib -L./bin/SFML-2.6.1/lib -lsfml-audio -lsfml-system -ltag -lfreeimage -o temqo
+	./temqo
+
 build:     
 	@ $(CXX) $(TARGET_FILE) $(DEPENDENCIES) $(CXXFLAGS) -o $(OUT_NAME)
 
