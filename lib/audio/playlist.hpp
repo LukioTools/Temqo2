@@ -57,6 +57,10 @@ namespace audio
             return seed == 0;
         }
         
+        inline bool empty(){
+            return files.size() == 0;
+        }
+
         void sort(){
             std::sort(files.begin(), files.end());
             seed = 0;

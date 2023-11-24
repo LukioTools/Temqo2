@@ -337,6 +337,8 @@ void refresh_configuration(){
 
 void refresh_playlist()
 {
+    if(pl.empty())
+        goto draw_boxes;
     if(playlist.aSpace().width() < 5 || playlist.aSpace().height() < 5)
         goto draw_boxes;
     // display the elements
@@ -410,7 +412,7 @@ void refresh_display_offset()
 
 void refresh_coverart_img()
 {
-    if(cover_art_override){
+    if(cover_art_override || pl.empty()){
         covert_img_path = cover_art_img_placeholder;
         cover_file_valid = true;
         return;
@@ -666,10 +668,15 @@ void refresh_all()
     clear_all();
     use_attr(cursor_invisible);
     refresh_element_sizes();
+    log_t << "1" << std::endl;
     refresh_currently_playing();
+    log_t << "2" << std::endl;
     refresh_playlist();
+    log_t << "3" << std::endl;
     refresh_UIelements();
+    log_t << "4" << std::endl;
     refresh_playbar();
+    log_t << "5" << std::endl;
     try
     {
         refresh_coverart();
@@ -1193,8 +1200,8 @@ void configuraton()
         shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char; });
 
     cfg::add_config_inline("PlaylistClipType", [](std::string line){
-        auto str = cfg::parse_inline(line);
-        size_t idx = 0;
+        //auto str = cfg::parse_inline(line);
+        //size_t idx = 0;
         //playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); //decommisioned fuck the preprocessor
     });
 }
@@ -1257,9 +1264,13 @@ void input_args(int argc,  char * const *argv){
 
 int main(int argc, char * const argv[])
 {
+    log_t << "Before input_args" << std::endl;
     input_args(argc, argv);
+    log_t << "Before init" << std::endl;
     init(argc, argv);
+    log_t << "Before refresh" << std::endl;
     refresh_all();
+    log_t << "After refresh" << std::endl;
     std::thread thr(refrehs_thread);
     use_attr(cursor_invisible);
     while (!exit_mainloop)
