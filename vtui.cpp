@@ -15,6 +15,7 @@
 #include "lib/wm/space.hpp"
 #include <cstdlib>
 #include <filesystem>
+#include <initializer_list>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
@@ -879,57 +880,69 @@ void update_input()
 {
 }
 
+
+struct Command
+{
+    std::regex rgx;
+    void(*cb)(const std::string&);
+};
+
+
 namespace hcr
 {
     std::regex add_to_playlist("^p?l?add .*$");
     std::regex use_playlist("^p?l?use .*$");
     std::regex save_playlist("^p?l?save *$");
+    std::regex clear_playlist("^p?l?cle?a?r_?p?l? .*$");
     std::regex saveto_playlist("^p?l?saveto .*$");
     std::regex use_config("^useco?n?fi?g .*$");
-    std::regex goto_config("^got?o? .*$");
+    std::regex goto_index("^got?o? .*$");
 } // namespace hcr
+
+std::vector<Command> commands(std::initializer_list<Command>{
+        {
+        hcr::add_to_playlist, [](const std::string&){pl.add(input.substr(input.find_first_of(' ') + 1));}
+        },
+        {
+            hcr::save_playlist, [](const std::string&){pl.save();}
+        },
+        {
+            hcr::saveto_playlist, [](const std::string&){pl.save(input.substr(input.find_first_of(' ') + 1));}
+        },
+        {
+            hcr::use_playlist, [](const std::string&){pl.save();pl.use(input.substr(input.find_first_of(' ') + 1));}
+        },
+        {
+            hcr::use_config, [](const std::string&){cfg::parse(input.substr(input.find_first_of(' ') + 1));}
+        },
+        {
+            hcr::goto_index, [](const std::string&){playlist_cursor_offset = std::stoi(input.substr(input.find_first_of(' ') + 1));
+            pl.current_index = playlist_clamp(playlist_cursor_offset);
+            if(!pl.empty()){load_file(pl.current());}}
+        },
+
+});
+
+
 
 void handle_command()
 {
-    try
-    {
-        if (input.length() == 0)
-        {
-            return;
-        }
-        if (std::regex_match(input, hcr::save_playlist))
-        {
-            pl.save();
-        }
-        else if (std::regex_match(input, hcr::saveto_playlist))
-        {
-            pl.save(input.substr(input.find_first_of(' ') + 1));
-        }
-        else if (std::regex_match(input, hcr::add_to_playlist))
-        {
-            pl.add(input.substr(input.find_first_of(' ') + 1));
-        }
-        else if (std::regex_match(input, hcr::use_playlist))
-        {
-            pl.save();
-            pl.use(input.substr(input.find_first_of(' ') + 1));
-        }
-        else if (std::regex_match(input, hcr::use_config))
-        {
-            cfg::parse(input.substr(input.find_first_of(' ') + 1));
-        }
-        else if (std::regex_match(input, hcr::goto_config))
-        {
-            playlist_cursor_offset = std::stoi(input.substr(input.find_first_of(' ') + 1));
-            pl.current_index = playlist_clamp(playlist_cursor_offset);
-            if(!pl.empty())
-                load_file(pl.current());
-        }
-    }
-    catch (...)
+    if (input.length() == 0)
     {
         return;
     }
+    try
+    {
+        for (Command c : commands) {
+            if(!c.cb)
+                continue;
+            if(std::regex_match(input, c.rgx)){
+                c.cb(input);
+                break;
+            }
+        }
+    }
+    catch (...){return;}
 }
 void handle_search()
 {
