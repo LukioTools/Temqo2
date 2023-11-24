@@ -897,6 +897,7 @@ namespace hcr
     std::regex saveto_playlist("^p?l?saveto .*$");
     std::regex use_config("^useco?n?fi?g .*$");
     std::regex goto_index("^got?o? .*$");
+    std::regex refresh_config("^co?n?fi?grefr?e?s?h? *$");
 } // namespace hcr
 
 std::vector<Command> commands(std::initializer_list<Command>{
@@ -913,7 +914,10 @@ std::vector<Command> commands(std::initializer_list<Command>{
             hcr::use_playlist, [](const std::string&){pl.save();pl.use(input.substr(input.find_first_of(' ') + 1));}
         },
         {
-            hcr::use_config, [](const std::string&){cfg::parse(input.substr(input.find_first_of(' ') + 1));}
+            hcr::use_config, [](const std::string&){cfg_path = input.substr(input.find_first_of(' ') + 1);refresh_configuration();}
+        },
+        {
+            hcr::refresh_config, [](const std::string&){refresh_configuration();}
         },
         {
             hcr::goto_index, [](const std::string&){playlist_cursor_offset = std::stoi(input.substr(input.find_first_of(' ') + 1));
@@ -1213,8 +1217,7 @@ void configuraton()
         auto vol = std::stoi(str);
         audio::volume::set(vol); });
 
-    cfg::add_config_inline("MediaControlChar", [](std::string line)
-                           {
+    cfg::add_config_inline("MediaControlChar", [](std::string line){
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         auto play = cfg::get_bracket_contents(str, &idx, 0);
@@ -1222,11 +1225,18 @@ void configuraton()
         auto prev = cfg::get_bracket_contents(str, &idx, idx+1);
         auto next = cfg::get_bracket_contents(str, &idx, idx+1);
         auto shuffle = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto sorted = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto loop_on = cfg::get_bracket_contents(str, &idx, idx+1);
+        auto loop_off = cfg::get_bracket_contents(str, &idx, idx+1);
         toggle_playing_char = (play.length()>0) ? play : toggle_playing_char;
         toggle_stopped_char = (stop.length()>0) ? stop : toggle_stopped_char;
         prev_char = (prev.length()>0) ? prev : prev_char;
         next_char = (next.length()>0) ? next : prev_char;
-        shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char; });
+        shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char; 
+        sorted_char = (sorted.length()>0) ? sorted : sorted_char; 
+        loop_on_char = (loop_on.length()>0) ? loop_on : loop_on_char; 
+        loop_off_char = (loop_off.length()>0) ? loop_off : loop_on_char; 
+    });
 
     cfg::add_config_inline("PlaylistClipType", [](std::string line){
         //auto str = cfg::parse_inline(line);
