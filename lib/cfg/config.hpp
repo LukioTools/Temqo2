@@ -1,5 +1,6 @@
 
 #pragma once
+#include <filesystem>
 #include <iostream>
 #include <regex>
 #include <fstream>
@@ -41,6 +42,9 @@ namespace cfg
     std::regex comment_regex("^ *(#|\\/\\/).*$");
 
     inline void parse(std::string filename){
+        if(!std::filesystem::exists(filename))
+            return;
+            
         std::ifstream is(filename);
         std::string line;
         size_t current_multiline_configuration = std::variant_npos;

@@ -131,7 +131,9 @@ ButtonArrayElement prev = {
             std::cout << color_bg_rgb(hover_color_bg) << color_fg_rgb(hover_color_fg) << prev_char << " " << attr_reset;
             if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
-                load_file(pl.prev());
+                if(!pl.empty()){
+                    load_file(pl.prev());
+                }
             }
         }
         else
@@ -151,7 +153,9 @@ ButtonArrayElement next = {
 
             if (m.btn == wm::MOUSE_BTN::M_LEFT)
             {
-                load_file(pl.next());
+                if(!pl.empty()){
+                    load_file(pl.next());
+                }
             }
         }
         else
@@ -195,7 +199,7 @@ ButtonArrayElement toggle = {
     {
         if (inside)
         {
-            if (m.btn == wm::MOUSE_BTN::M_LEFT)
+            if (m.btn == wm::MOUSE_BTN::M_LEFT && !pl.empty())
             {
                 audio::control::toggle();
             }
@@ -309,6 +313,8 @@ double playlist_width = 0.5;
 
 size_t playlist_clamp(long i)
 {
+    if(pl.empty())
+        return 0;
     while (i < 0)
     {
         i += pl.files.size();
@@ -660,7 +666,7 @@ void refresh_element_sizes()
     playback_control.pos = {static_cast<unsigned short>(tp.space.x - playback_control.width()), static_cast<unsigned short>(wm::HEIGHT)};
     UIelements::playbar.space = wm::Space(0, wm::HEIGHT, playback_control.pos.x - 1, 0);
 
-    // log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
+    // //log_t << "pv : pos" << playback_control.pos << " width: " << playback_control.width() << std::endl;
 }
 // veri expensiv
 void refresh_all()
@@ -668,15 +674,15 @@ void refresh_all()
     clear_all();
     use_attr(cursor_invisible);
     refresh_element_sizes();
-    log_t << "1" << std::endl;
+    //log_t << "1" << std::endl;
     refresh_currently_playing();
-    log_t << "2" << std::endl;
+    //log_t << "2" << std::endl;
     refresh_playlist();
-    log_t << "3" << std::endl;
+    //log_t << "3" << std::endl;
     refresh_UIelements();
-    log_t << "4" << std::endl;
+    //log_t << "4" << std::endl;
     refresh_playbar();
-    log_t << "5" << std::endl;
+    //log_t << "5" << std::endl;
     try
     {
         refresh_coverart();
@@ -688,6 +694,9 @@ void refresh_all()
 
 void load_file(std::string filepath)
 {
+    if(filepath == ""){
+        return;
+    }
 
     cover_file_valid = false;
     cover_art_valid = false;
@@ -779,7 +788,7 @@ void handle_mouse(wm::MOUSE_INPUT m)
     {
         playback_control_inside = playback_control.inside(m.pos);
         refresh_controls(m);
-        // log_t << (playback_control_inside? "true":"false") << std::endl;
+        // //log_t << (playback_control_inside? "true":"false") << std::endl;
     }
     if (UIelements::playbar.space.inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT)
     {
@@ -822,7 +831,8 @@ void handle_mouse(wm::MOUSE_INPUT m)
 
                 }else{
                     pl.current_index = playlist_cursor_offset;
-                    load_file(pl.current());
+                    if(!pl.empty())
+                        load_file(pl.current());
                 }
             }
         }
@@ -912,7 +922,8 @@ void handle_command()
         {
             playlist_cursor_offset = std::stoi(input.substr(input.find_first_of(' ') + 1));
             pl.current_index = playlist_clamp(playlist_cursor_offset);
-            load_file(pl.current());
+            if(!pl.empty())
+                load_file(pl.current());
         }
     }
     catch (...)
@@ -945,16 +956,19 @@ void handle_char(int ch)
             exit_mainloop = true;
             break;
         case 'n':
-            load_file(pl.next());
+            if(!pl.empty())
+                load_file(pl.next());
             break;
         case 'b':
-            load_file(pl.prev());
+            if(!pl.empty())
+                load_file(pl.prev());
             break;
         case 'r':
             refresh_configuration();
             break;
         case 'c':
-            audio::control::toggle();
+            if(!pl.empty())
+                audio::control::toggle();
             break;
         case '+':
             audio::volume::shift(volume_shift);
@@ -967,7 +981,8 @@ void handle_char(int ch)
             break;
         case '\n':
             pl.current_index = playlist_clamp(playlist_cursor_offset);
-            load_file(pl.current());
+            if(!pl.empty())
+                load_file(pl.current());
             break;
             // switch to command mode
 
@@ -1011,7 +1026,8 @@ void handle_char(int ch)
         {
         case '\n':
             pl.current_index = playlist_clamp(playlist_cursor_offset);
-            load_file(pl.current());
+            if(!pl.empty())
+                load_file(pl.current());
             input = "";
             current_mode = DEFAULT;
             break;
@@ -1068,7 +1084,7 @@ void refrehs_thread()
         if (in_getch)
         {
             std::lock_guard<std::mutex> lock(rendering);
-            if (audio::stopped())
+            if (audio::stopped() && !pl.empty())
             {
                 if(looping) load_file(pl.current()); //seek to start if stopped
                 else load_file(pl.next());
@@ -1173,7 +1189,7 @@ void configuraton()
     cfg::add_config_inline("CoverArtPlaceholder", [](std::string line){
         auto str = cfg::parse_inline(line);
         str = cfg::get_bracket_contents(str);
-        //log_t << "new placeholder: " << str << std::endl;
+        ////log_t << "new placeholder: " << str << std::endl;
         cover_file_valid = false;
         cover_art_valid = false;
         cover_art_img_placeholder = str;
@@ -1223,7 +1239,7 @@ void init(int argc, char* const *argv)
     
     auto seek_to = pl.use(playlist_file);
     
-    if(pl.files.size()){
+    if(!pl.empty()){
         //"⤭" shall be used to add a shuffle feature
         if(pl.seed){
             pl.shuffle();
@@ -1251,8 +1267,8 @@ void input_args(int argc,  char * const *argv){
                 break;
             case 'd':
                 if(std::filesystem::exists(optarg)){
-                    log_t = std::ofstream(optarg);
-                    log_t << argv[0] << " Logging..." << std::endl;
+                    //log_t = std::ofstream(optarg);
+                    //log_t << argv[0] << " Logging..." << std::endl;
                 }
                 break;
             default:
@@ -1264,17 +1280,18 @@ void input_args(int argc,  char * const *argv){
 
 int main(int argc, char * const argv[])
 {
-    log_t << "Before input_args" << std::endl;
+    //log_t << "Before input_args" << std::endl;
     input_args(argc, argv);
-    log_t << "Before init" << std::endl;
+    //log_t << "Before init" << std::endl;
     init(argc, argv);
-    log_t << "Before refresh" << std::endl;
+    //log_t << "Before refresh" << std::endl;
     refresh_all();
-    log_t << "After refresh" << std::endl;
+    //log_t << "After refresh" << std::endl;
     std::thread thr(refrehs_thread);
     use_attr(cursor_invisible);
     while (!exit_mainloop)
     {
+        //log_t << "Main lööp" << std::endl;
         if (wm::resize_event)
         {
             std::lock_guard<std::mutex> lock(rendering);
@@ -1299,6 +1316,6 @@ int main(int argc, char * const argv[])
     }
     deinit();
     thr.join();
-    log_t << "\ec" << std::endl;
+    //log_t << "\ec" << std::endl;
     return 0;
 }
