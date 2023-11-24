@@ -6,11 +6,11 @@
 #include <string>
 namespace cfg
 {
-    std::string parse_inline(const std::string& str){
+    inline std::string parse_inline(const std::string& str){
         return str.substr(str.find_first_of('=')+1);
     }
     
-    std::string get_bracket_contents(const std::string& str, size_t* end_b_pos = nullptr, size_t offset = 0){
+    inline std::string get_bracket_contents(const std::string& str, size_t* end_b_pos = nullptr, size_t offset = 0){
         auto bg_first = str.find_first_of('{', offset);
         auto bg_last = str.find_first_of('}', offset);
         
@@ -39,7 +39,7 @@ namespace cfg
 
     
     
-    RGB parse_rgb(std::string bracket_contents){
+    inline RGB parse_rgb(std::string bracket_contents){
         auto first = bracket_contents.find_first_of(',');
         auto last = bracket_contents.find_last_of(',');
         if(first == std::string::npos){
@@ -60,7 +60,7 @@ namespace cfg
     }
 
     std::regex parse_bool_regex("^ *(true|ye?s?|1) *$", std::regex::icase);
-    bool parse_bool(std::string content){
+    inline bool parse_bool(std::string content){
         return std::regex_match(content, parse_bool_regex);
     }
 

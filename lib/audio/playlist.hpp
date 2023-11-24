@@ -53,7 +53,7 @@ namespace audio
         std::string use_file;
         uint_fast32_t seed = 0;
 
-        bool sorted(){
+        inline bool sorted(){
             return seed == 0;
         }
         
@@ -61,13 +61,13 @@ namespace audio
             return files.size() == 0;
         }
 
-        void sort(){
+        inline void sort(){
             std::sort(files.begin(), files.end());
             seed = 0;
         }
 
         //-1 doesnt exist, 1 exists but is not supportted, 0 success
-        int add(std::string path, bool recursive = true){
+        inline int add(std::string path, bool recursive = true){
             if(!std::filesystem::exists(path)){
                 return -1;
             }
@@ -86,7 +86,7 @@ namespace audio
             return EXIT_SUCCESS;
         }
         //may throw idk man
-        std::string next(){
+        inline std::string next(){
             if(files.size() < 1){
                 return "";
             }
@@ -96,14 +96,14 @@ namespace audio
             }
             return files[current_index];
         }
-        std::string current(){
+        inline std::string current(){
             if(files.size() < 1){
                 return "";
             }
             return files[current_index];
         }
         //previous, loops if nececcary
-        std::string prev(){
+        inline std::string prev(){
             if(files.size() < 1){
                 return "";
             }
@@ -114,7 +114,7 @@ namespace audio
             return files[current_index];
         }
 
-        std::string find(const std::string& thing,size_t* index = nullptr){
+        inline std::string find(const std::string& thing,size_t* index = nullptr){
             if(index){
                 *index = std::string::npos;
             }
@@ -129,7 +129,7 @@ namespace audio
             }
             return "";
         }
-        std::string find_insensitive(const std::string& thing, size_t* index = nullptr, bool split = true){
+        inline std::string find_insensitive(const std::string& thing, size_t* index = nullptr, bool split = true){
             std::vector<std::string> find_shits;
             split ?  (void) boost::split(find_shits, thing, boost::is_any_of(" ")) : find_shits.push_back(thing);
             
@@ -165,7 +165,7 @@ namespace audio
             return "";
         }
         //find regex
-        std::string frgx(const std::regex& rgx, size_t* index = nullptr){
+        inline std::string frgx(const std::regex& rgx, size_t* index = nullptr){
             if(index){
                 *index = std::string::npos;
             }
@@ -181,7 +181,7 @@ namespace audio
             return "";
         }
 
-        void shuffle(){
+        inline void shuffle(){
             if(files.size() < 1){
                 return;
             }
@@ -189,12 +189,12 @@ namespace audio
             std::shuffle(files.begin(), files.end(), rng);
         }
 
-        void new_seed(){
+        inline void new_seed(){
             std::random_device rd;
             seed = rd();
         }
 
-        void clear(){
+        inline void clear(){
             current_index = 0;
             files.clear();
             use_file = "";
@@ -202,7 +202,7 @@ namespace audio
 
 
 
-        void unique(){
+        inline void unique(){
 
             std::thread thr1(__unique, &files);
             std::thread thr2(__unique, &folders);
@@ -212,7 +212,7 @@ namespace audio
             return;
         }
 
-        int use(std::string playlist_file){
+        inline int use(std::string playlist_file){
             if(!std::filesystem::exists(playlist_file))
                 return 2;
             std::ifstream in(playlist_file);
@@ -276,7 +276,7 @@ namespace audio
             return time;
         }
 
-        int save(std::string dest_file = ""){
+        inline int save(std::string dest_file = ""){
             if(dest_file.length() == 0)
                 dest_file = use_file;
 
@@ -314,7 +314,7 @@ namespace audio
             return files.end();
         }
         
-        std::string operator[](size_t index){
+        inline std::string operator[](size_t index){
             if( index >= files.size() || index < 0){
                 return "";
             }
