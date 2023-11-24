@@ -27,16 +27,16 @@ namespace cfg
     std::vector<InlineConfiguration> il_cfg;
     std::vector<MultilineConfiguration> ml_cfg;
 
-    void add_config(InlineConfiguration il){
+    inline void add_config(InlineConfiguration il){
         il_cfg.push_back(il);
     }
-    void add_config_inline(std::string name, ConfigCallback cb){
+    inline void add_config_inline(std::string name, ConfigCallback cb){
         il_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\] *=.*$"), cb});
     }
-    void add_config_multiline(std::string name, ConfigCallback cb){
+    inline void add_config_multiline(std::string name, ConfigCallback cb){
         il_cfg.push_back({std::regex("^ *\\[ *" + name + " *\\].*"), cb});
     }
-    void add_config(MultilineConfiguration ml){
+    inline void add_config(MultilineConfiguration ml){
         ml_cfg.push_back(ml);
     }
     std::regex comment_regex("^ *(#|\\/\\/).*$");
