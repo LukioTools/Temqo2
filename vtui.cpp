@@ -946,7 +946,7 @@ namespace actions
         input = "";
         current_mode = INPUT_MODE::COMMAND;
     }
-    void handle_command(){
+    void use_command(){
         handle_command();
         input = "";
         current_mode = DEFAULT;
@@ -981,7 +981,7 @@ std::map<chartype, cbtype> default_mode_keys({
 });
 
 std::map<chartype, cbtype> command_mode_keys({
-    mpair('\n', actions::handle_command),
+    mpair('\n', actions::use_command),
     mpair('\b', actions::pop_from_input),
     mpair(127, actions::pop_from_input),
 });
@@ -1010,7 +1010,7 @@ void handle_char(int ch)
     {
         if(auto cb = search_mode_keys[c]) cb();
         else actions::add_to_input(c); //idk
-        if(input != ""){
+        if(input.size()){
             handle_search();
         }
     }
