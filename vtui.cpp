@@ -558,7 +558,6 @@ void refresh_time_played()
     }
 }
 
-
 void refresh_controls()
 {
     playback_control.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
@@ -935,32 +934,39 @@ namespace actions
         if (!pl.empty())
             load_file(pl.current());
     }
-    void clear_input(){
+    void clear_input()
+    {
         input = "";
     }
-    void search(){
+    void search()
+    {
         input = "";
         current_mode = INPUT_MODE::SEARCH;
     }
-    void command(){
+    void command()
+    {
         input = "";
         current_mode = INPUT_MODE::COMMAND;
     }
-    void use_command(){
+    void use_command()
+    {
         handle_command();
         input = "";
         current_mode = DEFAULT;
     }
-    void pop_from_input(){
+    void pop_from_input()
+    {
         if (input.length() > 0)
         {
             input.pop_back();
         }
     }
-    void add_to_input(char ch){
-        input+=ch;
+    void add_to_input(char ch)
+    {
+        input += ch;
     }
-    void select_cursor_clear(){
+    void select_cursor_clear()
+    {
         select_cursor();
         clear_input();
         current_mode = DEFAULT;
@@ -998,19 +1004,27 @@ void handle_char(int ch)
     auto c = (char)ch;
     if (current_mode == DEFAULT) // yea the mode shit
     {
-        if(auto cb = default_mode_keys[c]) cb();
-        else {} //idk
+        if (auto cb = default_mode_keys[c])
+            cb();
+        else
+        {
+        } // idk
     }
     else if (current_mode == COMMAND)
     {
-        if(auto cb = command_mode_keys[c]) cb();
-        else actions::add_to_input(c);
+        if (auto cb = command_mode_keys[c])
+            cb();
+        else
+            actions::add_to_input(c);
     }
     else if (current_mode == SEARCH)
     {
-        if(auto cb = search_mode_keys[c]) cb();
-        else actions::add_to_input(c); //idk
-        if(input.size()){
+        if (auto cb = search_mode_keys[c])
+            cb();
+        else
+            actions::add_to_input(c); // idk
+        if (input.size())
+        {
             handle_search();
         }
     }
@@ -1196,12 +1210,6 @@ void configuraton()
         loop_on_char = (loop_on.length()>0) ? loop_on : loop_on_char; 
         loop_off_char = (loop_off.length()>0) ? loop_off : loop_on_char; });
 
-    ADD_CONFIG_INLINE("PlaylistClipType", [](const std::string &line)
-                      {
-                          // auto str = cfg::parse_inline(line);
-                          // size_t idx = 0;
-                          // playlist_clip.load(cfg::get_bracket_contents(str, &idx, 0)); //decommisioned fuck the preprocessor
-                      });
 }
 void init(int argc, char *const *argv)
 {
@@ -1254,7 +1262,7 @@ void input_args(int argc, char *const *argv)
         case 'd':
             if (std::filesystem::exists(optarg))
             {
-                // log_t = std::ofstream(optarg);
+                log_t = std::ofstream(optarg);
                 // log_t << argv[0] << " Logging..." << std::endl;
             }
             break;
