@@ -700,7 +700,7 @@ void refresh_element_sizes()
         cover_art.pad = {1, 1, 1, 0};
     }
     else if (layout == layout_t::VERTICAL) {
-        log_t << "VERTICAL" << std::endl;
+        //log_t << "VERTICAL" << std::endl;
         playlist.space = wm::Space(0, 1, wm::WIDTH, (wm::HEIGHT - 2) * playlist_width);
         playlist.pad = {1, 1, 0, 0};
         cover_art.space = wm::Space(0, playlist.space.h+1, wm::WIDTH, (wm::HEIGHT - 2)-playlist.space.h);
@@ -863,9 +863,9 @@ void handle_mouse(wm::MOUSE_INPUT m)
         if(layout == layout_t::HORIZONTAL)
             playlist_width = static_cast<double>(m.pos.x) / static_cast<double>(wm::WIDTH); // its that simple
         else if(layout == layout_t::VERTICAL){
-            log_t << m.pos.y << ':' <<  wm::HEIGHT-2 << std::endl;
+            //log_t << m.pos.y << ':' <<  wm::HEIGHT-2 << std::endl;
             playlist_width = static_cast<double>(m.pos.y) / static_cast<double>(wm::HEIGHT); // its that simple
-            log_t << playlist_width << std::endl;
+            //log_t << playlist_width << std::endl;
         }
         if(playlist_width > 1) playlist_width = 1;
         if(playlist_width < 0) playlist_width = 0;
@@ -1258,7 +1258,6 @@ void configuraton()
                       {
         auto str = cfg::parse_inline(line);
         str = cfg::get_bracket_contents(str);
-        ////log_t << "new placeholder: " << str << std::endl;
         cover_file_valid = false;
         cover_art_valid = false;
         cover_art_img_placeholder = str; });
@@ -1268,7 +1267,7 @@ void configuraton()
         auto str = cfg::parse_inline(line);
         auto vol = std::stoi(str);
         
-        log_t << "hell" << std::endl;
+        //log_t << "hell" << std::endl;
         audio::volume::set(vol); });
 
     ADD_CONFIG_INLINE("MediaControlChar", [](const std::string &line)
