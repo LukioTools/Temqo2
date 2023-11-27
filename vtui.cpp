@@ -57,8 +57,10 @@ float volume_shift = 5.f;
 float volume_reset = 100.f;
 bool exit_mainloop = false;
 
-ENUM(layout_t, unsigned char, HORIZONTAL, VERTICAL);
-layout_t layout = layout_t::HORIZONTAL; 
+double layout_auto_ratio_cutoff = 2;
+
+ENUM(layout_t, unsigned char, AUTO, HORIZONTAL, VERTICAL);
+layout_t layout = layout_t::AUTO; 
 
 // COLORS
 cfg::RGB warning_color_fg = {150, 60, 60};
@@ -422,7 +424,7 @@ void refresh_playlist()
 // draw the borders
 draw_boxes:
 {
-    if(layout == layout_t::HORIZONTAL){
+    if(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff)){
         auto s = playlist.space;
         std::string b;
         for (size_t i = 0; i < s.width(); i++)
@@ -435,7 +437,7 @@ draw_boxes:
         mv(s.x, s.y + s.h);
         std::cout << b << attr_reset;
     }
-    else if(layout == layout_t::VERTICAL){
+    else if((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff)){
         auto s = playlist.space;
         auto e = s.end();
         std::string b;
@@ -485,9 +487,9 @@ void refresh_coverart()
 {
     cover_art_valid = true;
     use_attr(color_bg_rgb(border_color_bg) << color_fg_rgb(border_color_fg));
-    if(layout == layout_t::HORIZONTAL)
+    if(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff))
         cover_art.space.box("─", "─", nullptr, "│", "┬", nullptr, "┴", nullptr);
-    else if(layout == layout_t::VERTICAL)
+    else if((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff))
         cover_art.space.box("─", "─", nullptr, nullptr, "─", "─", "─", "─");
 
     use_attr(attr_reset);
@@ -693,13 +695,17 @@ void refresh_element_sizes()
     current_file.space = wm::Space(0, 0, wm::WIDTH, 0);
     input_field.space = wm::Space(0, wm::HEIGHT, wm::WIDTH, 0);
 
-    if(layout == layout_t::HORIZONTAL){
+
+        //(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff)
+        //((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff))
+
+    if(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff)){
         playlist.space = wm::Space(0, 1, wm::WIDTH * playlist_width, wm::HEIGHT - 2);
         playlist.pad = {1, 1, 0, 1};
         cover_art.space = wm::Space(playlist.space.w, 1, wm::WIDTH - playlist.space.w + 1, wm::HEIGHT - 2);
         cover_art.pad = {1, 1, 1, 0};
     }
-    else if (layout == layout_t::VERTICAL) {
+    else if ((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff)) {
         //log_t << "VERTICAL" << std::endl;
         playlist.space = wm::Space(0, 1, wm::WIDTH, (wm::HEIGHT - 2) * playlist_width);
         playlist.pad = {1, 1, 0, 0};
@@ -776,6 +782,7 @@ void handle_resize()
     wm::resize_event = false;
     cover_art_valid = false;
     refresh_all();
+    log_t << wm::WIDTH << ':' << wm::HEIGHT << std::endl;
 }
 
 bool resize_drag = false;
@@ -853,16 +860,16 @@ void handle_mouse(wm::MOUSE_INPUT m)
         refresh_playlist();
     }
 
-    if ((playlist.aSpace().end().x == m.pos.x && m.btn == wm::MOUSE_BTN::M_LEFT && layout == layout_t::HORIZONTAL) 
-        || (playlist.aSpace().end().y == m.pos.y && m.btn == wm::MOUSE_BTN::M_LEFT && layout == layout_t::VERTICAL))
+    if ((playlist.aSpace().end().x == m.pos.x       && m.btn == wm::MOUSE_BTN::M_LEFT && (layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff))) 
+        || (playlist.aSpace().end().y == m.pos.y    && m.btn == wm::MOUSE_BTN::M_LEFT && ((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff))))
     {
         resize_drag = true;
     }
     if (resize_drag && m.btn == wm::MOUSE_BTN::M_RELEASE)
     {
-        if(layout == layout_t::HORIZONTAL)
+        if(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff))
             playlist_width = static_cast<double>(m.pos.x) / static_cast<double>(wm::WIDTH); // its that simple
-        else if(layout == layout_t::VERTICAL){
+        else if((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff)){
             //log_t << m.pos.y << ':' <<  wm::HEIGHT-2 << std::endl;
             playlist_width = static_cast<double>(m.pos.y) / static_cast<double>(wm::HEIGHT); // its that simple
             //log_t << playlist_width << std::endl;
@@ -922,6 +929,7 @@ std::vector<Command> commands(std::initializer_list<Command>{
      { pl.add(input.substr(input.find_first_of(' ') + 1)); }},
     {hcr::save_playlist, [](const std::string &)
      { pl.save(); }},
+     {hcr::clear_playlist, [](const std::string&){ pl.clear(); if(audio::playing()) audio::control::pause(); refresh_playlist(); refresh_controls();}},
     {hcr::saveto_playlist, [](const std::string &)
      { pl.save(input.substr(input.find_first_of(' ') + 1)); }},
     {hcr::use_playlist, [](const std::string &)
@@ -1320,14 +1328,18 @@ void configuraton()
         
     });
 
-    ADD_CONFIG_INLINE("VerticalLayout", [](const std::string& line){
+    ADD_CONFIG_INLINE("Layout", [](const std::string& line){
         auto str = cfg::parse_inline(line);
-        bool vertical = cfg::parse_bool(str);
-        if(vertical)
-            layout = layout_t::VERTICAL;
-        else
+        
+        if(std::regex_match(str, std::regex(" *horizontal *", std::regex::icase))){
             layout = layout_t::HORIZONTAL;
-
+        }
+        else if(std::regex_match(str, std::regex(" *vertical *", std::regex::icase))){
+            layout = layout_t::VERTICAL;
+        }
+        else{
+            layout = layout_t::AUTO;
+        }
     });
 
 }
