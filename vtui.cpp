@@ -1261,7 +1261,7 @@ void configuraton()
         cover_file_valid = false;
         cover_art_valid = false;
         cover_art_img_placeholder = str; });
-    ADD_CONFIG_INLINE("CoverArtOverride", [](const std::string &line) {});
+    ADD_CONFIG_INLINE("CoverArtOverride", [](const std::string &line) {cover_art_override = cfg::parse_bool(cfg::parse_inline(line));});
     ADD_CONFIG_INLINE("Volume", [](const std::string &line)
                       {
         auto str = cfg::parse_inline(line);
