@@ -142,6 +142,7 @@ public:
 
     ButtonArray(){};
     ButtonArray(std::initializer_list<ButtonArrayElement> ls): std::vector<ButtonArrayElement>(ls){}
+    ButtonArray(std::vector<ButtonArrayElement> v): std::vector<ButtonArrayElement>(v){}
     ~ButtonArray() {}
 };
 

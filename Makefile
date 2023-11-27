@@ -18,7 +18,7 @@ default: build exec
 
 exec_debug: 
 	@echo "Executing: ./$(OUT_NAME)"
-	@./$(OUT_NAME) -d /dev/pts/4
+	@./$(OUT_NAME) $(DEBUG_ARGS)
 
 exec: 
 	./$(OUT_NAME)

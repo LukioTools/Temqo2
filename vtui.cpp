@@ -14,6 +14,7 @@
 #include "lib/wm/position.hpp"
 #include "lib/wm/space.hpp"
 #include <chrono>
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <initializer_list>
@@ -21,13 +22,22 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <regex>
 #include <string>
 #include <thread>
 #include <valarray>
+#include <variant>
 #include <vector>
 #include "custom/time_played.hpp"
 #include "custom/button_array.hpp"
+
+
+#define chartype int
+#define cbtype void (*)()
+
+#define mpair(k, v) std::make_pair(k, v)
+#define clamp_1(val) (val == 0) ? 1 : val
 
 audio::Playlist pl;
 
@@ -271,15 +281,41 @@ ButtonArrayElement volume = {
     GROUPS::VOLUME,
     IDS::VOLUME};
 
-ButtonArray
-    playback_control({
-        prev,
-        toggle,
-        next,
-        shuffle,
-        loop,
-        volume,
+
+std::vector<ButtonArrayElement> bae_elements({
+    prev,
+    toggle,
+    next,
+    shuffle,
+    loop,
+    volume,
+});
+
+struct BAE_NAME_TO_INDEX
+{
+    std::vector<std::regex> regexses = std::vector<std::regex>({
+        std::regex("^ *previ?o?u?s? *$"),
+        std::regex("^ *to?gg?le? *$"),
+        std::regex("^ *next *$"),
+        std::regex("^ *shuff?l?e? *$"),
+        std::regex("^ *loop *$"),
+        std::regex("^ *volu?m?e? *$"),
     });
+
+    std::optional<size_t> find_index(std::string str){
+        for(size_t i = 0; i < regexses.size(); i++){
+            if(std::regex_match( str, regexses[i]))
+                return i;
+        }
+        return std::nullopt;
+    }
+} bae_name_to_index;
+
+
+
+
+//use default
+ButtonArray playback_control(bae_elements);
 
 namespace UIelements
 {
@@ -340,6 +376,7 @@ wm::PAD_TYPE playlist_pad = wm::PAD_TYPE::PAD_RIGHT;
 void refresh_configuration()
 {
     cfg::parse(cfg_path);
+    wm::resize_event = true;
 }
 
 void refresh_playlist()
@@ -445,7 +482,6 @@ void refresh_coverart()
 
     std::ostringstream out;
 
-#define clamp_1(val) (val == 0) ? 1 : val
 
     for (size_t iy = 0; iy <= s.height(); iy++)
     {
@@ -894,10 +930,6 @@ void handle_search()
     refresh_playlist();
 }
 
-#define chartype int
-#define cbtype void (*)()
-
-#define mpair(k, v) std::make_pair(k, v)
 
 namespace actions
 {
@@ -916,7 +948,10 @@ namespace actions
     void toggle_play()
     {
         if (!pl.empty())
+        {
             audio::control::toggle();
+            refresh_controls();
+        }
     }
     void vol_up()
     {
@@ -1187,10 +1222,12 @@ void configuraton()
                       {
         auto str = cfg::parse_inline(line);
         auto vol = std::stoi(str);
+        
+        log_t << "hell" << std::endl;
         audio::volume::set(vol); });
 
     ADD_CONFIG_INLINE("MediaControlChar", [](const std::string &line)
-                      {
+    {
         auto str = cfg::parse_inline(line);
         size_t idx = 0;
         auto play = cfg::get_bracket_contents(str, &idx, 0);
@@ -1208,7 +1245,36 @@ void configuraton()
         shuffle_char = (shuffle.length()>0) ? shuffle : shuffle_char; 
         sorted_char = (sorted.length()>0) ? sorted : sorted_char; 
         loop_on_char = (loop_on.length()>0) ? loop_on : loop_on_char; 
-        loop_off_char = (loop_off.length()>0) ? loop_off : loop_on_char; });
+        loop_off_char = (loop_off.length()>0) ? loop_off : loop_on_char; 
+    });
+
+    ADD_CONFIG_INLINE("PlaybackControlButtons", [](const std::string& line){
+        auto str = cfg::parse_inline(line);
+        size_t idx = 0;
+        playback_control.clear();
+
+        do
+        {
+            std::optional<std::string> pce = cfg::get_bracket_contents_conditional(str, &idx, idx==0 ? idx : idx+1);
+            if(!pce.has_value())
+                break;
+            std::optional<size_t> index = bae_name_to_index.find_index(*pce);
+            if(index.has_value() && index.value() < bae_elements.size()){
+                playback_control.push_back(bae_elements[index.value()]);
+            }
+            else{
+                try{
+                    auto index = std::stoul(*pce);
+                    if(index < bae_elements.size()){
+                        playback_control.push_back(bae_elements[index]);
+                    };
+                }
+                catch(...){}
+            }            
+            /* code */
+        } while (idx != std::variant_npos);
+        
+    });
 
 }
 void init(int argc, char *const *argv)

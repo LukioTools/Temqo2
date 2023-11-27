@@ -8,7 +8,7 @@
 #include <filesystem>
 namespace audio
 {
-    std::regex supported_audio("^.{1,255}\\.(mp3|wav|flac)$");
+    std::regex supported_audio("^.{1,255}\\.(mp3|wav|flac|ogg)$");
 
     inline int scan(std::vector<std::string>& vec ,std::string dir, bool recursive){
         struct dirent **namelist;

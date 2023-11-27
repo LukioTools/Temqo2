@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <ostream>
 #include <regex>
 #include <stdexcept>
@@ -8,6 +9,22 @@ namespace cfg
 {
     inline std::string parse_inline(const std::string& str){
         return str.substr(str.find_first_of('=')+1);
+    }
+    inline std::optional<std::string> get_bracket_contents_conditional(const std::string& str, size_t* end_b_pos = nullptr, size_t offset = 0){
+        auto bg_first = str.find_first_of('{', offset);
+        auto bg_last = str.find_first_of('}', offset);
+        
+        if(bg_first == std::string::npos || bg_last == std::string::npos){
+            if(end_b_pos){
+                *end_b_pos = std::string::npos;
+            }
+            return std::nullopt;
+        }
+        if(end_b_pos){
+            *end_b_pos = bg_last;
+        }
+        bg_first++;
+        return str.substr(bg_first, bg_last-bg_first);
     }
     
     inline std::string get_bracket_contents(const std::string& str, size_t* end_b_pos = nullptr, size_t offset = 0){
