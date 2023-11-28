@@ -26,4 +26,8 @@ exec:
 build:     
 	$(CXX) $(TARGET_FILE) $(INCLUDING) $(LINKING) $(DEPENDENCIES) -o $(OUT_NAME)
 
+d:
+	@echo "THIS IS A DBUS TESTING STAGE... BE WARNED\n"
+	$(CXX) dbus/dbus.cpp -I/usr/include/dbus-1.0 -I/usr/lib/dbus-1.0/include -ldbus-1   -o dbus/dbus
+	./dbus/dbus
 
