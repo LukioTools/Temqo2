@@ -1,6 +1,7 @@
 
 #pragma once
 #define mv(x,y) std::cout << "\e["<< y+1 << ";"<< x+1 <<"H" ;
+#define mv_stream(x,y) "\e["<< y+1 << ';'<< x+1 << 'H'
 #define mv_str(x,y) "\e[" + std::to_string(y+1) + ";" + std::to_string(x+1) + "H" 
 #define clear_all_no_mouse() std::cout << "\ec" ;
 #define clear_all() std::cout << "\ec" << enable_mouse(USE_MOUSE) ;
