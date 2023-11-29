@@ -411,6 +411,11 @@ inline void Server::send_seeked_signal(int64_t position) { }
 
 #endif
 
+// SO TLDR MPRIS::SERVER::MAKE(SERVICE_NAME)
+//IF IT DOESNT EXSIT THEN IN COULDNT CONNECT
+//SHIT CAN BE SET AS REQUIRED
+//CHECK THE ON_* SHITS
+//START LÖÖP ASYNC IS RECCOMENDED
 
 int main(int argc, char const *argv[])
 {
@@ -483,9 +488,5 @@ int main(int argc, char const *argv[])
         sleep(1);
     }
 
-    return 0;
-
-
-    
     return 0;
 }
