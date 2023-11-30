@@ -22,9 +22,12 @@
 #include <filesystem>
 #include <fstream>
 #include <signal.h>
+#include <vector>
 #include "custom/stringlite.hpp"
 #include "lib/wm/clip.hpp"
-
+#include "custom/button_array.hpp"
+#include "lib/wm/mouse.hpp"
+#include "lib/wm/position.hpp"
 
 #define default_normal_fg {255,255,255}
 #define default_normal_bg {0,0,0}
@@ -52,6 +55,24 @@ namespace temqo
     //input buffer;
     std::string input;
     std::ofstream clog("/dev/null");
+
+    wm::Position mpos;
+
+    struct Valid
+    {
+        virtual void refresh();
+        bool valid = false;
+    };
+
+    namespace load
+    {   
+        inline void file(const std::string&);
+        inline void prev();
+        inline void next();
+        inline void curr();
+    } // namespace load
+
+    
     
 
     struct DisplayMode
@@ -78,7 +99,7 @@ namespace temqo
 
     double DisplayMode::cutoff = 2;
 
-    struct Config
+    struct Config : public Valid
     {
         StringLite path = "./temqo.cfg";
 
@@ -88,7 +109,8 @@ namespace temqo
             //do the configs again
         }
 
-        void refresh(){
+        void refresh() override{
+            valid = true;
             cfg::parse(path);
         }
 
@@ -128,13 +150,14 @@ namespace temqo
         };
     } colors;
 
-    struct Playlist : audio::Playlist {
+    struct Playlist : audio::Playlist, public Valid {
         size_t cursor_offset = 0;
         size_t display_offset = 0;
         bool filename_only = true;
         wm::Element element;
         wm::SPLICE_TYPE clip_type = wm::SPLICE_TYPE::BEGIN_DOTS;
         wm::PAD_TYPE pad_type = wm::PAD_TYPE::PAD_RIGHT;
+
         size_t clamp(long i){
             if (empty())
                 return 0;
@@ -210,7 +233,10 @@ namespace temqo
         }
 
 
-        void refresh(){
+        void action(wm::MOUSE_INPUT m);//do something with the input
+
+        void refresh() override{
+            valid = true;
             auto as = element.aSpace();
             draw_box();
             if (!size() || as.width() < 5 || as.height() < 5) return;
@@ -219,7 +245,7 @@ namespace temqo
 
     } p;
 
-    struct ProgressBar
+    struct ProgressBar : public Valid
     {
     private:
         void refresh_mode_default(){
@@ -281,7 +307,10 @@ namespace temqo
 
         wm::Element element;
 
-        void refresh(){
+        void action(wm::MOUSE_INPUT m);//do something with the input
+
+        void refresh() override{
+            valid = true;
             switch (input_mode.num) {
                 case InputMode::DEFAULT:
                     refresh_mode_command();
@@ -300,9 +329,9 @@ namespace temqo
         }
 
 
-    };
+    } progres_bar;
 
-    struct CoverArt{
+    struct CoverArt: public Valid{
         static StringLite cache_path;
         static StringLite placeholder_path;
         StringLite file_path;
@@ -312,8 +341,8 @@ namespace temqo
 
         inline void draw_border();
         inline void draw_image();
-        inline void refresh();
-    };
+        inline virtual void refresh();
+    } cover_art;
 
     inline void fetch_coverart(CoverArt* ptr){
         ptr->img_valid = true;
@@ -357,13 +386,80 @@ namespace temqo
             
     }
 
-    inline void CoverArt:: refresh(){
+    inline void CoverArt::refresh(){
+        valid = true;
         std::thread* thr = img_valid ? nullptr : new std::thread(fetch_coverart, this); 
         draw_border();
         if(thr)
             thr->join();
         draw_image();
     }
+
+
+    ENUM(IDS, unsigned int,
+        NO_ID,
+        PREV,
+        NEXT,
+        SHUFFLE,
+        TOGGLE,
+        LOOP,
+        VOLUME
+    );
+
+    ENUM(GROUPS, short,
+        UNGROUPED,
+        MEDIA_CONTROLS,
+        VOLUME
+    );
+
+    StringLite prev_ch = "⏮";
+    ButtonArrayElement prev_bae({
+        [](bool inside, wm::MOUSE_INPUT m){
+            use_attr( attr_reset );
+            if(inside){
+                use_attr(color_color(colors.hover)); 
+                if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                    load::prev();
+                }
+            }
+            else
+                use_attr(color_color(colors.normal))
+            
+            std::cout << attr_reset << prev_ch << ' ' << attr_reset;
+        },
+        2,
+        GROUPS::MEDIA_CONTROLS,
+        IDS::PREV,
+    });
+    
+    
+
+    static std::vector<ButtonArrayElement> controlButtons({
+
+    });
+
+    class Controls :public ButtonArray, public Valid{
+    public:
+        void action(wm::MOUSE_INPUT m){
+            valid = true; // idk why but lets just do it
+            draw(m);
+        };
+
+        void refresh() override{
+            valid = true;
+            this->draw({
+                mpos,
+                wm::MOUSE_BTN::M_NONE,
+                true,
+                });
+        }
+
+        Controls() = default;
+        Controls(const std::vector<ButtonArrayElement>& v): ButtonArray(v) {};
+
+        ~Controls() = default;
+
+    } controls(controlButtons);
 
 
     
@@ -374,16 +470,43 @@ namespace temqo
 
     namespace refresh
     {
-        void elements();
-        void playlist();
-        void progressbar();
-        void controls();
-        void title();
-        void coverart();
+        //the element size config
+        inline void elements();
 
-        void config();
+        //all the classes that have the refresh thing
+        inline void playlist(){
+            if(!p.valid)
+                p.refresh();
+        };
+        inline void progressbar(){
+            if(!progres_bar.valid)
+                progres_bar.refresh();
+        };
+        inline void coverart(){
+            if(!cover_art.valid)
+                cover_art.refresh();
+        };
+        inline void config(){
+            if(!cfg.valid)
+                cfg.refresh();
+        };
+        //todo
+        inline void controls();
+        inline void title();
 
-        void all();
+        inline void all();
+        inline void invalidate(Valid& v){
+            v.valid = false;
+        }
+        inline void invalidate_drawable(){
+            invalidate(p);
+            invalidate(progres_bar);
+            invalidate(cover_art);
+        }
+        inline void invalidate_elements();
+        inline void invalidate_configs(){
+            cfg.valid = false;
+        }
     } // namespace refresh
 
     namespace load
