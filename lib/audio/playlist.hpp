@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <iterator>
+#include <optional>
 #include <regex>
 #include <string>
 #include <thread>
@@ -85,6 +86,33 @@ namespace audio
             }
             return EXIT_SUCCESS;
         }
+
+        inline std::optional<std::string> opt_next(){
+            if(!files.size())
+                return std::nullopt;
+            current_index++;
+            if(current_index >= files.size())
+                current_index = 0;
+            
+            return files[current_index];
+        }
+        inline std::optional<std::string> opt_curr(){
+            if(!files.size())
+                return std::nullopt;
+            
+            return files[current_index];
+        }
+
+        inline std::optional<std::string> opt_prev(){
+            if(!files.size())
+                return std::nullopt;
+            if(current_index == 0)
+                current_index = files.size(); //-1 needed but -- happens so we can simplify :3
+            
+            current_index--;
+            return files[current_index];
+        }
+
         //may throw idk man
         inline std::string next(){
             if(files.size() < 1){
@@ -274,6 +302,14 @@ namespace audio
             unique();
 
             return time;
+        }
+
+        int use(){
+            return use(use_file);
+        }
+
+        size_t size(){
+            return files.size();
         }
 
         inline int save(std::string dest_file = ""){

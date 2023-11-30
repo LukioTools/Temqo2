@@ -93,6 +93,7 @@
     "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
         "misc-definitions-in-headers",
         "clang-diagnostic-error",
+        "clang-diagnostic-error",
         "clang-diagnostic-error"
     ]
 }
