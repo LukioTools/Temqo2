@@ -8,8 +8,8 @@ namespace audio
 
     sf::Music player;
     //returns true if couldnt load
-    inline bool load(std::string filename){
-        return player.openFromFile(filename);
+    inline bool load(const std::string& filepath){
+        return player.openFromFile(filepath);
     }
     inline sf::Music::Status status(){
         return player.getStatus();

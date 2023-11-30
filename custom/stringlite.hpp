@@ -13,20 +13,28 @@ class StringLite
     public:
         std::unique_ptr<char[]>ptr = nullptr;
 
+        void copy(const char* str){
+            auto len = strlen(str)+1;
+            ptr = std::make_unique<char[]>(len);
+            memcpy(ptr.get(), str, len);
+        }
+        void copy(const std::string_view& str){
+            ptr = std::make_unique<char[]>(str.length()+1);
+            memcpy(ptr.get(), str.begin(), str.length()+1);
+        }
+
 
         void clear(){
             ptr = nullptr;
         }
 
+
         StringLite& operator=(const std::string_view& str){
-            ptr = std::make_unique<char[]>(str.length()+1);
-            memcpy(ptr.get(), str.begin(), str.length()+1);
+            copy(str);
             return *this;
         }
         StringLite& operator=(const char* str){
-            auto len = strlen(str)+1;
-            ptr = std::make_unique<char[]>(len);
-            memcpy(ptr.get(), str, len);
+            copy(str);
             return *this;
         }
 
@@ -56,18 +64,13 @@ class StringLite
 
 
         StringLite(/* args */) {}
+        StringLite(const char* str) {
+            copy(str);
+        }
+        StringLite(const std::string_view& str) {
+            copy(str);
+        }
         ~StringLite() {
 
         }
-} str;
-
-int main(int argc, char const *argv[])
-{
-    std::cout << "hell\n";
-
-    str = "Hello World!";
-
-    std::cout << str << std::endl;
-
-    return 0;
-}
+};

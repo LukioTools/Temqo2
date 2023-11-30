@@ -39,6 +39,9 @@
 #define color_fg_rgb_str(rgb) ("\e[38;2;" + std::to_string((int) rgb.r) + ';' + std::to_string((int) rgb.g) + ';' + std::to_string( (int) rgb.b) + 'm')
 #define color_bg_rgb_str(rgb) ("\e[48;2;" + std::to_string((int) rgb.r) + ';' + std::to_string((int) rgb.g) + ';' + std::to_string( (int) rgb.b) + 'm')
 
+#define color_color(colr) colr.attr <<  color_fg_rgb(colr.fg) <<  color_bg_rgb(colr.bg)
+
+
 #define attr_reset "\e[0m"
 #define bold "\e[1m"
 #define dim "\e[2m"

@@ -350,11 +350,22 @@ namespace audio
             return files.end();
         }
         
-        inline std::string operator[](size_t index){
+
+        inline std::string get(size_t index){
             if( index >= files.size() || index < 0){
                 return "";
             }
             return files[index];
+        }
+        inline std::optional<std::string> opt_get(size_t index){
+            if( index >= files.size() || index < 0){
+                return std::nullopt;
+            }
+            return files[index];
+        }
+
+        inline std::string operator[](size_t index){
+            return get(index);
         }
 
 
