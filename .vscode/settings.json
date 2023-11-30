@@ -89,5 +89,10 @@
         "stack": "cpp",
         "queue": "cpp"
     },
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "misc-definitions-in-headers",
+        "clang-diagnostic-error",
+        "clang-diagnostic-error"
+    ]
 }

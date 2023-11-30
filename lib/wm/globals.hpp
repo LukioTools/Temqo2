@@ -11,6 +11,6 @@ namespace wm
     
 } // namespace wm
 
-
+#define aspect_ratio static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT)
 
 
