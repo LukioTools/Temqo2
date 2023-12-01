@@ -19,6 +19,7 @@
 #include <memory>
 #include <mutex>
 #include <ostream>
+#include <ratio>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -34,6 +35,14 @@
 #include "lib/wm/position.hpp"
 #include "lib/wm/space.hpp"
 #include "clog.hpp"
+
+#define MPRIS 1
+#if defined(MPRIS)
+#include "dbus/mpris_server.hpp"
+#endif // MPRIS
+
+
+
 #define default_normal_fg {255,255,255}
 #define default_normal_bg {0,0,0}
 
@@ -59,6 +68,10 @@ namespace temqo
     ENUM(InputMode, unsigned char, PROGRESS, COMMAD, SEARCH) input_mode = InputMode::PROGRESS;
     //input buffer;
     std::string input;
+
+    #if defined(MPRIS)
+    mpris::Server s("Temqo");
+    #endif // MPRIS
 
     static float volume_shift = 5;
     static float volume_reset = 100;
@@ -87,6 +100,10 @@ namespace temqo
         inline void pause();
         inline void shuffle();
         inline void sort();
+        inline void volume_set(double);
+        inline void volume_rel(double);
+        inline void volume_set_invalidate(double);
+        inline void volume_rel_invalidate(double);
     } // namespace control
     
 
@@ -640,15 +657,15 @@ namespace temqo
 
                 if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
                 {
-                    audio::volume::shift(volume_shift);
+                    control::volume_rel(volume_shift);
                 }
                 else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
                 {
-                    audio::volume::shift(-volume_shift);
+                    control::volume_rel(-volume_shift);
                 }
                 else if (m.btn == wm::MOUSE_BTN::M_LEFT)
                 {
-                    audio::volume::set(volume_reset);
+                    control::volume_set(volume_reset);
                 }
             }
             else
@@ -910,22 +927,30 @@ namespace temqo
 
         inline void next(){
             auto o = p.opt_next();
-            if(!o.has_value())
+            if(!o.has_value()){
+                clog << color_color(colors.warn)<<"!FAILED TO CHANGE SONG!" << attr_reset;
                 return;
+            }
             file(*o);
 
             
         }
         inline void prev(){
             auto o = p.opt_prev();
-            if(o.has_value())
-                file(*o);
+            if(!o.has_value()){
+                clog << color_color(colors.warn) << "!FAILED TO CHANGE SONG!" << attr_reset;
+                return;
+            }
+            file(*o);
 
         }
         inline void curr(){
             auto o = p.opt_curr();
-            if(o.has_value())
-                file(*o);
+            if(!o.has_value()){
+                clog << color_color(colors.warn)<<"!FAILED TO CHANGE SONG!" << attr_reset;
+                return;
+            }
+            file(*o);
 
         }
 
@@ -938,6 +963,9 @@ namespace temqo
                 return;
             
             audio::control::toggle();
+            #if defined(MPRIS)
+            s.set_playback_status(audio::playing()? mpris::PlaybackStatus::Playing : mpris::PlaybackStatus::Paused );
+            #endif // MPRIS
             ctrl.invalidateId(IDS::PLAYPAUSE);
         }
         inline void play(){
@@ -945,6 +973,10 @@ namespace temqo
                 return;
 
             audio::control::play();
+            #if defined(MPRIS)
+            s.set_playback_status(mpris::PlaybackStatus::Playing);
+            #endif // MPRIS
+            
             ctrl.invalidateId(IDS::PLAYPAUSE);
         }
         inline void pause(){
@@ -952,6 +984,9 @@ namespace temqo
                 return;
 
             audio::control::pause();
+            #if defined(MPRIS)
+            s.set_playback_status(mpris::PlaybackStatus::Paused);
+            #endif // MPRIS
             ctrl.invalidateId(IDS::PLAYPAUSE);
         };
         inline void shuffle(){
@@ -968,6 +1003,29 @@ namespace temqo
             p.sort();
             ctrl.invalidateId(IDS::SHUFFLE);
         }
+
+        inline void volume_set(double d){
+            audio::volume::set(d);
+            #if defined(MPRIS)
+            s.set_volume(audio::volume::get());
+            #endif // MPRIS
+        }
+        inline void volume_rel(double d){
+            audio::volume::shift(d);
+            #if defined(MPRIS)
+            s.set_volume(audio::volume::get());
+            #endif // MPRIS
+        }
+
+        inline void volume_set_invalidate(double d){
+            volume_set(d);
+            ctrl.invalidateId(IDS::VOLUME);
+        }
+        inline void volume_rel_invalidate(double d){
+            volume_rel(d);
+            ctrl.invalidateId(IDS::VOLUME);
+        }
+        
 
     } // namespace control
     
@@ -1002,15 +1060,99 @@ namespace temqo
     std::mutex drawing;
     bool draw = true;
 
-    inline void at_exit(){
-        draw = false;
-        audio::control::pause();
-        wm::deinit();
-    }
-    inline void at_int(int){
-        at_exit();
+    //inline void at_exit(){
+    //    draw = false;
+    //    control::pause();
+    //    wm::deinit();
+    //}
+    //inline void at_int(int){
+    //    at_exit();
+    //    exit(0);
+    //}
+    inline void at_quit(){
         exit(0);
     }
+
+    #if defined(MPRIS)
+    void mpris_init(){
+
+
+        s.set_identity("Terminal Musicplayer");
+        s.on_quit([](){
+            clog << "QUIT" << std::endl;
+        });
+
+
+        s.on_seek([&] (int64_t p) {
+            clog << "s.on_seek:p:" << p <<std::endl;
+            audio::seek::rel(std::chrono::seconds(p));
+            auto t = audio::position::get<std::ratio<1>>();
+            s.set_position(t.count());
+        });
+        s.on_set_position([&] (int64_t p) {
+            clog << "s.on_set_position:p:" << p <<std::endl;
+            audio::seek::rel(std::chrono::seconds(p));
+            auto t = audio::position::get<std::ratio<1>>();
+            s.set_position(t.count());
+        });
+
+        s.on_next([&](){
+            clog << "next\n";
+            load::next();
+        });
+        s.on_previous([](){
+            load::prev();
+        });
+        s.on_play([](){
+            control::play();
+        });
+        s.on_pause([](){
+            control::pause();
+        });
+        s.on_stop([]{
+            control::pause();
+        });
+        s.on_play_pause([&](){
+            clog << "MPRIS PLAYPAUSE" << std::endl;
+            control::playpause();
+        });
+
+        s.on_loop_status_changed([&] (mpris::LoopStatus status) {
+            switch (status)
+            {
+            case (mpris::LoopStatus::None):
+                p.loopType = Playlist::LoopType::L_NONE;
+                break;
+            case (mpris::LoopStatus::Playlist):
+                p.loopType = Playlist::LoopType::L_PLAYLIST;
+                break;
+            case (mpris::LoopStatus::Track):
+                p.loopType = Playlist::LoopType::L_TRACK;
+                break;
+            default:
+                p.loopType = Playlist::LoopType::L_PLAYLIST;
+                break;
+            }
+            ctrl.invalidateId(IDS::LOOP);
+        });
+        s.on_shuffle_changed([&] (bool shuffle) {
+            if(shuffle)
+                control::shuffle();
+            else
+                control::sort();
+        });
+        s.on_volume_changed([&] (double vol) {
+            control::volume_set(vol);
+            ctrl.invalidateId(IDS::VOLUME);
+        });
+        
+        s.set_volume(audio::volume::get());
+
+        s.start_loop_async();
+        clog << "Mpris Initialized" << std::endl;
+    }
+    #endif // MPRIS
+
     std::chrono::milliseconds d(static_cast<long>((1./24.)*1000));
     std::thread* draw_thread;
     inline void draw_thr_fn(){
@@ -1022,14 +1164,23 @@ namespace temqo
                 else
                     load::next();
             }
+            #if defined(MPRIS)
+            {
+                auto t = audio::position::get<std::ratio<1>>();
+                s.set_position(t.count());
+            }
             
-            std::lock_guard lock(drawing);
+            #endif // MPRIS
+            
+            //std::lock_guard lock(drawing);
 
             refresh::all();
             
             std::this_thread::sleep_for(d);
         }
     }
+
+    
 
     inline void init(int argc,  char** const argv){
 
@@ -1040,8 +1191,8 @@ namespace temqo
         std::cerr.rdbuf(clog.rdbuf());
 
         
-        atexit(at_exit);
-        signal(SIGINT, at_int);
+        //atexit(at_exit);
+        //signal(SIGINT, at_int);
 
         wm::init();
         use_attr(cursor_invisible);
@@ -1049,20 +1200,29 @@ namespace temqo
         cfg.configuration();
         cfg.refresh();
 
-        p.use();
+        auto seek_to = p.use();
         if(p.size()){
             if(p.seed)
                 control::shuffle();
             
             load::curr();
         }
+        p.cursor_offset = p.current_index;
+        p.display_offset = p.current_index;
+        audio::seek::abs(std::chrono::seconds(seek_to));
 
         draw_thread = new std::thread(draw_thr_fn);
+
+        #if defined(MPRIS)
+        
+        mpris_init();
+        
+        #endif // MPRIS
+        
 
     }
 
     inline void deinit(){
-        at_exit();
     }
 
 } // namespace temqo
