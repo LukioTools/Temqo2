@@ -15,10 +15,9 @@ int main(int argc, char** const argv)
     {
         if(ch == 'q')
             break;
-        temqo::clog << "Hello World" << std::endl;
     }
     
-    temqo::deinit();
+    //temqo::deinit();
 
     return 0;
 }

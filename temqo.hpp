@@ -275,6 +275,10 @@ namespace temqo
             draw_content();
         }
 
+        Playlist(){
+            use_file = "playlist.pls";
+        }
+
     } p;
 
     struct ProgressBar : public Valid
@@ -376,7 +380,7 @@ namespace temqo
         static StringLite cache_path;
     };
 
-    StringLite CoverArtData::placeholder_path = "playlist.pls";
+    StringLite CoverArtData::placeholder_path = "gluttony.png";
     StringLite CoverArtData::cache_path = "tmp.png";
 
     inline void fetch_coverart(CoverArtData* ptr){
@@ -933,8 +937,8 @@ namespace temqo
         exit(0);
     }
 
-
-    inline void draw_thread(){
+    std::thread* draw_thread;
+    inline void draw_thr_fn(){
         while (draw)
         {
             std::lock_guard lock(drawing);
@@ -963,6 +967,8 @@ namespace temqo
             
             load::curr();
         }
+
+        draw_thread = new std::thread(draw_thr_fn);
 
     }
 
