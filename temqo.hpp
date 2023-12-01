@@ -812,7 +812,9 @@ namespace temqo
         GROUPS::VOLUME,
         IDS::VOLUME,
         []{
-            return volume_bae.valid || std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;
+                clog << "vbae.valid = " << (volume_bae.valid ? "True":"False") << std::endl;
+                clog << "vbae.vol = " << volume_bae.vol << '/' << std::abs( (int) std::round(audio::volume::get())) << " : " << ( std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol ? "True":"False") << std::endl;
+                return volume_bae.valid || std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;
             },
         []{volume_bae.valid = false;},
 
