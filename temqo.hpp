@@ -376,6 +376,9 @@ namespace temqo
         static StringLite cache_path;
     };
 
+    StringLite CoverArtData::placeholder_path = "playlist.pls";
+    StringLite CoverArtData::cache_path = "tmp.png";
+
     inline void fetch_coverart(CoverArtData* ptr){
         ptr->img_valid = true;
         auto o = p.opt_curr();
