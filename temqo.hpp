@@ -12,6 +12,7 @@
 #include "lib/wm/globals.hpp"
 #include "lib/wm/init.hpp"
 #include <bits/getopt_core.h>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -824,7 +825,7 @@ namespace temqo
             if(!filepath.size() || std::filesystem::exists(filepath))
                 return;
             //invalidate shit and stuff
-
+            clog << "loading file:" << filepath << std::endl;
             audio::load(filepath);
             p.valid = false;
             cover_art.valid = false;
@@ -936,13 +937,14 @@ namespace temqo
         at_exit();
         exit(0);
     }
-
+    std::chrono::microseconds d(200);
     std::thread* draw_thread;
     inline void draw_thr_fn(){
         while (draw)
         {
             std::lock_guard lock(drawing);
             refresh::all();
+            std::this_thread::sleep_for(d);
         }
     }
 
