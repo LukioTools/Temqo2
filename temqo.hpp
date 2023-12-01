@@ -70,6 +70,8 @@ namespace temqo
     std::string input;
 
     #if defined(MPRIS)
+    mpris::Metadata metad;
+
     mpris::Server s("Temqo");
     #endif // MPRIS
 
@@ -803,18 +805,18 @@ namespace temqo
                 use_attr(color_color(colors.normal));
 
             // drawing
-            int vol = std::abs( (int) std::round(audio::volume::get()) );
-            vol = vol > 999 ? 999 : vol;
-            std::cout << std::setfill('0') << std::setw(3) << vol << '%' << ' ' << attr_reset;
-
+            volume_bae.vol = std::abs( (int) std::round(audio::volume::get()) );
+            volume_bae.vol = volume_bae.vol > 999 ? 999 : volume_bae.vol;
+            std::cout << std::setfill('0') << std::setw(3) << volume_bae.vol << '%' << ' ' << attr_reset;
+            volume_bae.valid = true;
         },
         5,
         GROUPS::VOLUME,
         IDS::VOLUME,
         []{
-                clog << "vbae.valid = " << (volume_bae.valid ? "True":"False") << std::endl;
-                clog << "vbae.vol = " << volume_bae.vol << '/' << std::abs( (int) std::round(audio::volume::get())) << " : " << ( std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol ? "True":"False") << std::endl;
-                return volume_bae.valid || std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;
+                //clog << "vbae.valid = " << (volume_bae.valid ? "True":"False") << std::endl;
+                //clog << "vbae.vol = " << volume_bae.vol << '/' << std::abs( (int) std::round(audio::volume::get())) << " : " << ( std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol ? "True":"False") << std::endl;
+                return volume_bae.valid && std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;
             },
         []{volume_bae.valid = false;},
 
@@ -852,7 +854,7 @@ namespace temqo
             GROUPS::TIME,
             IDS::TIME,
             []{
-                return time_bae.valid || time_bae.current_time == audio::position::get<std::ratio<1, 1>>().count();
+                return time_bae.valid && time_bae.current_time == audio::position::get<std::ratio<1, 1>>().count();
             },
             []{time_bae.valid = false;},
         };
@@ -869,7 +871,7 @@ namespace temqo
         ControlButtons::shuffle_bae,
         ControlButtons::loop_bae,
         ControlButtons::volume_bae,
-        ControlButtons::time_bae,
+        //ControlButtons::time_bae,
     });
 
     class Controls :public ButtonArray, public Valid{
@@ -890,7 +892,7 @@ namespace temqo
             auto ret = true;
             for (auto e : *this) {
                 if(!e.is_valid()){
-                    clog << "Controls:IsValid: "<<e.is_valid() << " Alloc: " <<e.alloc<< " Group:" << e.group << " ID: " <<e.id << std::endl; 
+                    //clog << "Controls:IsValid: "<<e.is_valid() << " Alloc: " <<e.alloc<< " Group:" << e.group << " ID: " <<e.id << std::endl; 
                     ret =  false;
                 }
 
@@ -1031,7 +1033,7 @@ namespace temqo
         //todo
         inline void controls(){
             if(!ctrl.is_valid()){
-                clog << "Controls Refresh" << std::endl;
+                //clog << "Controls Refresh" << std::endl;
                 ctrl.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
             }
         };
@@ -1239,8 +1241,9 @@ namespace temqo
     inline void at_quit(){
         exit(0);
     }
-
+    
     #if defined(MPRIS)
+    
     void mpris_init(){
 
 
@@ -1308,12 +1311,15 @@ namespace temqo
             else
                 control::sort();
         });
-        s.on_volume_changed([&] (double vol) {
-            control::volume_set(vol);
+        s.on_volume_changed([&] (double v) { //because why not :3
+            double vol = v*100;
+            //clog << "ovc: " << v << "vol: " << audio::volume::get() << std::endl;
+            control::volume_set( vol > 100 ? 100 : vol);
             ctrl.invalidateId(IDS::VOLUME);
+            s.set_volume(audio::volume::get()/100);
         });
         
-        s.set_volume(audio::volume::get());
+        s.set_volume(audio::volume::get()/100);
 
         s.start_loop_async();
         clog << "Mpris Initialized" << std::endl;
