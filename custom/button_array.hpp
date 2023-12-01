@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "../clog.hpp"
 
 struct ButtonArrayElement
 {
@@ -11,7 +12,8 @@ struct ButtonArrayElement
     unsigned short alloc;
     unsigned short group = 0;
     unsigned short id = 0;
-    bool valid = false;
+    bool(*is_valid)() = nullptr;
+    void (*invalidate)() = nullptr;
 };
 
 class ButtonArray : public std::vector<ButtonArrayElement>
@@ -28,8 +30,8 @@ public:
 
         for (size_t i = 0; i < this->size(); i++)
         {
-            ButtonArrayElement e = this->at(i);
-            if(!e.draw || e.valid)
+            ButtonArrayElement& e = this->at(i);
+            if(!e.draw || !e.invalidate || !e.is_valid || e.is_valid())
                 continue;
 
             auto poffset = pos.x+offset;
@@ -39,7 +41,7 @@ public:
             //std::cout << i;
             mv(poffset, pos.y);
             e.draw(same_height && inside_x_axis, m);
-            e.valid = true;
+            //e.valid = true;
         }
     }
 
@@ -118,13 +120,15 @@ public:
     
     void invalidateGroup(unsigned short group){
         getInGroup(group, [](ButtonArrayElement & bae){
-            bae.valid = false;
+            if(bae.invalidate)
+                bae.invalidate();
         });
     }
 
     void invalidateId(unsigned short id){
         getInId(id, [](ButtonArrayElement & bae){
-            bae.valid = false;
+            if(bae.invalidate)
+                bae.invalidate();
         });
     }
 

@@ -87,6 +87,7 @@ namespace temqo
 
     namespace load
     {   
+        bool loading = false;
         inline void file(const std::string&);
         inline void prev();
         inline void next();
@@ -278,6 +279,42 @@ namespace temqo
                 mv(ws.x, ws.y + index);
                 std::cout << str << attr_reset;
             }
+        }
+        size_t st_index()
+        {
+            return clamp(display_offset);
+        }
+        size_t last_index()
+        {
+            return clamp(display_offset + element.wSpace().h);
+        }
+
+        bool ref_disp_offset(){ //returns if need to redraw
+            bool ret = false;
+            auto idx = clamp(cursor_offset);
+            auto fst = st_index();
+            auto lst = last_index();
+            if (idx < fst)
+            {
+                display_offset -= fst - idx;
+                ret = true;
+            }
+            if (idx > lst)
+            {
+                display_offset -= lst - idx;
+                ret = true;
+            }
+            return ret;
+        }
+        void curs_up(size_t n = 1){
+            cursor_offset+=n;
+            ref_disp_offset();
+            valid = false;
+        }
+        void curs_down(size_t n = 1){
+            cursor_offset-=n;
+            ref_disp_offset();
+            valid = false;
         }
 
         void action(wm::MOUSE_INPUT m);//do something with the input
@@ -530,8 +567,12 @@ namespace temqo
 
     namespace ControlButtons
     {
-        StringLite prev_ch = "⏮";
-        ButtonArrayElement prev_bae({
+        struct Prev: public ButtonArrayElement{
+            //extra shit
+            static StringLite ch;
+            bool valid = false;
+
+        } prev_bae = {
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr( attr_reset );
                 if(inside){
@@ -542,15 +583,21 @@ namespace temqo
                 else
                     use_attr(color_color(colors.normal))
                 
-                std::cout << prev_ch << ' ' << attr_reset;
+                std::cout << prev_bae.ch << ' ' << attr_reset;
+                prev_bae.valid = true;
             },
             2,
             GROUPS::MEDIA_CONTROLS,
             IDS::PREV,
-        });
+            []{return prev_bae.valid;},
+            []{prev_bae.valid = false;}
 
-        StringLite next_ch = "⏭";
-        ButtonArrayElement next_bae = {
+        };
+
+        struct Next : public ButtonArrayElement {
+            static StringLite ch;
+            bool valid = false;
+        } next_bae = {
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr(attr_reset);
                 if(inside){
@@ -560,20 +607,33 @@ namespace temqo
                 }
                 else
                     use_attr(color_color(colors.normal));
-                std::cout << next_ch << ' ' << attr_reset;
+                std::cout << next_bae.ch << ' ' << attr_reset;
+                //validate
+                next_bae.valid = true;
             },
             2,
             GROUPS::MEDIA_CONTROLS,
             IDS::NEXT,
+            []{return next_bae.valid;},
+            []{next_bae.valid = false;}
         };
 
-        StringLite playing_ch = "▶";
-        StringLite stopped_ch = "⏸";
+        
 
-        ButtonArrayElement playpause_bae = {
+        struct PlayPause: public ButtonArrayElement
+        {
+            static StringLite playing_ch;
+            static StringLite stopped_ch;
+            enum State : unsigned char{
+                INVALID,
+                PLAYING,
+                STOPPED,
+            } state;
+            /* data */
+        } playpause_bae = {
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr(attr_reset);
-                auto& usech = audio::playing() ? playing_ch : stopped_ch;
+                auto& usech = audio::playing() ? playpause_bae.playing_ch : playpause_bae.stopped_ch;
                 if(inside){
                     use_attr(color_color(colors.hover));
                     if(m.btn == wm::MOUSE_BTN::M_LEFT && p.size())
@@ -582,19 +642,43 @@ namespace temqo
                 else
                     use_attr(color_color(colors.normal));
                 std::cout << usech << ' ' << attr_reset;
+                playpause_bae.state = 
             },
             2,
             GROUPS::MEDIA_CONTROLS,
             IDS::PLAYPAUSE,
+            []{
+                switch (playpause_bae.state)
+                {
+                case PlayPause::State::INVALID:
+                    return false;
+                case PlayPause::State::PLAYING:
+                    return audio::playing();
+                case PlayPause::State::STOPPED:
+                    return !audio::playing();
+                default:
+                    playpause_bae.state = PlayPause::State::INVALID;
+                    break;
+                }
+                return false;
+            },
+            []{playpause_bae.state = PlayPause::State::INVALID;}
         };
 
-        StringLite shuffle_ch = "⤮";
-        StringLite sort_ch = "⇉";
 
-        ButtonArrayElement shuffle_bae = {
+
+       
+
+
+        struct Shuffle: public ButtonArrayElement {
+            static StringLite shuffle_ch;
+            static StringLite sort_ch;
+            bool valid = false;
+
+        } shuffle_bae = {
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr(attr_reset);
-                auto& usech = p.sorted() ? sort_ch : shuffle_ch;
+                auto& usech = p.sorted() ? shuffle_bae.sort_ch : shuffle_bae.shuffle_ch;
                 if(inside){
                     use_attr(color_color(colors.hover));
                     if(m.btn == wm::MOUSE_BTN::M_LEFT && p.size()){
@@ -611,17 +695,25 @@ namespace temqo
             2,
             GROUPS::MEDIA_CONTROLS,
             IDS::SHUFFLE,
+            [](){return shuffle_bae.valid;},
+            [](){shuffle_bae.valid = false;},
         };
 
-        StringLite loop_track_ch = "⥀";
-        StringLite loop_playlist_ch = "♺";
-        StringLite loop_off_ch = "🡢";
-
-        ButtonArrayElement loop_bae = {
+        struct Loop : ButtonArrayElement {
+            static StringLite track_ch;
+            static StringLite playlist_ch;
+            static StringLite off_ch;
+            enum State : unsigned char {
+                INVALID,
+                OFF,
+                PLAYLIST,
+                TRACK,
+            } state = INVALID;
+        } loop_bae = {
         [](bool inside, wm::MOUSE_INPUT m)
             {
                 use_attr(attr_reset);
-                StringLite &use_char = p.loopType == p.L_NONE ? loop_off_ch : p.loopType == p.L_PLAYLIST? loop_playlist_ch : loop_track_ch;
+                StringLite &use_char = p.loopType == p.L_NONE ? loop_bae.off_ch : p.loopType == p.L_PLAYLIST? loop_bae.playlist_ch : loop_bae.track_ch;
                 
                 if (inside)
                 {
@@ -643,10 +735,42 @@ namespace temqo
             },
             2,
             GROUPS::MEDIA_CONTROLS,
-            IDS::LOOP
+            IDS::LOOP,
+            [](){
+                switch (loop_bae.state)
+                {
+                case Loop::TRACK:
+                    return p.loopType == Playlist::LoopType::L_TRACK;
+                case Loop::PLAYLIST:
+                    return p.loopType == Playlist::LoopType::L_PLAYLIST;
+                case Loop::OFF:
+                    return p.loopType == Playlist::LoopType::L_NONE;
+                case Loop::INVALID:
+                default:
+                    break;
+                }
+                return false;
+            },
+            [](){loop_bae.state = Loop::State::INVALID;}
         };
 
-        ButtonArrayElement volume_bae = {
+        StringLite Shuffle::shuffle_ch = "⤮";
+        StringLite Shuffle::sort_ch = "⇉";
+
+        StringLite Prev::ch = "⏮";
+        StringLite Next::ch = "⏭";
+
+        StringLite PlayPause::playing_ch = "▶";
+        StringLite PlayPause::stopped_ch = "⏸";
+
+        StringLite Loop::track_ch = "⥀";
+        StringLite Loop::playlist_ch = "♺";
+        StringLite Loop::off_ch = "🡢";
+
+        struct Volume : public ButtonArrayElement {
+            int vol = 0;
+            bool valid = false;
+        } volume_bae = {
     [](bool inside, wm::MOUSE_INPUT m)
         {
             use_attr(attr_reset);
@@ -679,11 +803,17 @@ namespace temqo
         },
         5,
         GROUPS::VOLUME,
-        IDS::VOLUME
+        IDS::VOLUME,
+        []{return !volume_bae.valid || std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;},
+        []{volume_bae.valid = false;},
+
         };
 
         #define leading_zero(n) ((n < 10) ? "0" : "") << n
-        ButtonArrayElement time_bae = {
+        struct Time : ButtonArrayElement {
+            long long current_time = 0;
+            bool valid = false;
+        } time_bae = {
             [](bool inside, wm::MOUSE_INPUT m){
                 auto ps = audio::position::get<std::ratio<1, 1>>().count();
                 auto ts = audio::duration::get<std::ratio<1, 1>>().count();
@@ -710,6 +840,10 @@ namespace temqo
             11,
             GROUPS::TIME,
             IDS::TIME,
+            []{
+                return !time_bae.valid || time_bae.current_time != audio::position::get<std::ratio<1, 1>>().count();
+            },
+            []{time_bae.valid = false;},
         };
 
 
@@ -736,17 +870,21 @@ namespace temqo
         //why? idk man...
         void invalidate_all(){
             for (auto e : *this) {
-                e.valid = false;
+                if(e.invalidate)
+                    e.invalidate();
             }
         }
 
         bool is_valid() override{
+            auto ret = true;
             for (auto e : *this) {
-                if(!e.valid)
-                    return false;
+                if(!e.is_valid()){
+                    clog << "Controls:IsValid: "<<e.is_valid() << " Alloc: " <<e.alloc<< " Group:" << e.group << " ID: " <<e.id << std::endl; 
+                    ret =  false;
+                }
 
             }
-            return true;
+            return ret;
         }
 
         void refresh() override{
@@ -856,30 +994,41 @@ namespace temqo
 
         //all the classes that have the refresh thing
         inline void playlist(){
-            if(!p.is_valid())
+            if(!p.is_valid()){
+                clog << "Playlist Refresh" << std::endl;
                 p.refresh();
+            }
         };
         inline void progressbar(){
-            if(!progres_bar.is_valid())
+            if(!progres_bar.is_valid()){
+                clog << "Progressbar Refresh" << std::endl;
                 progres_bar.refresh();
+            }
         };
         inline void coverart(){
-            if(!cover_art.is_valid())
+            if(!cover_art.is_valid()){
+                clog << "CoverArt Refresh" << std::endl;
                 cover_art.refresh();
+            }
         };
         inline void config(){
-            if(!cfg.is_valid())
+            if(!cfg.is_valid()){
+                clog << "Config Refresh" << std::endl;
                 cfg.refresh();
+            }
         };
         //todo
         inline void controls(){
-            if(!ctrl.is_valid())
+            if(!ctrl.is_valid()){
+                clog << "Controls Refresh" << std::endl;
                 ctrl.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
+            }
         };
         inline void r_title(){
             if(p.empty() || title.valid)
                 return;
             title.refresh();
+            clog << "Title Refresh" << std::endl;
         };
 
         inline void all(){
@@ -892,7 +1041,8 @@ namespace temqo
                 cover_art.valid = false;
                 title.valid = false;
                 for(auto& e : ctrl){
-                    e.valid = false;
+                    if(e.invalidate)
+                        e.invalidate();
                 }
                 clear_scr();
             }
@@ -910,10 +1060,11 @@ namespace temqo
     namespace load
     {
         inline void file(const std::string& filepath){
-            clog << filepath.size() << std::endl;
-            clog << std::filesystem::exists(filepath) << 'b' << std::endl;
-            if(!filepath.size() || !std::filesystem::exists(filepath))
-                return;
+            loading = true;
+            clog << filepath << std::endl;
+            if(!filepath.size() || !std::filesystem::exists(filepath)){
+                loading = false;return;
+            }
             //invalidate shit and stuff
             audio::load(filepath);
             control::play();
@@ -923,9 +1074,13 @@ namespace temqo
             ctrl.invalidateGroup(GROUPS::TIME);
             ctrl.invalidateGroup(GROUPS::MEDIA_CONTROLS);
             title.valid = false;
+            loading = false;
         }
 
         inline void next(){
+            if(loading)
+                return;
+            loading = true;
             auto o = p.opt_next();
             if(!o.has_value()){
                 clog << color_color(colors.warn)<<"!FAILED TO CHANGE SONG!" << attr_reset;
@@ -936,6 +1091,9 @@ namespace temqo
             
         }
         inline void prev(){
+            if(loading)
+                return;
+            loading = true;
             auto o = p.opt_prev();
             if(!o.has_value()){
                 clog << color_color(colors.warn) << "!FAILED TO CHANGE SONG!" << attr_reset;
@@ -945,6 +1103,9 @@ namespace temqo
 
         }
         inline void curr(){
+            if(loading)
+                return;
+            loading = true;
             auto o = p.opt_curr();
             if(!o.has_value()){
                 clog << color_color(colors.warn)<<"!FAILED TO CHANGE SONG!" << attr_reset;
@@ -996,12 +1157,15 @@ namespace temqo
                 p.new_seed();
             p.shuffle();
             ctrl.invalidateId(IDS::SHUFFLE);
+            p.valid = false;
         }
         inline void sort(){
             if(p.empty())
                 return;
             p.sort();
             ctrl.invalidateId(IDS::SHUFFLE);
+            p.valid = false;
+
         }
 
         inline void volume_set(double d){
@@ -1060,15 +1224,7 @@ namespace temqo
     std::mutex drawing;
     bool draw = true;
 
-    //inline void at_exit(){
-    //    draw = false;
-    //    control::pause();
-    //    wm::deinit();
-    //}
-    //inline void at_int(int){
-    //    at_exit();
-    //    exit(0);
-    //}
+    
     inline void at_quit(){
         exit(0);
     }
@@ -1097,7 +1253,7 @@ namespace temqo
         });
 
         s.on_next([&](){
-            clog << "next\n";
+            clog << "on_next:" << std::endl;
             load::next();
         });
         s.on_previous([](){
@@ -1158,7 +1314,7 @@ namespace temqo
     inline void draw_thr_fn(){
         while (draw)
         {
-            if(audio::stopped()){
+            if(audio::stopped() && !load::loading){
                 if(p.loopType == p.L_TRACK)
                     load::curr();
                 else
