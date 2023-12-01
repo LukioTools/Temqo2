@@ -642,7 +642,7 @@ namespace temqo
                 else
                     use_attr(color_color(colors.normal));
                 std::cout << usech << ' ' << attr_reset;
-                playpause_bae.state = 
+                playpause_bae.state = audio::playing() ? PlayPause::PLAYING:PlayPause::STOPPED;
             },
             2,
             GROUPS::MEDIA_CONTROLS,
@@ -673,7 +673,12 @@ namespace temqo
         struct Shuffle: public ButtonArrayElement {
             static StringLite shuffle_ch;
             static StringLite sort_ch;
-            bool valid = false;
+            enum State : unsigned char {
+                INVALID,
+                SORTED,
+                SHUFFLED,
+            } state = State::INVALID;
+            
 
         } shuffle_bae = {
             [](bool inside, wm::MOUSE_INPUT m){
@@ -691,12 +696,13 @@ namespace temqo
                 else
                     use_attr(color_color(colors.normal));
                 std::cout << usech << ' ' << attr_reset;
+                shuffle_bae.state = p.sorted() ? Shuffle::SORTED : Shuffle::SHUFFLED;
             },
             2,
             GROUPS::MEDIA_CONTROLS,
             IDS::SHUFFLE,
-            [](){return shuffle_bae.valid;},
-            [](){shuffle_bae.valid = false;},
+            [](){return shuffle_bae.state == (p.sorted() ? Shuffle::SORTED : Shuffle::SHUFFLED);},
+            [](){shuffle_bae.state = Shuffle::INVALID;},
         };
 
         struct Loop : ButtonArrayElement {
@@ -732,6 +738,7 @@ namespace temqo
                 else
                     use_attr(color_color(colors.normal));
                 std::cout << use_char << " " << attr_reset;
+                loop_bae.state =  p.loopType == p.L_NONE ? Loop::OFF : p.loopType == p.L_PLAYLIST? Loop::PLAYLIST : Loop::TRACK;
             },
             2,
             GROUPS::MEDIA_CONTROLS,
@@ -804,7 +811,9 @@ namespace temqo
         5,
         GROUPS::VOLUME,
         IDS::VOLUME,
-        []{return !volume_bae.valid || std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;},
+        []{
+            return volume_bae.valid || std::abs( (int) std::round(audio::volume::get()) ) == volume_bae.vol;
+            },
         []{volume_bae.valid = false;},
 
         };
@@ -841,7 +850,7 @@ namespace temqo
             GROUPS::TIME,
             IDS::TIME,
             []{
-                return !time_bae.valid || time_bae.current_time != audio::position::get<std::ratio<1, 1>>().count();
+                return time_bae.valid || time_bae.current_time == audio::position::get<std::ratio<1, 1>>().count();
             },
             []{time_bae.valid = false;},
         };
