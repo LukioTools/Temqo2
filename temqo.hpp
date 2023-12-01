@@ -139,8 +139,8 @@ namespace temqo
 
     class Config : public Valid
     {
-        public:
-        StringLite path = "./temqo.cfg";
+    public:
+        static StringLite path;
         bool valid = false;
 
         void configuration(){//do the config
@@ -158,7 +158,7 @@ namespace temqo
         }
 
     } cfg;
-
+    StringLite Config::path = "./temqo.cfg";
     struct Color{
         cfg::RGB fg = default_normal_fg;
         cfg::RGB bg = default_normal_bg;
@@ -195,12 +195,14 @@ namespace temqo
 
     class Playlist : public audio::Playlist, public Valid {
     public:
+        static bool filename_only;
+        static wm::SPLICE_TYPE clip_type;
+        static wm::PAD_TYPE pad_type;
+
         size_t cursor_offset = 0;
         size_t display_offset = 0;
-        bool filename_only = true;
         wm::Element element;
-        wm::SPLICE_TYPE clip_type = wm::SPLICE_TYPE::BEGIN_DOTS;
-        wm::PAD_TYPE pad_type = wm::PAD_TYPE::PAD_RIGHT;
+        
         bool valid = false;
 
         //remember to implement the lööp
@@ -336,6 +338,10 @@ namespace temqo
         }
 
     } p;
+    
+    bool Playlist::filename_only = false;
+    wm::SPLICE_TYPE Playlist::clip_type = wm::SPLICE_TYPE::BEGIN_DOTS;
+    wm::PAD_TYPE Playlist::pad_type = wm::PAD_TYPE::PAD_RIGHT;
 
     struct ProgressBar : public Valid
     {
@@ -441,7 +447,6 @@ namespace temqo
         }
         void refresh() override{
             valid = true;
-            clog << "ProgressBar refrehs "<< input_mode.num << std::endl;
 
             switch (input_mode.num) {
                 case InputMode::PROGRESS:
@@ -849,11 +854,14 @@ namespace temqo
                 << '/'
                 << leading_zero(tm) << ':' << leading_zero(tsec)
                 << attr_reset;
+                time_bae.valid = true;
+                time_bae.current_time = ps;
             },
             11,
             GROUPS::TIME,
             IDS::TIME,
             []{
+                //clog << "Time: " << time_bae.valid << ':' << (time_bae.current_time == audio::position::get<std::ratio<1, 1>>().count()) << std::endl;
                 return time_bae.valid && time_bae.current_time == audio::position::get<std::ratio<1, 1>>().count();
             },
             []{time_bae.valid = false;},
@@ -871,7 +879,7 @@ namespace temqo
         ControlButtons::shuffle_bae,
         ControlButtons::loop_bae,
         ControlButtons::volume_bae,
-        //ControlButtons::time_bae,
+        ControlButtons::time_bae,
     });
 
     class Controls :public ButtonArray, public Valid{
@@ -892,7 +900,7 @@ namespace temqo
             auto ret = true;
             for (auto e : *this) {
                 if(!e.is_valid()){
-                    //clog << "Controls:IsValid: "<<e.is_valid() << " Alloc: " <<e.alloc<< " Group:" << e.group << " ID: " <<e.id << std::endl; 
+                    clog << "Controls:IsValid: "<< e.is_valid() << " Alloc: " <<e.alloc<< " Group:" << e.group << " ID: " <<e.id << std::endl; 
                     ret =  false;
                 }
 
@@ -994,6 +1002,7 @@ namespace temqo
         }
         //every resize_event
         inline void elements(){
+            clog << "ELEMENT RESIZE" << std::endl;
             title.element.space = wm::Space(0,0, wm::WIDTH, 1);
 
             ctrl.pos = {static_cast<unsigned short>(wm::WIDTH - ctrl.width()), static_cast<unsigned short>(wm::HEIGHT)};
@@ -1007,38 +1016,44 @@ namespace temqo
 
         //all the classes that have the refresh thing
         inline void playlist(){
-            if(!p.is_valid()){
-                clog << "Playlist Refresh" << std::endl;
-                p.refresh();
-            }
+            if(p.is_valid())
+                return;
+            clog << "Playlist Refresh" << std::endl;
+            p.refresh();
+            
         };
         inline void progressbar(){
-            if(!progres_bar.is_valid()){
-                clog << "Progressbar Refresh" << std::endl;
-                progres_bar.refresh();
-            }
+            if(progres_bar.is_valid())
+                return;
+            clog << "ProgressBar Refresh" << std::endl;
+            progres_bar.refresh();
+            
         };
         inline void coverart(){
-            if(!cover_art.is_valid()){
-                clog << "CoverArt Refresh" << std::endl;
-                cover_art.refresh();
-            }
+            if(cover_art.is_valid())
+                return;
+
+            clog << "CoverArt Refresh" << std::endl;
+            cover_art.refresh();
+            
         };
         inline void config(){
-            if(!cfg.is_valid()){
-                clog << "Config Refresh" << std::endl;
-                cfg.refresh();
-            }
+            if(cfg.is_valid())
+                return;
+            clog << "Config Refresh" << std::endl;
+            cfg.refresh();
+            
         };
         //todo
         inline void controls(){
-            if(!ctrl.is_valid()){
-                //clog << "Controls Refresh" << std::endl;
-                ctrl.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
-            }
+            if(ctrl.is_valid())
+                return;
+            
+            //clog << "Controls Refresh" << std::endl;
+            ctrl.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
         };
         inline void r_title(){
-            if(p.empty() || title.valid)
+            if(p.empty() || title.is_valid())
                 return;
             title.refresh();
             clog << "Title Refresh" << std::endl;
@@ -1047,6 +1062,8 @@ namespace temqo
         inline void all(){
             if(wm::resize_event){
                 wm::resize_event = false;
+                elements();
+
                 clog << (display_mode.horizontal() ? "HORIZONTAL " : "VERTICAL ") << wm::WIDTH << '/' << wm::HEIGHT << std::endl; 
                 clog << "RESIZE EVENT" << std::flush;
                 p.valid = false;
@@ -1059,7 +1076,6 @@ namespace temqo
                 }
                 clear_scr();
             }
-            elements();
             playlist();
             progressbar();
             controls();
@@ -1221,7 +1237,7 @@ namespace temqo
                 break;
             case 'c':
                 if (std::filesystem::exists(optarg))
-                    cfg.path = optarg;
+                    Config::path = optarg;
                 break;
             case 'd':
                 if (std::filesystem::exists(optarg))

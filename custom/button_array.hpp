@@ -31,16 +31,19 @@ public:
         for (size_t i = 0; i < this->size(); i++)
         {
             ButtonArrayElement& e = this->at(i);
-            if(!e.draw || !e.invalidate || !e.is_valid || e.is_valid())
+            if(!e.draw || !e.invalidate || !e.is_valid)
                 continue;
 
-            auto poffset = pos.x+offset;
-            bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
             
+            auto poffset = pos.x+offset;
             offset+=e.alloc;
             //std::cout << i;
-            mv(poffset, pos.y);
-            e.draw(same_height && inside_x_axis, m);
+            if(!e.is_valid()){ //only draw and calculate if not valid
+                bool inside_x_axis = mpos.x >= poffset && mpos.x < poffset+e.alloc;
+
+                mv(poffset, pos.y);
+                e.draw(same_height && inside_x_axis, m);
+            }
             //e.valid = true;
         }
     }
