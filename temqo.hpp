@@ -66,9 +66,9 @@ namespace temqo
 
     class Valid
     {
-        public:
-        virtual void refresh();
-        virtual bool is_valid();
+    public:
+        virtual void refresh(){};
+        virtual bool is_valid(){return true;};
     };
 
     namespace load
@@ -387,9 +387,10 @@ namespace temqo
     }
     
 
-    class CoverArt: public CoverArtData ,public Valid{
+    class CoverArt: public Valid{
     public:
         wm::Element element;
+        CoverArtData data;
         bool valid = false;
 
         inline void draw_border(){
@@ -402,11 +403,11 @@ namespace temqo
 
 
         inline void draw_image(){
-            if(!std::filesystem::exists(file_path.get_p()))
+            if(!std::filesystem::exists(data.file_path.get_p()))
                 return;
 
             auto s = element.wSpace();
-            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(file_path, s.width(), s.height() + 1);
+            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(data.file_path, s.width(), s.height() + 1);
             
             std::ostringstream out;
             for (size_t iy = 0; iy <= s.height(); iy++)
@@ -426,19 +427,19 @@ namespace temqo
         };
 
 
-        inline bool is_valid() override {
-            return valid && img_valid;
+        bool is_valid() override{
+            return valid && data.img_valid;
         };
 
-        inline void refresh() override {
+        void refresh() override{
             valid = true;
-            std::thread* thr = img_valid ? nullptr : new std::thread(fetch_coverart, this); 
+            std::thread* thr = data.img_valid ? nullptr : new std::thread(fetch_coverart, &data); 
             draw_border();
             if(thr)
                 thr->join();
             draw_image();
         };
-        
+
     } cover_art;
 
 
@@ -819,6 +820,8 @@ namespace temqo
 
             audio::load(filepath);
             p.valid = false;
+            cover_art.valid = false;
+            cover_art.data.img_valid = false;
             ctrl.invalidateGroup(GROUPS::TIME);
             ctrl.invalidateGroup(GROUPS::MEDIA_CONTROLS);
         }
