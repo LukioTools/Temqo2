@@ -57,7 +57,7 @@ namespace temqo
     ENUM(InputMode, unsigned char, DEFAULT, COMMAD, SEARCH) input_mode;
     //input buffer;
     std::string input;
-    std::ofstream clog("/dev/null");
+    std::ofstream clog("/dev/pts/4");
 
     static float volume_shift = 5;
     static float volume_reset = 100;
