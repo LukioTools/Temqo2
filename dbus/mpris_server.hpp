@@ -49,8 +49,8 @@ static const auto MP2         = "org.mpris.MediaPlayer2"s;
 static const auto MP2P        = "org.mpris.MediaPlayer2.Player"s;
 static const auto PROPS       = "org.freedesktop.DBus.Properties"s;
 
-enum class PlaybackStatus { Playing, Paused, Stopped };
-enum class LoopStatus     { None, Track, Playlist };
+enum class PlaybackStatus : unsigned char{ Playing, Paused, Stopped };
+enum class LoopStatus     : unsigned char{ None, Track, Playlist };
 
 enum class Field {
     TrackId     , Length     , ArtUrl      , Album          ,

@@ -15,7 +15,7 @@ int main(int argc, char const *argv[])
     bool playing = false;
 
     mpris::Server server("genericplayer");
-
+    
     server.set_identity("A generic player");
     server.set_supported_uri_schemes({ "file" });
     server.set_supported_mime_types({ "application/octet-stream", "text/plain" });

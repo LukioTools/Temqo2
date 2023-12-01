@@ -693,23 +693,34 @@ void refresh_playbar()
 void refresh_element_sizes()
 {
     current_file.space = wm::Space(0, 0, wm::WIDTH, 0);
-    input_field.space = wm::Space(0, wm::HEIGHT, wm::WIDTH, 0);
-
-
-        //(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff)
-        //((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff))
+    //input_field.space = wm::Space(0, wm::HEIGHT, wm::WIDTH, 0);
 
     if(layout == layout_t::HORIZONTAL || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) >= layout_auto_ratio_cutoff)){
         playlist.space = wm::Space(0, 1, wm::WIDTH * playlist_width, wm::HEIGHT - 2);
         playlist.pad = {1, 1, 0, 1};
-        cover_art.space = wm::Space(playlist.space.w, 1, wm::WIDTH - playlist.space.w + 1, wm::HEIGHT - 2);
+        cover_art.space = wm::Space(
+            playlist.space.w,
+            1,
+            wm::WIDTH - playlist.space.w + 1, 
+            wm::HEIGHT - 2
+        );
         cover_art.pad = {1, 1, 1, 0};
     }
     else if ((layout == layout_t::VERTICAL) || (layout == layout_t::AUTO && static_cast<double>(wm::WIDTH)/static_cast<double>(wm::HEIGHT) < layout_auto_ratio_cutoff)) {
         //log_t << "VERTICAL" << std::endl;
-        playlist.space = wm::Space(0, 1, wm::WIDTH, (wm::HEIGHT - 2) * playlist_width);
+        playlist.space = wm::Space(
+            0,
+            1, 
+            wm::WIDTH,
+            (wm::HEIGHT - 2) * playlist_width
+        );
         playlist.pad = {1, 1, 0, 0};
-        cover_art.space = wm::Space(0, playlist.space.h+1, wm::WIDTH, (wm::HEIGHT - 2)-playlist.space.h);
+        cover_art.space = wm::Space(
+            0,
+            playlist.space.h+1, 
+            wm::WIDTH, 
+            (wm::HEIGHT - 2)-playlist.space.h 
+        );
         cover_art.pad = {1, 1, 0, 0};
     }
     

@@ -8,9 +8,10 @@
 struct ButtonArrayElement
 {
     void(*draw)(bool inside, wm::MOUSE_INPUT m);//the function that prints out the data //plz use the whole space as not to induse any oddities
-    short alloc;
-    short group = 0;
-    unsigned int id = 0;
+    unsigned short alloc;
+    unsigned short group = 0;
+    unsigned short id = 0;
+    bool valid = false;
 };
 
 class ButtonArray : public std::vector<ButtonArrayElement>
@@ -28,7 +29,7 @@ public:
         for (size_t i = 0; i < this->size(); i++)
         {
             ButtonArrayElement e = this->at(i);
-            if(!e.draw)
+            if(!e.draw || e.valid)
                 continue;
 
             auto poffset = pos.x+offset;
@@ -38,6 +39,7 @@ public:
             //std::cout << i;
             mv(poffset, pos.y);
             e.draw(same_height && inside_x_axis, m);
+            e.valid = true;
         }
     }
 
@@ -66,7 +68,7 @@ public:
         }
     }
 
-    void drawById(unsigned int id, wm::MOUSE_INPUT m){
+    void drawById(unsigned short id, wm::MOUSE_INPUT m){
         auto mpos = m.pos;
         unsigned int offset = 0;
         bool same_height = mpos.y == pos.y;
@@ -90,7 +92,7 @@ public:
         }
     }
 
-    void getInGroup(short group, void(fn)(ButtonArrayElement& bae)){
+    void getInGroup(unsigned short group, void(fn)(ButtonArrayElement& bae)){
         if(!fn){
             return;
         }
@@ -102,7 +104,7 @@ public:
         }
     }
 
-    void getInId(unsigned int id, void(fn)(ButtonArrayElement& bae)){
+    void getInId(unsigned short id, void(fn)(ButtonArrayElement& bae)){
         if(!fn){
             return;
         }
@@ -114,6 +116,17 @@ public:
         }
     }
     
+    void invalidateGroup(unsigned short group){
+        getInGroup(group, [](ButtonArrayElement & bae){
+            bae.valid = false;
+        });
+    }
+
+    void invalidateId(unsigned short id){
+        getInId(id, [](ButtonArrayElement & bae){
+            bae.valid = false;
+        });
+    }
 
     size_t width(){
         size_t out  = 0;

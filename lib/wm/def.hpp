@@ -69,6 +69,7 @@
 #define set_title_attr(title) ("\033]30;" + title + "\007")
 #define set_title_static_attr(title) ("\033]30;" title "\007")
 
+#define set_title_stream(title) "\033]30;" << title << "\007"
 #define set_title(title) printf("\033]30;%s\007", title);
 #define set_title_static(title) printf("\033]30;"#title"\007");
 
