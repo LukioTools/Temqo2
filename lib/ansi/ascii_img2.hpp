@@ -8,6 +8,7 @@
 #include <string>
 #include <sys/types.h>
 #include <thread>
+#include "../../clog.hpp"
 
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -182,7 +183,6 @@ namespace ascii_img
         check__(!out_data, "could not allocate memory for image");
 
         stbir_resize_uint8(data, cx, cy, 0, out_data, x, y, 0, n_channels);
-        
         
         free(data);
 

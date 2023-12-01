@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -32,7 +33,7 @@
 #include "lib/wm/mouse.hpp"
 #include "lib/wm/position.hpp"
 #include "lib/wm/space.hpp"
-
+#include "clog.hpp"
 #define default_normal_fg {255,255,255}
 #define default_normal_bg {0,0,0}
 
@@ -55,10 +56,9 @@
 namespace temqo
 {
 
-    ENUM(InputMode, unsigned char, DEFAULT, COMMAD, SEARCH) input_mode;
+    ENUM(InputMode, unsigned char, PROGRESS, COMMAD, SEARCH) input_mode = InputMode::PROGRESS;
     //input buffer;
     std::string input;
-    std::ofstream clog("/dev/pts/4");
 
     static float volume_shift = 5;
     static float volume_reset = 100;
@@ -106,12 +106,11 @@ namespace temqo
         } mode;
         
         bool vertical(){
-            return mode == HORIZONTAL || aspect_ratio >= cutoff;
-        };
-        bool horizontal(){
             return mode == VERTICAL || aspect_ratio < cutoff;
         };
-        #undef whratio
+        bool horizontal(){
+            return mode == HORIZONTAL || aspect_ratio >= cutoff;
+        };
     
     } display_mode;
 
@@ -164,7 +163,7 @@ namespace temqo
             italic
         };
         Color border = {
-            default_warn_fg,
+            default_border_fg,
             default_border_bg,
         };
         Color hilight = {
@@ -285,16 +284,21 @@ namespace temqo
     struct ProgressBar : public Valid
     {
     public:
-        void refresh_mode_default(){
+
+        unsigned int current_cursor = 0;
+
+        void refresh_mode_progress(){
             auto d = audio::position::get_d();
             auto s = element.space;
             auto idx = static_cast<unsigned int>(s.w * d);
+            current_cursor = idx;
             mv(s.x, s.y);
-            use_attr(color_color(color_played));
+            
+            use_attr( attr_reset << color_color(color_played));
             for (size_t i = 0; i < s.width(); i++)
             {
                 if (i == idx)
-                    std::cout << color_color(color_cursor) << char_first << color_color(color_remaining);
+                    std::cout << attr_reset << color_color(color_cursor) << char_cursor << color_color(color_remaining);
                 else if (i == 0)
                     std::cout << char_first;
                 else if (i == static_cast<unsigned long>(s.width() - 1))
@@ -302,6 +306,7 @@ namespace temqo
                 else
                     std::cout << char_center;
             }
+            use_attr(attr_reset)
         }
 
         void refresh_mode_command(){
@@ -331,30 +336,60 @@ namespace temqo
             std::cout << str;
         }
 
+        bool valid_mode_progress(){
+            auto d = audio::position::get_d();
+            auto s = element.space;
+            auto idx = static_cast<unsigned int>(s.w * d);
+            return current_cursor == idx;
+        }
+        bool valid_mode_command(){
+            return false;
+        }
+        bool valid_mode_search(){
+            return false;
+        }
+        bool valid_mode_unknown(){
+            return false;
+        }
+
 
         StringLite char_first = "├";
         StringLite char_last = "┤";
         StringLite char_center = "─";
         StringLite char_cursor = "•";
 
-        Color color_played;
-        Color color_remaining;
-        Color color_cursor;
+        Color color_played = {default_warn_fg, default_warn_bg, ""};
+        Color color_remaining  = {default_normal_fg, default_normal_bg, ""};
+        Color color_cursor = {{255,0,255,}, {0,0,0}, ""};
 
         bool valid = false;
 
         wm::Element element;
 
 
-        void action(wm::MOUSE_INPUT m);//do something with the input
+        void action(wm::MOUSE_INPUT m){//do something with the input
+
+        };
         bool is_valid() override{
-            return valid;
+            if(!valid)
+                return false;
+
+                //valid functions
+            switch (input_mode.num) {
+                case InputMode::PROGRESS: return valid_mode_progress();
+                case InputMode::COMMAD: return valid_mode_command();
+                case InputMode::SEARCH: return valid_mode_search();
+                default: return valid_mode_unknown();
+            }
+
         }
         void refresh() override{
             valid = true;
+            clog << "ProgressBar refrehs "<< input_mode.num << std::endl;
+
             switch (input_mode.num) {
-                case InputMode::DEFAULT:
-                    refresh_mode_command();
+                case InputMode::PROGRESS:
+                    refresh_mode_progress();
                     break;
                 case InputMode::COMMAD:
                     refresh_mode_command();
@@ -363,7 +398,7 @@ namespace temqo
                     refresh_mode_search();
                     break;
                 default:
-                    refresh_mode_command();
+                    refresh_mode_unknown();
                     //unknown mode
                     break;
             }
@@ -407,6 +442,7 @@ namespace temqo
                 element.space.box("─", "─", nullptr, "│", "┬", nullptr, "┴", nullptr);
             else if(display_mode.vertical())
                 element.space.box("─", "─", nullptr, nullptr, "─", "─", "─", "─");
+            use_attr(attr_reset)
         };
 
 
@@ -415,7 +451,8 @@ namespace temqo
                 return;
 
             auto s = element.wSpace();
-            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(data.file_path, s.width(), s.height() + 1);
+            std::string fpath = data.file_path.get_p();
+            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(fpath, s.width(), s.height() + 1);
             
             std::ostringstream out;
             for (size_t iy = 0; iy <= s.height(); iy++)
@@ -428,10 +465,10 @@ namespace temqo
                     out << color_bg_str(clamp_1(rgb.r), clamp_1(rgb.g), clamp_1(rgb.b)) << ' ' << attr_reset;
                 }
             }
+
             if (cover_ansi)
                 delete cover_ansi;
             std::cout << out.str();
-                
         };
 
 
@@ -440,8 +477,9 @@ namespace temqo
         };
 
         void refresh() override{
-            valid = true;
             std::thread* thr = data.img_valid ? nullptr : new std::thread(fetch_coverart, &data); 
+            valid = true;
+            data.img_valid = true;
             draw_border();
             if(thr)
                 thr->join();
@@ -627,8 +665,31 @@ namespace temqo
         IDS::VOLUME
         };
 
+        #define leading_zero(n) ((n < 10) ? "0" : "") << n
         ButtonArrayElement time_bae = {
-            [](bool inside, wm::MOUSE_INPUT m){},
+            [](bool inside, wm::MOUSE_INPUT m){
+                auto ps = audio::position::get<std::ratio<1, 1>>().count();
+                auto ts = audio::duration::get<std::ratio<1, 1>>().count();
+
+                auto pm = ps / 60;
+                auto tm = ts / 60;
+
+                auto psec = ps - pm * 60;
+                auto tsec = ts - tm * 60;
+
+                use_attr(attr_reset)
+                if(inside)
+                    use_attr(color_color(colors.hover))
+                else
+                    use_attr(color_color(colors.normal))
+
+
+                std::cout 
+                << leading_zero(pm) << ':' << leading_zero(psec)
+                << '/'
+                << leading_zero(tm) << ':' << leading_zero(tsec)
+                << attr_reset;
+            },
             11,
             GROUPS::TIME,
             IDS::TIME,
@@ -646,6 +707,7 @@ namespace temqo
         ControlButtons::shuffle_bae,
         ControlButtons::loop_bae,
         ControlButtons::volume_bae,
+        ControlButtons::time_bae,
     });
 
     class Controls :public ButtonArray, public Valid{
@@ -697,13 +759,13 @@ namespace temqo
         }
 
         void refresh() override{
+            clog << "Refresh Title" << std::endl;
             valid = true;
             if(p.empty())
                 return;
             //set window title
             //maby set metadata also but well do it later or something :3
-            use_attr(set_title_stream((window_title_filename_only ? path::filename(p.current()) : p.current())));
-            
+            set_title((window_title_filename_only ? path::filename(p.current()) : p.current()).c_str());
             std::string c = scr_title_filename_only ? path::filename(p.current()) : p.current();
             auto s = element.aSpace();
             // current_file.space.fill("?");
@@ -755,8 +817,8 @@ namespace temqo
             p.element.pad = {1, 1, 0, 1};
 
             cover_art.element.space = {
-                p.element.space.w,
-                title.element.space.h, 
+                p.element.space.x,
+                p.element.space.end().y, 
                 static_cast<unsigned short>(wm::WIDTH),
                 static_cast<unsigned short>(useable_height-p.element.space.h)
             };
@@ -797,24 +859,33 @@ namespace temqo
             if(!ctrl.is_valid())
                 ctrl.draw({mpos, wm::MOUSE_BTN::M_NONE, true});
         };
-        inline void title(){
-            if(p.empty())
+        inline void r_title(){
+            if(p.empty() || title.valid)
                 return;
-            
+            title.refresh();
         };
 
         inline void all(){
             if(wm::resize_event){
+                wm::resize_event = false;
+                clog << (display_mode.horizontal() ? "HORIZONTAL " : "VERTICAL ") << wm::WIDTH << '/' << wm::HEIGHT << std::endl; 
+                clog << "RESIZE EVENT" << std::flush;
                 p.valid = false;
                 progres_bar.valid = false;
                 cover_art.valid = false;
+                title.valid = false;
+                for(auto& e : ctrl){
+                    e.valid = false;
+                }
+                clear_scr();
             }
             elements();
             playlist();
             progressbar();
             controls();
-            title();
+            r_title();
             coverart();
+            std::cout.flush();
         };
 
     } // namespace refresh
@@ -822,16 +893,19 @@ namespace temqo
     namespace load
     {
         inline void file(const std::string& filepath){
-            if(!filepath.size() || std::filesystem::exists(filepath))
+            clog << filepath.size() << std::endl;
+            clog << std::filesystem::exists(filepath) << 'b' << std::endl;
+            if(!filepath.size() || !std::filesystem::exists(filepath))
                 return;
             //invalidate shit and stuff
-            clog << "loading file:" << filepath << std::endl;
             audio::load(filepath);
+            control::play();
             p.valid = false;
             cover_art.valid = false;
             cover_art.data.img_valid = false;
             ctrl.invalidateGroup(GROUPS::TIME);
             ctrl.invalidateGroup(GROUPS::MEDIA_CONTROLS);
+            title.valid = false;
         }
 
         inline void next(){
@@ -937,22 +1011,35 @@ namespace temqo
         at_exit();
         exit(0);
     }
-    std::chrono::microseconds d(200);
+    std::chrono::milliseconds d(static_cast<long>((1./24.)*1000));
     std::thread* draw_thread;
     inline void draw_thr_fn(){
         while (draw)
         {
+            if(audio::stopped()){
+                if(p.loopType == p.L_TRACK)
+                    load::curr();
+                else
+                    load::next();
+            }
+            
             std::lock_guard lock(drawing);
+
             refresh::all();
+            
             std::this_thread::sleep_for(d);
         }
     }
 
     inline void init(int argc,  char** const argv){
 
-        std::cerr.rdbuf(std::ofstream("/dev/null").rdbuf());
+        clear_all_no_mouse();
+        use_attr(alt_buffer);
 
         parse_arguments(argc, argv);
+        std::cerr.rdbuf(clog.rdbuf());
+
+        
         atexit(at_exit);
         signal(SIGINT, at_int);
 

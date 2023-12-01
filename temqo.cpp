@@ -8,7 +8,9 @@
 
 int main(int argc, char** const argv)
 {
+    temqo::clog << "Starting\n";
     temqo::init(argc, argv);
+    temqo::clog << "Initialized\n";
 
 
     while (auto ch = wm::getch())
@@ -18,6 +20,9 @@ int main(int argc, char** const argv)
     }
     
     //temqo::deinit();
+    try{
+        temqo::p.save();
+    }catch(...){}
 
     return 0;
 }

@@ -14,6 +14,8 @@
 #include "../ansi/ascii_img2.hpp"
 
 #define TMP_OUT "tmp.png"
+#include "../../clog.hpp"
+
 
 namespace audio
 {
