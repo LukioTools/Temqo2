@@ -142,7 +142,7 @@ namespace audio
             return files[current_index];
         }
 
-        inline std::string find(const std::string& thing,size_t* index = nullptr){
+        inline std::string find(const std::string& thing, size_t* index = nullptr){
             if(index){
                 *index = std::string::npos;
             }

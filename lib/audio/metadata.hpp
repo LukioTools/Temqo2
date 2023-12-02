@@ -9,17 +9,18 @@
 #include <taglib/mpegfile.h>
 #include <taglib/id3v2tag.h>
 #include <taglib/attachedpictureframe.h>
+#include "../../custom/stringlite.hpp"
 
 namespace audio
 {
     namespace extra
     {
         struct AudioMetadata {
-            TagLib::String title;
-            TagLib::String album;
-            TagLib::String artist;
-            TagLib::String genre;
-            TagLib::String comment;
+            StringLite title;
+            StringLite album;
+            StringLite artist;
+            StringLite genre;
+            StringLite comment;
             unsigned int track;
             unsigned int year;
         };
@@ -31,11 +32,11 @@ namespace audio
                 auto tag = tag_file.tag();
 
                 return AudioMetadata{
-                    tag->title(),
-                    tag->album(),
-                    tag->artist(),
-                    tag->genre(),
-                    tag->comment(),
+                    tag->title().toCString(true),
+                    tag->album().toCString(true),
+                    tag->artist().toCString(true),
+                    tag->genre().toCString(true),
+                    tag->comment().toCString(true),
                     tag->track(),
                     tag->year(),
                 };

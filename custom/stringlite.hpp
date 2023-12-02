@@ -3,13 +3,13 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <string_view>
 
 
 class StringLite
     {
-    private:
-        /* data */
+    
     public:
         std::unique_ptr<char[]>ptr = nullptr;
 
@@ -22,6 +22,11 @@ class StringLite
             ptr = std::make_unique<char[]>(str.length()+1);
             memcpy(ptr.get(), str.begin(), str.length()+1);
         }
+        void copy(const std::string& str){
+            ptr = std::make_unique<char[]>(str.length()+1);
+            memcpy(ptr.get(), str.c_str(), str.length()+1);
+        }
+        
 
 
         void clear(){
@@ -33,45 +38,60 @@ class StringLite
             copy(str);
             return *this;
         }
+        StringLite& operator=(const std::string& str) {
+            copy(str);
+            return *this;
+        }
         StringLite& operator=(const char* str){
             copy(str);
             return *this;
         }
+        StringLite& operator=(const StringLite& str){
+            copy(str.ptr.get());
+            return *this;
+        }
 
 
-        inline operator const char*(){
+        inline operator const char*() const {
             return ptr.get();
         }
-        inline operator std::string(){
+        inline operator std::string() const {
             return ptr.get();
         }
-        const char* get_p(){
+        const char* get_p() const {
             return ptr.get();
         }
-        std::string get_s(){
+        std::string get_s() const{
             return ptr.get();
         }
         //just wrapped strlen
-        size_t lenght(){
+        inline size_t lenght() const{
             if(ptr.get())
                 return strlen(ptr.get());
             else
                 return 0;
         }
+        inline size_t length() const {
+            return lenght();
+        }
         //just wrapped lenght
-        size_t size(){
+        inline size_t size() const {
             return lenght();
         }
 
 
         StringLite(/* args */) {}
+        StringLite(const StringLite& strlite) {
+            copy(strlite.ptr.get());
+        }
         StringLite(const char* str) {
             copy(str);
         }
         StringLite(const std::string_view& str) {
             copy(str);
         }
-        ~StringLite() {
-
+        StringLite(const std::string& str) {
+            copy(str);
         }
+        ~StringLite() {}
 };

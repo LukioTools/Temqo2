@@ -39,9 +39,61 @@ namespace audio
 
     struct FileMetadata 
     {
-        std::string file = "";
+        StringLite file = "";
         std::optional<extra::AudioMetadata> o_md = std::nullopt;
     };
+
+    
+
+    struct SortBy
+    {
+        static const char* SortByStrings[];
+
+        enum Enum: unsigned char{
+            FILEPATH,
+            FILENAME,
+            ARTIST,
+            ALBUM,
+            GENRE,
+            YEAR,
+            OUTSIDE_INDEX
+        } num = FILEPATH;
+
+        std::string toString(){
+            if(num >= OUTSIDE_INDEX){
+                return "";
+            }
+            return SortByStrings[num];
+        }
+        
+        SortBy(){};
+        SortBy(SortBy::Enum n) :num(n){};
+        SortBy(const std::string& str){
+            for (size_t i = 0; i < Enum::OUTSIDE_INDEX-1; i++)
+            {
+                if(str == SortByStrings[i]){
+                    num = static_cast<Enum>(i);
+                    return;
+                }
+            }
+        };
+
+    };
+
+    const char* SortBy::SortByStrings[] =  {
+        "FILENAME",
+        "FILEPATH",
+        "ARTIST",
+        "ALBUM",
+        "GENRE",
+        "YEAR",
+    };
+
+    
+
+    
+
+    
 
     class PlaylistMetadata : public std::vector<FileMetadata>
     {
@@ -55,37 +107,49 @@ namespace audio
         std::vector<std::string> folders;
         std::string use_file;
         uint_fast32_t seed = 0;
+        SortBy s = SortBy::Enum::FILEPATH;
 
-        enum SortBy: unsigned char{
-            FILENAME,
-            FILEPATH,
-            ARTIST,
-            ALBUM,
-            GENRE,
-            YEAR,
-        };
 
-    #define vor(el) el.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0})
-        void sort(SortBy s = SortBy::FILENAME){
-            switch (s) {
-            case ARTIST:
-            case ALBUM:
-            case GENRE:
+
+        inline bool empty(){
+            return size() == 0;
+        }
+
+        inline bool sorted(){
+            return seed == 0;
+        }
+
+//yea it do be wilding doe
+#define vor(el) el.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0})
+
+        void sort(){
+            switch (s.num) {
+            case SortBy::ARTIST:
+                std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
+                    return vor(a).artist < vor(b).artist;
+                });
+                break;
+            case SortBy::ALBUM:
+                std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
+                    return vor(a).album < vor(b).album;
+                });
+                break;
+            case SortBy::GENRE:
                 std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
                     return vor(a).genre < vor(b).genre;
                 });
                 break;
-            case YEAR:
+            case SortBy::YEAR:
                 std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
-                    return a.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0}).year < b.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0}).year;
+                    return vor(a).year < vor(b).year;
                 });
                 break;
-            case FILENAME:
+            case SortBy::FILENAME:
                 std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
                     return path::filename(a.file) < path::filename(b.file);
                 });
                 break;
-            case FILEPATH:
+            case SortBy::FILEPATH:
             default:
                 std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
                     return a.file < b.file;
@@ -94,11 +158,12 @@ namespace audio
             }
         }
 
+#undef vor
+
         bool add(const std::string& dir, bool recursive = true){
             static auto add_file = [this](const std::string& str){
-                push_back({
-                    str,
-                    extra::getMetadata(str),
+                push_back(FileMetadata{
+                    str, extra::getMetadata(str)
                 });
             };
             if(!std::filesystem::exists(dir)){
@@ -112,7 +177,75 @@ namespace audio
             return EXIT_SUCCESS != scanfn_threaded(dir, recursive, add_file);
         }
 
+        inline std::optional<FileMetadata> opt_next(){
+            if(empty())
+                return std::nullopt;
+            current_index++;
+            if(current_index >= size())
+                current_index = 0;
+            
+            return at(current_index);
+        }
 
+        inline std::optional<FileMetadata> opt_prev(){
+            if(empty())
+                return std::nullopt;
+            if(current_index == 0)
+                current_index = size(); //-1 needed but -- happens so we can simplify :3
+            
+            current_index--;
+            return at(current_index);
+        }
+
+        inline std::optional<FileMetadata> opt_curr(){
+            if(empty())
+                return std::nullopt;
+                
+            return at(current_index);
+        }
+
+        inline FileMetadata curr(){
+            if(size() == 0){
+                return FileMetadata{"", std::nullopt};
+            }
+            return at(current_index);
+        }
+        inline FileMetadata next(){
+            if(size() == 0){
+                return FileMetadata{"", std::nullopt};
+            }
+            current_index++;
+            if(current_index >= size()){
+                current_index = 0;
+            }
+            return at(current_index);
+        }
+        inline FileMetadata prev(){
+            if(size() == 0){
+                return FileMetadata{"", std::nullopt};
+            }
+            if(current_index == 0){
+                current_index = size();
+            }
+            current_index--;
+            return at(current_index);
+        }
+
+        inline FileMetadata find(const std::string& fname, size_t* index = nullptr){
+            if(index)
+                *index = std::string::npos;
+            for (size_t i = 0; i < size(); i++)
+            {
+                auto e = at(i);
+                if(std::string(e.file).find(fname) != std::string::npos){
+                    if(index){
+                        *index = i;
+                    }
+                    return e;
+                }
+            }
+            return FileMetadata{"", std::nullopt};
+        }
 
 
 

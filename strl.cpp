@@ -1,14 +1,14 @@
 #include "custom/stringlite.hpp"
 #include <iostream>
 
-StringLite str = "Hello World!";
 
 int main(int argc, char const *argv[])
 {
+    StringLite str = "Hello World!";
+    
     std::cout << str << std::endl;
 
-
-    StringLite str2 = str.get_p();
+    StringLite str2 = str;
 
     std::cout << str2 << std::endl;
 
