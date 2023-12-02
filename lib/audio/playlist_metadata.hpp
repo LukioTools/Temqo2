@@ -19,6 +19,7 @@
 #include "metadata.hpp"
 #include "scandir.hpp"
 #include "../../custom/stringlite.hpp"
+#include "../path/filename.hpp"
 
 namespace audio
 {
@@ -49,11 +50,49 @@ namespace audio
     public:
         
         
+        
         size_t current_index = 0;
-        ;
         std::vector<std::string> folders;
         std::string use_file;
         uint_fast32_t seed = 0;
+
+        enum SortBy: unsigned char{
+            FILENAME,
+            FILEPATH,
+            ARTIST,
+            ALBUM,
+            GENRE,
+            YEAR,
+        };
+
+    #define vor(el) el.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0})
+        void sort(SortBy s = SortBy::FILENAME){
+            switch (s) {
+            case ARTIST:
+            case ALBUM:
+            case GENRE:
+                std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
+                    return vor(a).genre < vor(b).genre;
+                });
+                break;
+            case YEAR:
+                std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
+                    return a.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0}).year < b.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0}).year;
+                });
+                break;
+            case FILENAME:
+                std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
+                    return path::filename(a.file) < path::filename(b.file);
+                });
+                break;
+            case FILEPATH:
+            default:
+                std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
+                    return a.file < b.file;
+                });
+                break;
+            }
+        }
 
         bool add(const std::string& dir, bool recursive = true){
             static auto add_file = [this](const std::string& str){
