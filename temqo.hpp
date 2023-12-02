@@ -20,6 +20,7 @@
 #include <mutex>
 #include <ostream>
 #include <ratio>
+#include <sdbus-c++/Types.h>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -69,11 +70,7 @@ namespace temqo
     //input buffer;
     std::string input;
 
-    #if defined(MPRIS)
-    mpris::Metadata metad;
 
-    mpris::Server s("Temqo");
-    #endif // MPRIS
 
     static float volume_shift = 5;
     static float volume_reset = 100;
@@ -86,6 +83,31 @@ namespace temqo
         virtual void refresh(){};
         virtual bool is_valid(){return true;};
     };
+
+    #if defined(MPRIS)
+    mpris::Server s("Temqo");
+
+
+    struct Metadata:  public std::map<mpris::Field, sdbus::Variant>, public Valid{
+        bool valid = false;
+        bool is_valid(){
+            return valid;
+        }
+        void refresh(){
+            s.set_metadata(*this);
+            valid = true;
+        }
+        ///invalidates the metadata for refreshing
+        void set(const key_type& k, const mapped_type& m){
+            this->insert_or_assign(k, m);
+            valid = false;
+        }
+        //sdbus::Variant& operator[](const key_type& k){
+        //    return this->at(k);
+        //}
+    } metadata;
+
+    #endif // MPRIS
 
     namespace load
     {   
@@ -108,6 +130,7 @@ namespace temqo
         inline void volume_set_invalidate(double);
         inline void volume_rel_invalidate(double);
     } // namespace control
+
     
 
     
@@ -488,6 +511,10 @@ namespace temqo
         }
         auto res = audio::extra::extractAlbumCoverTo(*o, ptr->cache_path);
         ptr->file_path = ((res == 0) ? ptr->cache_path : ptr->placeholder_path).get_p();
+            //we need the absolute path
+        std::string fpath = "file:///"+std::filesystem::absolute(ptr->file_path.get_p()).generic_string();
+        clog << "fetch_coverart: fpath: " << fpath << std::endl;
+        metadata.set(mpris::Field::ArtUrl, fpath);
     }
     
 
@@ -856,6 +883,7 @@ namespace temqo
                 << attr_reset;
                 time_bae.valid = true;
                 time_bae.current_time = ps;
+                s.set_position(ps);
             },
             11,
             GROUPS::TIME,
@@ -943,6 +971,11 @@ namespace temqo
             //maby set metadata also but well do it later or something :3
             set_title((window_title_filename_only ? path::filename(p.current()) : p.current()).c_str());
             std::string c = scr_title_filename_only ? path::filename(p.current()) : p.current();
+            
+            //set the metadata
+            metadata.set(mpris::Field::Title, c);
+            
+            
             auto s = element.aSpace();
             // current_file.space.fill("?");
             wm::clip(c, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
@@ -1000,6 +1033,14 @@ namespace temqo
             };
             cover_art.element.pad = {1, 1, 1, 0};
         }
+
+        inline void metadata_r(){
+            if(metadata.is_valid())
+                return;
+            clog << "Metadata Refresh" << std::endl;
+            metadata.refresh();
+        }
+
         //every resize_event
         inline void elements(){
             clog << "ELEMENT RESIZE" << std::endl;
@@ -1080,7 +1121,9 @@ namespace temqo
             progressbar();
             controls();
             r_title();
+            metadata_r(); //idk why 2 but there are 2 now :3
             coverart();
+            metadata_r(); //idk why 2 but there are 2 now :3
             std::cout.flush();
         };
 
@@ -1104,6 +1147,11 @@ namespace temqo
             ctrl.invalidateGroup(GROUPS::MEDIA_CONTROLS);
             title.valid = false;
             loading = false;
+                //set track
+            metadata.set(mpris::Field::TrackId, '/'+std::to_string(p.current_index));
+            metadata.set(mpris::Field::TrackNumber, static_cast<int>(p.current_index));
+            //sdbus::Variant l = ;
+            metadata.set(mpris::Field::Length, static_cast<int>(audio::duration::get<std::ratio<1>>().count()));
         }
 
         inline void next(){
@@ -1277,7 +1325,7 @@ namespace temqo
         });
         s.on_set_position([&] (int64_t p) {
             clog << "s.on_set_position:p:" << p <<std::endl;
-            audio::seek::rel(std::chrono::seconds(p));
+            audio::seek::abs(std::chrono::seconds(p));
             auto t = audio::position::get<std::ratio<1>>();
             s.set_position(t.count());
         });
@@ -1353,13 +1401,7 @@ namespace temqo
                 else
                     load::next();
             }
-            #if defined(MPRIS)
-            {
-                auto t = audio::position::get<std::ratio<1>>();
-                s.set_position(t.count());
-            }
-            
-            #endif // MPRIS
+
             
             //std::lock_guard lock(drawing);
 

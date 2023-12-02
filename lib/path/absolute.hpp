@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 namespace path
@@ -16,5 +17,6 @@ namespace path
         }
         return path.replace(idx, 1, env);
     }
+
 
 } // namespace path

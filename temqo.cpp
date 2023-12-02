@@ -55,5 +55,10 @@ int main(int argc, char** const argv)
         temqo::p.save();
     }catch(...){}
 
+    temqo::draw = false;
+    if(temqo::draw_thread)
+        temqo::draw_thread->join();
+
+    //segfaults here?
     return 0;
 }

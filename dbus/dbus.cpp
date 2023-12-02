@@ -19,14 +19,16 @@ int main(int argc, char const *argv[])
     server.set_identity("A generic player");
     //server.set_supported_uri_schemes({ "file" });
     //server.set_supported_mime_types({ "application/octet-stream", "text/plain" });
-    server.set_metadata({
+    
+    std::map<mpris::Field, sdbus::Variant> metadata = {
         { mpris::Field::TrackId,    "/1"             },
         { mpris::Field::Album,      "an album"       },
         { mpris::Field::Title,      "best song ever" },
         { mpris::Field::Artist,     "idk"            },
         { mpris::Field::Length,     1000             },
         { mpris::Field::ArtUrl, "file:///home/pikku/code/tqo2/gluttony.png"},
-    });
+    };
+    server.set_metadata(metadata);
     //server.set_maximum_rate(2.0);
     //server.set_minimum_rate(0.1);
 
