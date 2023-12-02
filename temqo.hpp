@@ -1524,6 +1524,10 @@ namespace temqo
     #endif // MPRIS
 
     std::chrono::milliseconds d(static_cast<long>((1./24.)*1000));
+
+    inline void refresh_rate(size_t n){
+        d = std::chrono::milliseconds(static_cast<long>((1./n)*1000));
+    }
     std::thread* draw_thread;
     inline void draw_thr_fn(){
         while (draw)

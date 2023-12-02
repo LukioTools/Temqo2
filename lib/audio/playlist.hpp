@@ -16,6 +16,7 @@
 
 #include "scandir.hpp"
 #include "sfml.hpp"
+#include "../../custom/stringlite.hpp"
 
 namespace audio
 {
@@ -41,6 +42,41 @@ namespace audio
         auto it = std::unique(vec->begin(), vec->end());
         vec->resize(std::distance(vec->begin(), it));
     }
+
+    class PlaylistAbstract
+    {
+    private:
+        /* data */
+    public:
+        size_t current_index = 0;
+        StringLite use_file;
+        uint_fast32_t seed = 0;
+
+        inline virtual bool sorted() const noexcept {return seed == 0;};
+        inline virtual size_t size() const noexcept {return 0;}
+        inline virtual bool empty() const noexcept {return true;};
+        inline virtual void sort() const noexcept {};
+        inline virtual void add() {};
+        inline virtual std::string next() {return "";}
+        inline virtual std::string prev() {return "";}
+        inline virtual std::string curr() {return "";}
+        inline virtual std::optional<std::string> opt_next() {return "";}
+        inline virtual std::optional<std::string> opt_prev() {return "";}
+        inline virtual std::optional<std::string> opt_curr() {return "";}
+        inline virtual void unique() {}
+        inline virtual void new_seed() {}
+        
+        inline virtual int use(std::string) {return 0;}
+        inline virtual int use() {return use(use_file);}
+
+        inline virtual void save(std::string) {}
+        inline virtual void save() {save(use_file);}
+
+        
+        
+    };
+
+    
     
     //implement modes
     class Playlist
@@ -317,9 +353,6 @@ namespace audio
                 dest_file = use_file;
 
             //unique();
-            
-
-
             std::ofstream out(dest_file);
             if(!out){
                 return -1;

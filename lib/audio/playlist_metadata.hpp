@@ -20,6 +20,7 @@
 #include "scandir.hpp"
 #include "../../custom/stringlite.hpp"
 #include "../path/filename.hpp"
+#include "sfml.hpp"
 
 namespace audio
 {
@@ -42,6 +43,8 @@ namespace audio
         StringLite file = "";
         std::optional<extra::AudioMetadata> o_md = std::nullopt;
     };
+
+    
 
     
 
@@ -122,7 +125,7 @@ namespace audio
 //yea it do be wilding doe
 #define vor(el) el.o_md.value_or(audio::extra::AudioMetadata{})
 
-        void sort(){
+        void sort(SortBy s){
             switch (s.num) {
             case SortBy::ARTIST:
                 std::sort(this->begin(), this->end(), [](FileMetadata& a, FileMetadata& b){
@@ -156,6 +159,10 @@ namespace audio
                 });
                 break;
             }
+        }
+
+        void sort(){
+            sort(s);
         }
 
 #undef vor
@@ -202,6 +209,16 @@ namespace audio
                 return std::nullopt;
                 
             return at(current_index);
+        }
+
+        inline FileMetadata& get(size_t index){
+            return at(index);
+        }
+        inline std::optional<FileMetadata> opt_get(size_t index){
+            if( index >= size() || index < 0){
+                return std::nullopt;
+            }
+            return at(index);
         }
 
         inline FileMetadata curr(){
@@ -274,8 +291,120 @@ namespace audio
             return {};
         }
 
+        inline void unique(){
+
+            std::thread thr([this](){
+                std::sort(folders.begin(), folders.end());
+                auto it = std::unique(folders.begin(), folders.end());
+                folders.resize(std::distance(folders.begin(),it));
+            });
+
+            sort(SortBy::FILEPATH);
+            auto it = std::unique(begin(), end());
+            resize(std::distance(begin(),it));
+
+            thr.join();
+            return;
+        }
+
+        inline int use(const std::string& playlist_file){
+            if(!std::filesystem::exists(playlist_file))
+                return 2;
+            std::ifstream in(playlist_file);
+            use_file = playlist_file;
+            if(!in)
+                return -1;
+            unsigned long long time = 0;
+            std::string line;
+            bool add_ = false;
+            while (std::getline(in, line)) {
+                if(line.length() == 0 || line[0] == '#'  ){
+                    continue;
+                }
+                boost::trim(line);
+                if (std::regex_match(line, playlist_path_rgx))
+                {
+                    add_ = true;
+                }
+                else if(std::regex_match(line, playlist_fldr_rgx)){
+                    add_ = true;
+                }
+                else if(std::regex_match(line, playlist_attr_rgx)){
+                    add_ = false;
+                }
+
+                if(std::regex_match(line, playlist_indx_rgx)){
+                    
+                    auto idx = line.find_first_of('=');
+                    if(idx == std::string::npos){
+                        continue;
+                    }
+                    current_index = std::stoull(line.substr(idx+1));
+                }
+                else if(std::regex_match(line, playlist_time_rgx)){
+                    auto idx = line.find_first_of('=');
+                    if(idx == std::string::npos){
+                        continue;
+                    }
+                    time = std::stoull(line.substr(idx+1));
+                }else if(std::regex_match(line, playlist_seed_rgx)){
+                    auto idx = line.find_first_of('=');
+                    if(idx == std::string::npos){
+                        continue;
+                    }
+                    seed = std::stoull(line.substr(idx+1));
+
+                }
+                
+
+
+                if(add_){
+                    add(line);
+                }
+            };
+        
+            if(current_index >= size()){
+                current_index = 0;
+            }
+            
+            unique();
+
+            return time;
+        }
+
+        inline int save(std::string dest_file = ""){
+            if(dest_file.length() == 0)
+                dest_file = use_file;
+
+            //unique();
+            std::ofstream out(dest_file);
+            if(!out){
+                return -1;
+            }
+            out << "\n[" current_index_cfg "] = " << current_index << "\n";
+            out << "\n[" current_time_cfg "] = " << audio::position::get<std::ratio<1,1>>().count() << "\n";
+            out << "\n[" shuffle_seed "] = " << seed << "\n";
+            out<<"\n[" folder_cfg "]\n";
+            for (auto e : folders)
+            {
+                out << e << "\n";
+            }
+            
+            out<<"\n[" path_cfg "]\n";
+            for(auto& e : *this){
+                out << e.file << "\n";
+            }
+            out.close();
+
+            return 0;
+        }
         
 
+
+        
+        inline FileMetadata& operator[](size_t index){
+            return at(index);
+        }
 
 
 
