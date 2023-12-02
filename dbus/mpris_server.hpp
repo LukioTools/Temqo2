@@ -1,5 +1,8 @@
+
 #ifndef MPRIS_SERVER_HPP_INCLUDED
 #define MPRIS_SERVER_HPP_INCLUDED
+
+#define MPRIS_TIME_RATIO std::micro
 
 #include <cstdio>
 #include <cstdint>

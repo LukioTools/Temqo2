@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <optional>
 #include <string>
 #include <sstream>
 #include <taglib/taglib.h>
@@ -10,17 +11,47 @@
 #include <taglib/attachedpictureframe.h>
 
 #include <FreeImage.h>  // You need to have FreeImage installed.
+#include <taglib/tstring.h>
 
 #include "../ansi/ascii_img2.hpp"
 
 #define TMP_OUT "tmp.png"
-#include "../../clog.hpp"
-
 
 namespace audio
 {
     namespace extra
     {
+        struct AudioMetadata {
+            TagLib::String title;
+            TagLib::String album;
+            TagLib::String artist;
+            TagLib::String genre;
+            TagLib::String comment;
+            unsigned int track;
+            unsigned int year;
+        };
+
+        inline std::optional<AudioMetadata> getMetadata(const std::string& str){
+
+            try {
+                TagLib::FileRef tag_file(str.c_str());
+                auto tag = tag_file.tag();
+
+
+
+                return AudioMetadata{
+                    tag->title(),
+                    tag->album(),
+                    tag->artist(),
+                    tag->genre(),
+                    tag->comment(),
+                    tag->track(),
+                    tag->year(),
+                };
+            } catch (...) {
+                return std::nullopt;
+            }
+        };
         inline int extractAlbumCoverTo(std::string filename, std::string out){
             TagLib::MPEG::File mp3File(filename.c_str());
             TagLib::ID3v2::Tag* id3v2Tag = mp3File.ID3v2Tag();

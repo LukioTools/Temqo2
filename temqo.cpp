@@ -20,13 +20,12 @@ int main(int argc, char** const argv)
     {
         if(ch == 'q')
             break;
-        if(is_mouse(ch)){
+        if(is_mouse(ch) && wm::parse_mouse(ch).valid){
             auto m = wm::parse_mouse(ch);
-            if(m.valid){
-                temqo::mpos = m.pos;
-            }
+            temqo::mpos = m.pos;
+            
         }
-        if(auto k = wm::is_key(ch)){
+        else if(auto k = wm::is_key(ch)){
             switch (k)
             {
             case wm::KEY::K_UP:

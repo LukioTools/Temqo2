@@ -9,6 +9,7 @@
 #include "lib/path/filename.hpp"
 #include "lib/wm/def.hpp"
 #include "lib/wm/element.hpp"
+#include "lib/wm/getch.hpp"
 #include "lib/wm/globals.hpp"
 #include "lib/wm/init.hpp"
 #include <bits/getopt_core.h>
@@ -63,6 +64,7 @@
 
 //all of the shit that need defining
 
+
 namespace temqo
 {
 
@@ -81,31 +83,20 @@ namespace temqo
     {
     public:
         virtual void refresh(){};
+        virtual void invalidate(){};
         virtual bool is_valid(){return true;};
+    };
+
+    class Action{
+    public:
+        virtual void m_action(wm::MOUSE_INPUT) {};
+        virtual void k_action(wm::KEY) {};
+        virtual void ch_action(int) {};
     };
 
     #if defined(MPRIS)
     mpris::Server s("Temqo");
 
-
-    struct Metadata:  public std::map<mpris::Field, sdbus::Variant>, public Valid{
-        bool valid = false;
-        bool is_valid(){
-            return valid;
-        }
-        void refresh(){
-            s.set_metadata(*this);
-            valid = true;
-        }
-        ///invalidates the metadata for refreshing
-        void set(const key_type& k, const mapped_type& m){
-            this->insert_or_assign(k, m);
-            valid = false;
-        }
-        //sdbus::Variant& operator[](const key_type& k){
-        //    return this->at(k);
-        //}
-    } metadata;
 
     #endif // MPRIS
 
@@ -172,15 +163,23 @@ namespace temqo
             //do the configs again
         }
 
-        bool is_valid() override{
+        bool is_valid() override{ //maby calculate file hash??
             return valid;
         }
         void refresh() override{
             valid = true;
             cfg::parse(path);
         }
+        void invalidate() override{
+            valid = false;
+        }
 
-    } cfg;
+        Config(){configuration();}
+        Config(const char* ch){
+            Config::path = ch;
+            configuration();
+        }
+    } cfg("./temqo.cfg");
     StringLite Config::path = "./temqo.cfg";
     struct Color{
         cfg::RGB fg = default_normal_fg;
@@ -216,7 +215,7 @@ namespace temqo
         };
     } colors;
 
-    class Playlist : public audio::Playlist, public Valid {
+    class Playlist : public audio::Playlist, public Valid, public Action{
     public:
         static bool filename_only;
         static wm::SPLICE_TYPE clip_type;
@@ -344,7 +343,16 @@ namespace temqo
             valid = false;
         }
 
-        void action(wm::MOUSE_INPUT m);//do something with the input
+        void m_action(wm::MOUSE_INPUT m) override {
+            //handle mouse action
+        }
+        void k_action(wm::KEY m) override {
+            //handle arrow key action
+        }
+        void ch_action(int) override {
+            //handle char action
+        }
+
         bool is_valid() override{
             return valid;
         }
@@ -361,16 +369,67 @@ namespace temqo
         }
 
     } p;
+
+
+    #if defined(MPRIS)
+    #define mpris_setstr(property, mpfield)  if(md->property.length()) set(mpris::Field::mpfield, std::string(md->property.toCString(true)));
+    #define mpris_seti(property, mpfield)  if(md->property) set(mpris::Field::mpfield, static_cast<int>(md->property));
+
+    
+
+    struct Metadata:  public std::map<mpris::Field, sdbus::Variant>, public Valid{
+        bool valid = false;
+        bool is_valid() override{
+            return valid;
+        }
+        void refresh() override{
+            auto o = p.opt_curr();
+            if(o.has_value()){
+                auto md = audio::extra::getMetadata(*o);
+                if(md.has_value()){ //set extra metadata
+                    mpris_setstr(album,     Album)
+                    mpris_setstr(title,     Title)
+                    mpris_setstr(artist,    Artist)
+                    mpris_setstr(genre,     Genre)
+                    mpris_setstr(comment,   Comment)
+                    mpris_seti  (track,     TrackNumber)
+}
+            }
+
+            s.set_metadata(*this);
+            valid = true;
+        }
+        void invalidate() override{
+            valid = false;
+        }
+        //bool action() override{}
+
+
+        ///invalidates the metadata for refreshing
+        void set(const key_type& k, const mapped_type& m){
+            this->insert_or_assign(k, m);
+            valid = false;
+        }
+        //sdbus::Variant& operator[](const key_type& k){
+        //    return this->at(k);
+        //}
+    } metadata;
+    
+    #endif // MPRIS
+    
+
+    
     
     bool Playlist::filename_only = false;
     wm::SPLICE_TYPE Playlist::clip_type = wm::SPLICE_TYPE::BEGIN_DOTS;
     wm::PAD_TYPE Playlist::pad_type = wm::PAD_TYPE::PAD_RIGHT;
 
-    struct ProgressBar : public Valid
+    struct ProgressBar : public Valid, public Action
     {
     public:
 
         unsigned int current_cursor = 0;
+        StringLite current_input = "";
 
         void refresh_mode_progress(){
             auto d = audio::position::get_d();
@@ -428,15 +487,14 @@ namespace temqo
             return current_cursor == idx;
         }
         bool valid_mode_command(){
-            return false;
+            return current_input.get_p() == input;
         }
         bool valid_mode_search(){
-            return false;
+            return current_input.get_p() == input;
         }
         bool valid_mode_unknown(){
-            return false;
+            return true;
         }
-
 
         StringLite char_first = "├";
         StringLite char_last = "┤";
@@ -452,9 +510,16 @@ namespace temqo
         wm::Element element;
 
 
-        void action(wm::MOUSE_INPUT m){//do something with the input
+        void m_action(wm::MOUSE_INPUT m) override {
+            //handle mouse action
+        }
+        void k_action(wm::KEY m) override {
+            //handle arrow key action
+        }
+        void ch_action(int) override {
+            //handle char action
+        }
 
-        };
         bool is_valid() override{
             if(!valid)
                 return false;
@@ -591,6 +656,16 @@ namespace temqo
         VOLUME,
         TIME
     );
+    const char* IDS_NAMES[] = {
+        "NO_ID",
+        "PREV",
+        "NEXT",
+        "SHUFFLE",
+        "PLAYPAUSE",
+        "LOOP",
+        "VOLUME",
+        "TIME"
+    };
 
     ENUM(GROUPS, short,
         UNGROUPED,
@@ -598,6 +673,12 @@ namespace temqo
         VOLUME,
         TIME
     );
+    const char* GROUPS_NAMES[] = {
+        "UNGROUPED",
+        "MEDIA_CONTROLS",
+        "VOLUME",
+        "TIME"
+    };
 
     namespace ControlButtons
     {
@@ -883,7 +964,7 @@ namespace temqo
                 << attr_reset;
                 time_bae.valid = true;
                 time_bae.current_time = ps;
-                s.set_position(ps);
+                s.set_position(audio::position::get<MPRIS_TIME_RATIO>().count());
             },
             11,
             GROUPS::TIME,
@@ -928,7 +1009,7 @@ namespace temqo
             auto ret = true;
             for (auto e : *this) {
                 if(!e.is_valid()){
-                    clog << "Controls:IsValid: "<< e.is_valid() << " Alloc: " <<e.alloc<< " Group:" << e.group << " ID: " <<e.id << std::endl; 
+                    clog << "Controls:IsValid: "<< e.is_valid() << " Group: " << GROUPS_NAMES[e.group] << " ID: " << IDS_NAMES[e.id] << std::endl;
                     ret =  false;
                 }
 
@@ -1140,6 +1221,7 @@ namespace temqo
             //invalidate shit and stuff
             audio::load(filepath);
             control::play();
+
             p.valid = false;
             cover_art.valid = false;
             cover_art.data.img_valid = false;
@@ -1151,7 +1233,8 @@ namespace temqo
             metadata.set(mpris::Field::TrackId, '/'+std::to_string(p.current_index));
             metadata.set(mpris::Field::TrackNumber, static_cast<int>(p.current_index));
             //sdbus::Variant l = ;
-            metadata.set(mpris::Field::Length, static_cast<int>(audio::duration::get<std::ratio<1>>().count()));
+            metadata.set(mpris::Field::Length, static_cast<int>(audio::duration::get<MPRIS_TIME_RATIO>().count()));
+            
         }
 
         inline void next(){
@@ -1319,15 +1402,13 @@ namespace temqo
 
         s.on_seek([&] (int64_t p) {
             clog << "s.on_seek:p:" << p <<std::endl;
-            audio::seek::rel(std::chrono::seconds(p));
-            auto t = audio::position::get<std::ratio<1>>();
-            s.set_position(t.count());
+            audio::seek::rel(std::chrono::duration<long, MPRIS_TIME_RATIO>(p));
+            s.set_position(audio::position::get<MPRIS_TIME_RATIO>().count());
         });
         s.on_set_position([&] (int64_t p) {
             clog << "s.on_set_position:p:" << p <<std::endl;
-            audio::seek::abs(std::chrono::seconds(p));
-            auto t = audio::position::get<std::ratio<1>>();
-            s.set_position(t.count());
+            audio::seek::abs(std::chrono::duration<long, MPRIS_TIME_RATIO>(p));
+            s.set_position(audio::position::get<MPRIS_TIME_RATIO>().count());
         });
 
         s.on_next([&](){
