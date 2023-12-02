@@ -19,6 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <ostream>
 #include <ratio>
 #include <sdbus-c++/Types.h>
@@ -122,8 +123,31 @@ namespace temqo
         inline void volume_rel_invalidate(double);
     } // namespace control
 
-    
-
+    enum DisplayFileMode: unsigned char {
+        FILENAME,
+        FILE,
+        FILEPATH,
+        METADATA_TITLE,
+    };
+    std::string DisplayFileParse(const std::string& str, DisplayFileMode mode,  const std::optional<audio::extra::AudioMetadata>& o_md = std::nullopt){
+        switch (mode) {
+            case DisplayFileMode::METADATA_TITLE:
+                if(o_md.has_value())
+                {
+                    if(o_md->title.length()){
+                        return o_md->title.toCString(true);
+                    }
+                }
+            case DisplayFileMode::FILENAME:
+                return path::filebasename(str);
+            case DisplayFileMode::FILE:
+                return path::filename(str);
+            case DisplayFileMode::FILEPATH:
+                return str;
+            default:
+                return path::filebasename(str);
+        }
+    }
     
     
 
@@ -217,7 +241,6 @@ namespace temqo
 
     class Playlist : public audio::Playlist, public Valid, public Action{
     public:
-        static bool filename_only;
         static wm::SPLICE_TYPE clip_type;
         static wm::PAD_TYPE pad_type;
 
@@ -226,6 +249,7 @@ namespace temqo
         wm::Element element;
         
         bool valid = false;
+        DisplayFileMode dplfile = DisplayFileMode::FILEPATH;
 
         //remember to implement the lööp
 
@@ -288,9 +312,8 @@ namespace temqo
                 if(!o.has_value())
                     continue;
                     
-                std::string str = *o;
-                if (filename_only)
-                    str = path::filename(str);
+                std::string str = DisplayFileParse(*o, dplfile, dplfile==METADATA_TITLE ? audio::extra::getMetadata(*o) : std::nullopt);
+                
 
                 auto i_str = std::to_string(i) + ' ';
                 wm::clip(str, ws.width() - i_str.length(), clip_type);
@@ -417,11 +440,7 @@ namespace temqo
     
     #endif // MPRIS
     
-
-    
-    
-    bool Playlist::filename_only = false;
-    wm::SPLICE_TYPE Playlist::clip_type = wm::SPLICE_TYPE::BEGIN_DOTS;
+    wm::SPLICE_TYPE Playlist::clip_type = wm::SPLICE_TYPE::BEGIN_CUT;
     wm::PAD_TYPE Playlist::pad_type = wm::PAD_TYPE::PAD_RIGHT;
 
     struct ProgressBar : public Valid, public Action
@@ -1035,13 +1054,48 @@ namespace temqo
     struct Title : public Valid
     {
         wm::Element element;
-        bool scr_title_filename_only;
-        bool window_title_filename_only;
+
+
+        DisplayFileMode title = DisplayFileMode::METADATA_TITLE;
+        DisplayFileMode window = DisplayFileMode::METADATA_TITLE;
+        DisplayFileMode meda = DisplayFileMode::METADATA_TITLE;
+
+        wm::SPLICE_TYPE clip_type = wm::SPLICE_TYPE::BEGIN_DOTS;
+        wm::PAD_TYPE pad_type = wm::PAD_TYPE::PAD_CENTER;
+
         bool valid = false;
 
         bool is_valid() override{
             return valid;
         }
+
+        bool need_to_get_metadata(){
+            return title == METADATA_TITLE || window == METADATA_TITLE;
+        }
+
+        void setTitle(std::optional<audio::extra::AudioMetadata>& o_md){
+            auto str = p.opt_curr().value_or("");
+            str = DisplayFileParse(str, title, o_md);
+            set_title(str.c_str());
+        }
+
+        void setWindow(std::optional<audio::extra::AudioMetadata>& o_md){
+            auto s = element.aSpace();
+            std::string str = p.opt_curr().value_or("");
+            str= DisplayFileParse(str, window, o_md);
+
+            //do some doing :3
+            wm::clip(str, s.width(),    clip_type);
+            wm::pad(str, s.width(),     pad_type);
+            mv(s.x, s.y);
+            std::cout << str;
+        }
+
+        void setMetadata(std::optional<audio::extra::AudioMetadata>& o_md){
+                std::string str = p.opt_curr().value_or("");
+                DisplayFileParse(str, meda, o_md);                
+                metadata.set(mpris::Field::Title, str);
+            }
 
         void refresh() override{
             clog << "Refresh Title" << std::endl;
@@ -1050,19 +1104,17 @@ namespace temqo
                 return;
             //set window title
             //maby set metadata also but well do it later or something :3
-            set_title((window_title_filename_only ? path::filename(p.current()) : p.current()).c_str());
-            std::string c = scr_title_filename_only ? path::filename(p.current()) : p.current();
-            
-            //set the metadata
-            metadata.set(mpris::Field::Title, c);
-            
-            
-            auto s = element.aSpace();
-            // current_file.space.fill("?");
-            wm::clip(c, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
-            wm::pad(c, s.width(), wm::PAD_TYPE::PAD_CENTER);
-            mv(s.x, s.y);
-            std::cout << c;
+            std::optional<audio::extra::AudioMetadata> md = std::nullopt;
+            if(need_to_get_metadata()){
+                auto o = p.opt_curr();
+                if(o.has_value())
+                    md = audio::extra::getMetadata(*o);
+            }
+
+            setTitle(md);
+            setWindow(md);
+            setMetadata(md);
+
         }
     } title;
     

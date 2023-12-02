@@ -38,6 +38,7 @@ class StringLite
             return *this;
         }
 
+
         inline operator const char*(){
             return ptr.get();
         }
