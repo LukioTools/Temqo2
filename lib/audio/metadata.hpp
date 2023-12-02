@@ -16,13 +16,13 @@ namespace audio
     namespace extra
     {
         struct AudioMetadata {
-            StringLite title;
-            StringLite album;
-            StringLite artist;
-            StringLite genre;
-            StringLite comment;
-            unsigned int track;
-            unsigned int year;
+            StringLite title = "";
+            StringLite album = "";
+            StringLite artist = "";
+            StringLite genre = "";
+            StringLite comment = "";
+            unsigned int track = 0;
+            unsigned int year = 0;
         };
 
         inline std::optional<AudioMetadata> getMetadata(const std::string& str){

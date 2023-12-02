@@ -120,7 +120,7 @@ namespace audio
         }
 
 //yea it do be wilding doe
-#define vor(el) el.o_md.value_or(audio::extra::AudioMetadata{"","","","","",0,0})
+#define vor(el) el.o_md.value_or(audio::extra::AudioMetadata{})
 
         void sort(){
             switch (s.num) {
@@ -244,7 +244,34 @@ namespace audio
                     return e;
                 }
             }
-            return FileMetadata{"", std::nullopt};
+            return {};
+        }
+
+        inline FileMetadata find_insensitive(const std::string& thing, size_t* index = nullptr, bool split = true){
+            std::vector<std::string> find_shits;
+            split ?  (void) boost::split(find_shits, thing, boost::is_any_of(" ")) : find_shits.push_back(thing);
+
+            if(index)
+                *index = std::string::npos;
+
+
+            for (size_t i = 0; i < size(); i++)
+            {
+                auto it = std::search(
+                    at(i).file.cbegin(), at(i).file.cend(),
+                    thing.begin(),   thing.end(),
+                    [](unsigned char ch1, unsigned char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+                );
+                if(it != at(i).file.end()){
+                    if(index)
+                        *index = i;
+
+                    return at(i);
+                };
+            }
+            
+            
+            return {};
         }
 
         
