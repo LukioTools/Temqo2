@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <iterator>
+#include <cstdlib>
 #include <optional>
 #include <regex>
 #include <string>
@@ -72,7 +72,7 @@ namespace audio
         inline virtual void save(std::string) {}
         inline virtual void save() {save(use_file);}
 
-        
+
         
     };
 
@@ -154,6 +154,7 @@ namespace audio
             if(files.size() < 1){
                 return "";
             }
+
             current_index++;
             if(current_index >= files.size()){
                 current_index = 0;

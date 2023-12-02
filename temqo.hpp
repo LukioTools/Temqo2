@@ -1070,7 +1070,7 @@ namespace temqo
         }
 
         bool need_to_get_metadata(){
-            return title == METADATA_TITLE || window == METADATA_TITLE;
+            return title == METADATA_TITLE || window == METADATA_TITLE || meda == METADATA_TITLE;
         }
 
         void setTitle(std::string str, std::optional<audio::extra::AudioMetadata>& o_md){
