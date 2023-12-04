@@ -1,5 +1,7 @@
 *.pls
 *.cfg
 *.png
+*.jpg
+*.jpeg
 *.mp3
 cache/*

@@ -584,7 +584,7 @@ namespace temqo
         static StringLite cache_path;
     };
 
-    StringLite CoverArtData::placeholder_path = "gluttony.png";
+    StringLite CoverArtData::placeholder_path = "phrogt.jpg";
     StringLite CoverArtData::cache_path = "tmp.png";
 
     inline void fetch_coverart(CoverArtData* ptr){

@@ -21,21 +21,23 @@
 #include "../../custom/stringlite.hpp"
 #include "../path/filename.hpp"
 #include "sfml.hpp"
+#include "playlist.hpp"
+
 
 namespace audio
 {
-    #define path_cfg "Path"
-    #define folder_cfg "Folder"
-    #define current_index_cfg "CurrentIndex"
-    #define current_time_cfg "CurrentTime"
-    #define shuffle_seed "ShuffleSeed"
-
-    static std::regex playlist_attr_rgx("^ *\\[[A-Za-z]*\\] *$");
-    static std::regex playlist_path_rgx("^ *\\[" path_cfg "\\] *$");
-    static std::regex playlist_fldr_rgx("^ *\\[" folder_cfg "\\] *$");
-    static std::regex playlist_indx_rgx("^ *\\[" current_index_cfg "\\] *= *[0-9]{1,20} *$");
-    static std::regex playlist_time_rgx("^ *\\[" current_time_cfg "\\] *= *[0-9]{1,20} *$");
-    static std::regex playlist_seed_rgx("^ *\\[" shuffle_seed "\\] *= *[0-9]{1,20} *$");
+    //#define path_cfg "Path"
+    //#define folder_cfg "Folder"
+    //#define current_index_cfg "CurrentIndex"
+    //#define current_time_cfg "CurrentTime"
+    //#define shuffle_seed "ShuffleSeed"
+//
+    //static std::regex playlist_attr_rgx("^ *\\[[A-Za-z]*\\] *$");
+    //static std::regex playlist_path_rgx("^ *\\[" path_cfg "\\] *$");
+    //static std::regex playlist_fldr_rgx("^ *\\[" folder_cfg "\\] *$");
+    //static std::regex playlist_indx_rgx("^ *\\[" current_index_cfg "\\] *= *[0-9]{1,20} *$");
+    //static std::regex playlist_time_rgx("^ *\\[" current_time_cfg "\\] *= *[0-9]{1,20} *$");
+    //static std::regex playlist_seed_rgx("^ *\\[" shuffle_seed "\\] *= *[0-9]{1,20} *$");
 
 
     struct FileMetadata 
@@ -43,8 +45,6 @@ namespace audio
         StringLite file = "";
         std::optional<extra::AudioMetadata> o_md = std::nullopt;
     };
-
-    
 
     
 
