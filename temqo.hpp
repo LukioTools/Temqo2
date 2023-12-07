@@ -39,7 +39,7 @@
 #include "lib/wm/space.hpp"
 #include "clog.hpp"
 
-#define MPRIS 1
+//#define MPRIS 1
 #if defined(MPRIS)
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
@@ -78,6 +78,7 @@ namespace temqo
     static float volume_shift = 5;
     static float volume_reset = 100;
     static double playlist_coverart_ratio = 0.5;
+    bool elements_refresh = true;
     wm::Position mpos;
 
     class Valid
@@ -97,8 +98,6 @@ namespace temqo
 
     #if defined(MPRIS)
     mpris::Server s("Temqo");
-
-
     #endif // MPRIS
 
     namespace load
@@ -117,11 +116,21 @@ namespace temqo
         inline void pause();
         inline void shuffle();
         inline void sort();
+        inline void seek_abs(double);
+        template<typename T, typename Rat>
+        inline void seek_rel(std::chrono::duration<T, Rat> d);
         inline void volume_set(double);
         inline void volume_rel(double);
         inline void volume_set_invalidate(double);
         inline void volume_rel_invalidate(double);
     } // namespace control
+
+    namespace refresh
+    {
+        inline unsigned int get_useable_height();
+        inline unsigned int get_useable_width();
+    } // namespace refresh
+    
 
     enum DisplayFileMode: unsigned char {
         FILENAME,
@@ -249,6 +258,11 @@ namespace temqo
         wm::Element element;
         
         bool valid = false;
+
+        void invalidate() override{
+            valid = false;
+        }
+
         DisplayFileMode dplfile = DisplayFileMode::FILEPATH;
 
         //remember to implement the lööp
@@ -304,7 +318,7 @@ namespace temqo
             auto ws = element.wSpace();
             //draw playlist_content
             cursor_offset = clamp(cursor_offset);
-            for (size_t index = 0; index <= ws.h; index++)
+            for (size_t index = 0; index < ws.h; index++)
             {
                 auto i = clamp(display_offset + index);
                 auto o = opt_get(i);
@@ -355,25 +369,73 @@ namespace temqo
             }
             return ret;
         }
+
+                //implement and replace the mouse scrl w this
+        //void shift_up(size_t n = 1){
+        //    
+        //}
         void curs_up(size_t n = 1){
-            cursor_offset+=n;
-            ref_disp_offset();
-            valid = false;
-        }
-        void curs_down(size_t n = 1){
             cursor_offset-=n;
             ref_disp_offset();
-            valid = false;
+            invalidate();
         }
-
+        void curs_down(size_t n = 1){
+            cursor_offset+=n;
+            ref_disp_offset();
+            invalidate();
+        }
+        //bool inside = false;
+        char scroll_sensitivity = 1;
         void m_action(wm::MOUSE_INPUT m) override {
             //handle mouse action
+            //clog << m << std::endl;
+            if(element.wSpace().inside(m.pos)){
+                //inside= true;
+                //do the magic
+                if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+                    curs_up(scroll_sensitivity);
+                }else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+                    curs_down(scroll_sensitivity);
+                }else{
+                    auto s = element.wSpace();
+                    auto i = m.pos.y - s.y;
+                    cursor_offset = clamp(display_offset + i);
+                    ref_disp_offset();
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        if (element.aSpace().width() < 5 || element.aSpace().height() < 5){}
+                        else{
+                            play_current_cursor();
+                        }
+                    }
+                }
+                invalidate();
+            }
+            //else /*if(inside)*/{
+            //    //inside = false;
+            //    //do you need to refresh if its not inside??
+            //    //invalidate();
+            //}
         }
-        void k_action(wm::KEY m) override {
+        void k_action(wm::KEY k) override {
             //handle arrow key action
+            if(k == wm::K_DOWN){
+                curs_down();
+            }else if(k == wm::K_UP){
+                curs_up();
+            }
         }
-        void ch_action(int) override {
+        void play_current_cursor(){
+            if(!empty() && cursor_offset < size()){
+                current_index = cursor_offset;
+                load::curr();
+            }
+        }
+        void ch_action(int c) override {
             //handle char action
+            //it doesnt need charachter action... i think
+            if(c == '\n'){
+                play_current_cursor();
+            }
         }
 
         bool is_valid() override{
@@ -531,12 +593,22 @@ namespace temqo
 
         void m_action(wm::MOUSE_INPUT m) override {
             //handle mouse action
+            auto s = element.aSpace();
+            if(s.inside(m.pos)){
+                if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                    auto delta = static_cast<double>(m.pos.x) / static_cast<double>(s.width());
+                    control::seek_abs(delta);
+                }
+            }
+
         }
         void k_action(wm::KEY m) override {
             //handle arrow key action
+
         }
         void ch_action(int) override {
             //handle char action
+
         }
 
         bool is_valid() override{
@@ -598,11 +670,13 @@ namespace temqo
             //we need the absolute path
         std::string fpath = "file:///"+std::filesystem::absolute(ptr->file_path.get_p()).generic_string();
         clog << "fetch_coverart: fpath: " << fpath << std::endl;
+        #if defined(MPRIS)
         metadata.set(mpris::Field::ArtUrl, fpath);
+        #endif
     }
     
 
-    class CoverArt: public Valid{
+    class CoverArt: public Valid , public Action{
     public:
         wm::Element element;
         CoverArtData data;
@@ -623,6 +697,10 @@ namespace temqo
                 return;
 
             auto s = element.wSpace();
+            if(s.w < 4 || s.h < 4)
+                return;
+
+            clog << "drawing image: " << s << std::endl;
             std::string fpath = data.file_path.get_p();
             ascii_img::load_image_t *cover_ansi = audio::extra::getImg(fpath, s.width(), s.height() + 1);
             
@@ -642,7 +720,40 @@ namespace temqo
                 delete cover_ansi;
             std::cout << out.str();
         };
+        wm::Position drag_resize_start = {65535U, 65535U};
+        bool enable_mid_drag_draw = true;
+        void m_action(wm::MOUSE_INPUT m) override {
+            if(display_mode.vertical()){
+                if(m.pos.y == element.space.y && m.btn == wm::MOUSE_BTN::M_LEFT){
+                    clog << "resize start: " << m.pos << ':' << playlist_coverart_ratio<< std::endl;
+                    drag_resize_start = m.pos;
+                }
+                else if(enable_mid_drag_draw && m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
+                    clog << "resize  mid_drag : " << m.pos << ':' << playlist_coverart_ratio << std::endl;
+                    invalidate();
+                    p.invalidate();
+                                                                            //Maby use the true height ratio?
+                    playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
+                    elements_refresh = true;
+                } else if(m.btn == wm::MOUSE_BTN::M_RELEASE && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
+                    wm::resize_event = true;
+                                                                            //Maby use the true height ratio?
+                    playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
+                    clog << "resize  end: " << m.pos << ':' << playlist_coverart_ratio << std::endl;
+                    drag_resize_start = {65535U, 65535U};
+                }
+                if(playlist_coverart_ratio > 1){
+                    playlist_coverart_ratio = 1;
+                }
+                else if(playlist_coverart_ratio < 0){
+                    playlist_coverart_ratio = 0;
+                }
+            }
+        }
 
+        void invalidate() override{
+            valid = false;
+        }
 
         bool is_valid() override{
             return valid && data.img_valid;
@@ -983,7 +1094,10 @@ namespace temqo
                 << attr_reset;
                 time_bae.valid = true;
                 time_bae.current_time = ps;
+                #if defined (MPRIS)
                 s.set_position(audio::position::get<MPRIS_TIME_RATIO>().count());
+                #endif
+
             },
             11,
             GROUPS::TIME,
@@ -1028,7 +1142,7 @@ namespace temqo
             auto ret = true;
             for (auto e : *this) {
                 if(!e.is_valid()){
-                    clog << "Controls:IsValid: "<< e.is_valid() << " Group: " << GROUPS_NAMES[e.group] << " ID: " << IDS_NAMES[e.id] << std::endl;
+                    //clog << "Controls:IsValid: "<< e.is_valid() << " Group: " << GROUPS_NAMES[e.group] << " ID: " << IDS_NAMES[e.id] << std::endl;
                     ret =  false;
                 }
 
@@ -1092,8 +1206,11 @@ namespace temqo
         }
 
         void setMetadata( std::string str,std::optional<audio::extra::AudioMetadata>& o_md){
-                DisplayFileParse(str, meda, o_md);                
+                DisplayFileParse(str, meda, o_md);
+                
+                #if defined (MPRIS)
                 metadata.set(mpris::Field::Title, str);
+                #endif         
             }
 
         void refresh() override{
@@ -1129,6 +1246,12 @@ namespace temqo
     namespace refresh
     {
         //the element size config
+        inline unsigned int get_useable_height(){
+            return (wm::HEIGHT-title.element.space.h-progres_bar.element.space.h);
+        }
+        inline unsigned int get_useable_width(){
+            return wm::WIDTH;
+        }
 
         inline void elements_horizontal(){
             p.element.space = {
@@ -1148,34 +1271,41 @@ namespace temqo
             cover_art.element.pad = {1, 1, 1, 0};
         }
 
+
+
         inline void elements_vertical(){
-            auto useable_height = (wm::HEIGHT-title.element.space.h-progres_bar.element.space.h);
+            auto useable_height = get_useable_height();
             p.element.space = {
                 0,
                 title.element.space.h, 
                 static_cast<unsigned short>(wm::WIDTH),
                 static_cast<unsigned short>(useable_height*playlist_coverart_ratio)
             };
-            p.element.pad = {1, 1, 0, 1};
+            p.element.pad = {1, 0, 0, 0};
 
             cover_art.element.space = {
                 p.element.space.x,
-                p.element.space.end().y, 
+                static_cast<unsigned short>(p.element.space.end().y),
                 static_cast<unsigned short>(wm::WIDTH),
-                static_cast<unsigned short>(useable_height-p.element.space.h)
+                static_cast<unsigned short>((useable_height-p.element.space.h))
             };
-            cover_art.element.pad = {1, 1, 1, 0};
+            clog << "useable_height:" << useable_height << std::endl;
+            cover_art.element.pad = {1, 1, 0, 0};
+            clog << "Playlist[" << p.element << "] CoverArt[" << cover_art.element << "]" << std::endl;
         }
 
+        #if defined( MPRIS)
         inline void metadata_r(){
             if(metadata.is_valid())
                 return;
             clog << "Metadata Refresh" << std::endl;
             metadata.refresh();
         }
+        #endif
 
         //every resize_event
         inline void elements(){
+            elements_refresh  = false;
             clog << "ELEMENT RESIZE" << std::endl;
             title.element.space = wm::Space(0,0, wm::WIDTH, 1);
 
@@ -1199,7 +1329,7 @@ namespace temqo
         inline void progressbar(){
             if(progres_bar.is_valid())
                 return;
-            clog << "ProgressBar Refresh" << std::endl;
+            //clog << "ProgressBar Refresh" << std::endl;
             progres_bar.refresh();
             
         };
@@ -1236,10 +1366,11 @@ namespace temqo
         inline void all(){
             if(wm::resize_event){
                 wm::resize_event = false;
+
                 elements();
 
                 clog << (display_mode.horizontal() ? "HORIZONTAL " : "VERTICAL ") << wm::WIDTH << '/' << wm::HEIGHT << std::endl; 
-                clog << "RESIZE EVENT" << std::flush;
+                clog << "RESIZE EVENT" << std::endl;
                 p.valid = false;
                 progres_bar.valid = false;
                 cover_art.valid = false;
@@ -1250,13 +1381,18 @@ namespace temqo
                 }
                 clear_scr();
             }
+            if(elements_refresh)
+                elements();
+            //clog << p.element << std::endl << cover_art.element << std::endl;
             playlist();
             progressbar();
             controls();
             r_title();
-            metadata_r(); //idk why 2 but there are 2 now :3
+            //metadata_r(); //idk why 2 but there are 2 now :3
             coverart();
+            #if defined (MPRIS)
             metadata_r(); //idk why 2 but there are 2 now :3
+            #endif
             std::cout.flush();
         };
 
@@ -1282,10 +1418,12 @@ namespace temqo
             title.valid = false;
             loading = false;
                 //set track
+            #if defined(MPRIS)
             metadata.set(mpris::Field::TrackId, '/'+std::to_string(p.current_index));
             metadata.set(mpris::Field::TrackNumber, static_cast<int>(p.current_index));
             //sdbus::Variant l = ;
             metadata.set(mpris::Field::Length, static_cast<int>(audio::duration::get<MPRIS_TIME_RATIO>().count()));
+            #endif
             
         }
 
@@ -1336,31 +1474,34 @@ namespace temqo
                 return;
             
             audio::control::toggle();
+            ctrl.invalidateId(IDS::PLAYPAUSE);
+
             #if defined(MPRIS)
             s.set_playback_status(audio::playing()? mpris::PlaybackStatus::Playing : mpris::PlaybackStatus::Paused );
             #endif // MPRIS
-            ctrl.invalidateId(IDS::PLAYPAUSE);
         }
         inline void play(){
             if(p.empty())
                 return;
 
             audio::control::play();
+            ctrl.invalidateId(IDS::PLAYPAUSE);
+
             #if defined(MPRIS)
             s.set_playback_status(mpris::PlaybackStatus::Playing);
             #endif // MPRIS
             
-            ctrl.invalidateId(IDS::PLAYPAUSE);
         }
         inline void pause(){
             if(p.empty())
                 return;
 
             audio::control::pause();
+            ctrl.invalidateId(IDS::PLAYPAUSE);
+
             #if defined(MPRIS)
             s.set_playback_status(mpris::PlaybackStatus::Paused);
             #endif // MPRIS
-            ctrl.invalidateId(IDS::PLAYPAUSE);
         };
         inline void shuffle(){
             if(p.empty())
@@ -1378,6 +1519,13 @@ namespace temqo
             ctrl.invalidateId(IDS::SHUFFLE);
             p.valid = false;
 
+        }
+        inline void seek_abs(double d){
+            audio::seek::abs(d);
+        }
+        template<typename T, typename Rat>
+        inline void seek_rel(std::chrono::duration<T, Rat> d){
+            audio::seek::rel(d);
         }
 
         inline void volume_set(double d){
@@ -1444,7 +1592,6 @@ namespace temqo
     #if defined(MPRIS)
     
     void mpris_init(){
-
 
         s.set_identity("Terminal Musicplayer");
         s.on_quit([](){
@@ -1548,6 +1695,8 @@ namespace temqo
         }
     }
 
+
+    std::vector<Action*> actions({&p, &progres_bar, &cover_art});
     
 
     inline void init(int argc,  char** const argv){
@@ -1587,10 +1736,29 @@ namespace temqo
         
         #endif // MPRIS
         
-
     }
 
+    inline void action(int i){
+        for (auto& a : actions)
+            a->ch_action(i);
+    }
+    inline void action(wm::KEY i){
+        for (auto& a : actions)
+            a->k_action(i);
+    }
+    inline void action(wm::MOUSE_INPUT i){
+        for (auto& a : actions){
+            a->m_action(i);
+        }
+    }
+
+
+
     inline void deinit(){
+        if(audio::stopped())
+            return;
+
+
     }
 
 } // namespace temqo

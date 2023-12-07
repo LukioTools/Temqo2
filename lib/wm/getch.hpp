@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include "globals.hpp"
 
 #include "def.hpp"
 namespace wm
@@ -9,10 +8,6 @@ namespace wm
     
 
     inline int getch(){
-        if(resize_event){
-            resize_event = false;
-            return RESIZE_EVENT;
-        }
 
         int ch = std::cin.get();
         if(ch != '\x1b'){//escape

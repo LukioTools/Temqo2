@@ -84,11 +84,11 @@ namespace wm
         }
 
         inline bool inside(unsigned short _x, unsigned short _y){
-            return !((_x < x || _x > x+w) || (_y < y || _y > y+h));
+            return !((_x < x || _x >= x+w) || (_y < y || _y >= y+h));
         }
 
         inline bool inside(wm::Position pos){
-            return !((pos.x < x || pos.x > x+w) || (pos.y < y || pos.y > y+h));
+            return !((pos.x < x || pos.x >= x+w) || (pos.y < y || pos.y >= y+h));
         }
 
 #define if_not_mv_left(val) (val ? val : cursor_left(1))

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <ostream>
 std::ofstream log_t("/dev/null");
 
 #include "padding.hpp"
@@ -47,6 +48,10 @@ namespace wm
         }
         bool not_valid(){
             return false;
+        }
+        friend std::ostream& operator<<(std::ostream& os, const Element& e){
+            os << "Element["<< e.space << ", " << e.pad << "]";
+            return os;
         }
         Element(){}
         Element(Space sp, Padding p = {}): space(sp), pad(p) {}

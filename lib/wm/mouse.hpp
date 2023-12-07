@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include <sys/types.h>
 #include "position.hpp"
 #include "def.hpp"
@@ -58,6 +59,11 @@ namespace wm
         wm::Position pos;
         MOUSE_BTN btn = MOUSE_BTN::M_UNDEFINED;
         u_char valid = 1;
+
+        friend std::ostream& operator<<(std::ostream& os, const MOUSE_INPUT& m){
+            os << "Mouse[" << m.pos << ", " << to_str(m.btn) << ", valid: "<< (m.valid == 1 ? "true" : "false") << ']';
+            return os;
+        }
     };
 
     
