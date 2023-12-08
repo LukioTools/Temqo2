@@ -1,4 +1,5 @@
 #include "temqo.hpp"
+#include "clog.hpp"
 #include "lib/wm/getch.hpp"
 #include "lib/wm/mouse.hpp"
 #include <chrono>
@@ -18,18 +19,48 @@ int main(int argc, char** const argv)
 
     while (auto ch = wm::getch())
     {
-        if(ch == 'q')
-            break;
-        if(is_mouse(ch) && wm::parse_mouse(ch).valid){
-            auto m = wm::parse_mouse(ch);
-            temqo::mpos = m.pos;
-            temqo::action(m);
+        //temqo::clog << "input_mode: " << (int) temqo::input_mode.num << std::endl;
+        if(temqo::input_mode == temqo::InputMode::COMMON){
+            if(ch == 'q')
+                break;
+            else if (ch == ':') {
+                temqo::clog << "MODE IS NOW COMMAND" << std::endl;
+                temqo::input_mode = temqo::InputMode::COMMAND;
+                temqo::input.clear();
+            }
+            else if (ch == '/') {
+                temqo::input_mode = temqo::InputMode::SEARCH;
+                temqo::input.clear();
+            }
+            else if(is_mouse(ch) && wm::parse_mouse(ch).valid){
+                auto m = wm::parse_mouse(ch);
+                temqo::mpos = m.pos;
+                temqo::action(m);
+            }
+            else if(auto k = wm::is_key(ch)){
+                temqo::action(k);
+            }
+            else{
+                temqo::action(ch);
+            }
         }
-        else if(auto k = wm::is_key(ch)){
-            temqo::action(k);
-        }
-        else{
-            temqo::action(ch);
+        else if (temqo::input_mode == temqo::InputMode::COMMAND || temqo::input_mode == temqo::InputMode::SEARCH ) {
+            if(ch == 0x1b1b){
+                temqo::input_mode = temqo::InputMode::COMMON;
+                temqo::clog << "SET TO COMMON FROM ESC CHARACHER" << std::endl;
+                temqo::input.clear();
+            }
+            else if(is_mouse(ch) && wm::parse_mouse(ch).valid){
+                auto m = wm::parse_mouse(ch);
+                temqo::mpos = m.pos;
+                temqo::action(m);
+            }
+            else if(auto k = wm::is_key(ch)){
+                temqo::action(k);
+            }
+            else{
+                temqo::action(ch);
+            }
         }
     }
     

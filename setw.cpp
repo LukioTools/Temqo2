@@ -1,9 +1,14 @@
 
 
+#include "lib/wm/getch.hpp"
 #include <iomanip>
 #include <iostream>
 int main(int argc, char const *argv[])
 {
-    std::cout << std::setfill('0') << std::setw(7) << "Hello world"<< std::endl;
+    while (true) {
+        auto ch = wm::getch();
+        std::cout << ch << std::endl;
+    }
+
     return 0;
 }
