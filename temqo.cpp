@@ -1,5 +1,4 @@
 #include "temqo.hpp"
-#include "lib/audio/sfml.hpp"
 #include "lib/wm/getch.hpp"
 #include "lib/wm/mouse.hpp"
 #include <chrono>

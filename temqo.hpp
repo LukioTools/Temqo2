@@ -16,12 +16,15 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <iomanip>
+#include <ios>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <ostream>
 #include <ratio>
+#include <sdbus-c++/Error.h>
 #include <sdbus-c++/Types.h>
 #include <string>
 #include <string_view>
@@ -91,9 +94,9 @@ namespace temqo
 
     class Action{
     public:
-        virtual void m_action(wm::MOUSE_INPUT) {};
-        virtual void k_action(wm::KEY) {};
-        virtual void ch_action(int) {};
+        virtual void m_action(wm::MOUSE_INPUT m) {};
+        virtual void k_action(wm::KEY k) {};
+        virtual void ch_action(int c) {};
     };
 
     #if defined(MPRIS)
@@ -331,7 +334,7 @@ namespace temqo
 
                 auto i_str = std::to_string(i) + ' ';
                 wm::clip(str, ws.width() - i_str.length(), clip_type);
-                wm::pad(str, ws.width() - i_str.length(), pad_type);
+                //wm::pad(str, ws.width() - i_str.length(), pad_type);
                 str = i_str + str;
 
                 if (i == static_cast<unsigned int>(cursor_offset))
@@ -340,8 +343,10 @@ namespace temqo
                     use_attr(color_color(colors.hilight));
 
                 mv(ws.x, ws.y + index);
-                std::cout << str << attr_reset;
+                std::cout << std::setfill(' ') << std::setw(ws.width()+1) << std::left << str << attr_reset;
             }
+            //clog << "PLAYLIST_LAST: " <<  (*this)[ clamp(display_offset + ws.h-1)];
+
         }
         size_t st_index()
         {
@@ -349,7 +354,7 @@ namespace temqo
         }
         size_t last_index()
         {
-            return clamp(display_offset + element.wSpace().h);
+            return clamp(display_offset + element.wSpace().h-1);
         }
 
         bool ref_disp_offset(){ //returns if need to redraw
@@ -662,11 +667,17 @@ namespace temqo
     inline void fetch_coverart(CoverArtData* ptr){
         ptr->img_valid = true;
         auto o = p.opt_curr();
-        if(ptr->override || p.empty() || o.has_value()){
+        if(ptr->override || p.empty() || !o.has_value()){
             ptr->file_path = ptr->placeholder_path.get_p();
+            //clog << "p.empty()        "<< (p.empty()        ? "true" : "false") << std::endl;
+            //clog << "ptr->override    "<< (ptr->override    ? "true" : "false") << std::endl;
+            //clog << "!o.has_value()   "<< (!o.has_value()   ? "true" : "false") << std::endl;
+            //clog<< "using placeholder: " << ptr->file_path << std::endl;
         }
-        auto res = audio::extra::extractAlbumCoverTo(*o, ptr->cache_path);
-        ptr->file_path = ((res == 0) ? ptr->cache_path : ptr->placeholder_path).get_p();
+        else{
+            auto res = audio::extra::extractAlbumCoverTo(*o, ptr->cache_path);
+            ptr->file_path = ((res == 0) ? ptr->cache_path : ptr->placeholder_path).get_p();
+        }
             //we need the absolute path
         std::string fpath = "file:///"+std::filesystem::absolute(ptr->file_path.get_p()).generic_string();
         clog << "fetch_coverart: fpath: " << fpath << std::endl;
@@ -700,17 +711,17 @@ namespace temqo
             if(s.w < 4 || s.h < 4)
                 return;
 
-            clog << "drawing image: " << s << std::endl;
+            clog << "drawing image: " << s << " width: " << wm::WIDTH<< std::endl;
             std::string fpath = data.file_path.get_p();
-            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(fpath, s.width(), s.height() + 1);
-            
+            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(fpath, s.width()+1, s.height() + 1);
+            clog <<  "cover_ansi: x: " <<  cover_ansi->x << " y: " <<  cover_ansi->y << std::endl;
             std::ostringstream out;
             for (size_t iy = 0; iy <= s.height(); iy++)
             {
                 out << mv_str(s.x, s.y + iy);
-                for (size_t ix = 0; ix < s.width(); ix++)
+                for (size_t ix = 0; ix <= s.width(); ix++)
                 {
-                    auto rgb = cover_ansi->get(ix + s.width() * iy);
+                    auto rgb = cover_ansi->get(ix + (s.width()+1) * iy);
 
                     out << color_bg_str(clamp_1(rgb.r), clamp_1(rgb.g), clamp_1(rgb.b)) << ' ' << attr_reset;
                 }
@@ -725,22 +736,27 @@ namespace temqo
         void m_action(wm::MOUSE_INPUT m) override {
             if(display_mode.vertical()){
                 if(m.pos.y == element.space.y && m.btn == wm::MOUSE_BTN::M_LEFT){
-                    clog << "resize start: " << m.pos << ':' << playlist_coverart_ratio<< std::endl;
                     drag_resize_start = m.pos;
                 }
                 else if(enable_mid_drag_draw && m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
-                    clog << "resize  mid_drag : " << m.pos << ':' << playlist_coverart_ratio << std::endl;
-                    invalidate();
-                    p.invalidate();
-                                                                            //Maby use the true height ratio?
                     playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
                     elements_refresh = true;
+
+                    invalidate();
+                    p.invalidate();
+
                 } else if(m.btn == wm::MOUSE_BTN::M_RELEASE && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
-                    wm::resize_event = true;
-                                                                            //Maby use the true height ratio?
                     playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
                     clog << "resize  end: " << m.pos << ':' << playlist_coverart_ratio << std::endl;
                     drag_resize_start = {65535U, 65535U};
+
+                    invalidate();
+                    p.invalidate();
+
+                } else if(element.wSpace().inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
+                    data.override = !data.override;
+                    clog << "data.override: " << data.override << std::endl; 
+                    data.img_valid = false;
                 }
                 if(playlist_coverart_ratio > 1){
                     playlist_coverart_ratio = 1;
@@ -812,12 +828,46 @@ namespace temqo
 
     namespace ControlButtons
     {
-        struct Prev: public ButtonArrayElement{
+
+        class Controls :public ButtonArray, public Valid{};
+        ButtonArray* active_button_array;
+
+        struct Prev: public ButtonArrayElement, Action{
             //extra shit
             static StringLite ch;
             bool valid = false;
+            bool action_inside = false;
+            char ch_action_char = 'b';
+            
+            void ch_action(int ch) override{
+                if(ch == ch_action_char){
+                    load::prev();
+                }
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        load::prev();
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
 
-        } prev_bae = {
+                    action_inside = false;
+                }
+            };
+            Prev(ButtonArrayElement b) : ButtonArrayElement(b){}
+        } prev_bae = ButtonArrayElement{
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr( attr_reset );
                 if(inside){
@@ -839,10 +889,41 @@ namespace temqo
 
         };
 
-        struct Next : public ButtonArrayElement {
+        struct Next : public ButtonArrayElement, Action{
             static StringLite ch;
             bool valid = false;
-        } next_bae = {
+            bool action_inside = false;
+            char ch_action_char = 'n';
+            void ch_action(int ch) override{
+                if(ch == ch_action_char){
+                    load::next();
+                }
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        load::next();
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
+
+                    action_inside = false;
+                }
+            };
+
+            Next(ButtonArrayElement b): ButtonArrayElement(b) {};
+        } next_bae = ButtonArrayElement{
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr(attr_reset);
                 if(inside){
@@ -863,9 +944,7 @@ namespace temqo
             []{next_bae.valid = false;}
         };
 
-        
-
-        struct PlayPause: public ButtonArrayElement
+        struct PlayPause: public ButtonArrayElement, Action
         {
             static StringLite playing_ch;
             static StringLite stopped_ch;
@@ -874,8 +953,38 @@ namespace temqo
                 PLAYING,
                 STOPPED,
             } state;
+            bool action_inside = false;
+            char ch_action_char = 'c';
+
+            void ch_action(int c) override{
+                if (c == ch_action_char)
+                    control::playpause();
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        control::playpause(); //load::next();
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
+
+                    action_inside = false;
+                }
+            }
             /* data */
-        } playpause_bae = {
+            PlayPause(ButtonArrayElement b): ButtonArrayElement(b) {};
+        } playpause_bae = ButtonArrayElement{
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr(attr_reset);
                 auto& usech = audio::playing() ? playpause_bae.playing_ch : playpause_bae.stopped_ch;
@@ -910,12 +1019,7 @@ namespace temqo
             []{playpause_bae.state = PlayPause::State::INVALID;}
         };
 
-
-
-       
-
-
-        struct Shuffle: public ButtonArrayElement {
+        struct Shuffle: public ButtonArrayElement, Action {
             static StringLite shuffle_ch;
             static StringLite sort_ch;
             enum State : unsigned char {
@@ -923,9 +1027,38 @@ namespace temqo
                 SORTED,
                 SHUFFLED,
             } state = State::INVALID;
-            
+            bool action_inside = false;
+            char ch_action_char = 's';
 
-        } shuffle_bae = {
+            void ch_action(int c) override{
+                if (c == ch_action_char)
+                    control::shuffle();
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        control::shuffle(); //load::next();
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
+
+                    action_inside = false;
+                }
+            }
+            Shuffle(ButtonArrayElement b): ButtonArrayElement(b) {};
+
+        } shuffle_bae = ButtonArrayElement{
             [](bool inside, wm::MOUSE_INPUT m){
                 use_attr(attr_reset);
                 auto& usech = p.sorted() ? shuffle_bae.sort_ch : shuffle_bae.shuffle_ch;
@@ -950,7 +1083,7 @@ namespace temqo
             [](){shuffle_bae.state = Shuffle::INVALID;},
         };
 
-        struct Loop : ButtonArrayElement {
+        struct Loop : ButtonArrayElement, Action {
             static StringLite track_ch;
             static StringLite playlist_ch;
             static StringLite off_ch;
@@ -960,9 +1093,78 @@ namespace temqo
                 PLAYLIST,
                 TRACK,
             } state = INVALID;
-        } loop_bae = {
+            bool action_inside = false;
+            char ch_action_char = 'l';
+
+            void refresh_state(){
+                switch (p.loopType)
+                {
+                case Playlist::LoopType::L_NONE:
+                    state = State::OFF;
+                    break;
+                case Playlist::LoopType::L_PLAYLIST:
+                    state = State::PLAYLIST;
+                    break;
+                case Playlist::LoopType::L_TRACK:
+                    state = State::TRACK;
+                    break;
+                default:
+                    state = State::INVALID;
+                    break;
+                }
+            }
+
+            void next_loop_type(){
+                Playlist::LoopType& l = p.loopType;
+                switch (l)
+                {
+                case Playlist::LoopType::L_NONE:
+                    l = Playlist::LoopType::L_PLAYLIST;
+                    break;
+                case Playlist::LoopType::L_PLAYLIST:
+                    l = Playlist::LoopType::L_TRACK;
+                    break;
+                case Playlist::LoopType::L_TRACK:
+                    l = Playlist::LoopType::L_NONE;
+                    break;
+                default:
+                    break;
+                }
+                refresh_state();
+                invalidate();
+            }
+
+            void ch_action(int c) override{
+                if (c == ch_action_char)
+                    next_loop_type();
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        next_loop_type(); //load::next();
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
+
+                    action_inside = false;
+                }
+            }
+            Loop(ButtonArrayElement b): ButtonArrayElement(b) {};
+        } loop_bae = ButtonArrayElement{
         [](bool inside, wm::MOUSE_INPUT m)
             {
+                //clog << "Refresh Looop" << std::endl;
                 use_attr(attr_reset);
                 StringLite &use_char = p.loopType == p.L_NONE ? loop_bae.off_ch : p.loopType == p.L_PLAYLIST? loop_bae.playlist_ch : loop_bae.track_ch;
                 
@@ -971,19 +1173,14 @@ namespace temqo
                     use_attr(color_color(colors.hover));
                     if (m.btn == wm::MOUSE_BTN::M_LEFT)
                     {
-                        if(p.loopType == p.L_NONE){
-                            p.loopType = p.L_PLAYLIST;
-                        }else if(p.loopType == p.L_PLAYLIST){
-                            p.loopType = p.L_TRACK;
-                        }else if(p.loopType == p.L_TRACK){
-                            p.loopType = p.L_NONE;
-                        }
+                        loop_bae.next_loop_type();
                     }
                 }
                 else
                     use_attr(color_color(colors.normal));
                 std::cout << use_char << " " << attr_reset;
-                loop_bae.state =  p.loopType == p.L_NONE ? Loop::OFF : p.loopType == p.L_PLAYLIST? Loop::PLAYLIST : Loop::TRACK;
+                loop_bae.refresh_state();
+                //loop_bae.state =  p.loopType == p.L_NONE ? Loop::OFF : p.loopType == p.L_PLAYLIST? Loop::PLAYLIST : Loop::TRACK;
             },
             2,
             GROUPS::MEDIA_CONTROLS,
@@ -1019,10 +1216,59 @@ namespace temqo
         StringLite Loop::playlist_ch = "♺";
         StringLite Loop::off_ch = "🡢";
 
-        struct Volume : public ButtonArrayElement {
+        struct Volume : public ButtonArrayElement, Action{
             int vol = 0;
             bool valid = false;
-        } volume_bae = {
+            int reset_vol = 100;
+            bool action_inside = false;
+            char ch_action_char_up = '+';
+            char ch_action_char_down = '-';
+
+            void ch_action(int c) override{
+                if(c == ch_action_char_up){
+                    control::volume_rel(volume_shift);
+                }
+                else if(c == ch_action_char_down){
+                    control::volume_rel(-volume_shift);
+                }
+            }
+
+            void k_action(wm::KEY k) override{
+                if(k == wm::K_UP){
+                    control::volume_rel(volume_shift);
+                }
+                else if(k == wm::K_DOWN){
+                    control::volume_rel(-volume_shift);
+                }
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        control::volume_set(reset_vol);
+                    }else if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
+                        control::volume_rel(volume_shift);
+                    }else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){
+                        control::volume_rel(-volume_shift);
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
+
+                    action_inside = false;
+                }
+            }
+            Volume(ButtonArrayElement b): ButtonArrayElement(b){}
+        } volume_bae = ButtonArrayElement{
     [](bool inside, wm::MOUSE_INPUT m)
         {
             use_attr(attr_reset);
@@ -1030,27 +1276,15 @@ namespace temqo
             if (inside)
             {
                 use_attr(color_color(colors.hover));
-
-                if (m.btn == wm::MOUSE_BTN::M_SCRL_UP)
-                {
-                    control::volume_rel(volume_shift);
-                }
-                else if (m.btn == wm::MOUSE_BTN::M_SCRL_DOWN)
-                {
-                    control::volume_rel(-volume_shift);
-                }
-                else if (m.btn == wm::MOUSE_BTN::M_LEFT)
-                {
-                    control::volume_set(volume_reset);
-                }
             }
             else
                 use_attr(color_color(colors.normal));
 
             // drawing
             volume_bae.vol = std::abs( (int) std::round(audio::volume::get()) );
+            //clog << "Volume: " << audio::volume::get() << std::endl;
             volume_bae.vol = volume_bae.vol > 999 ? 999 : volume_bae.vol;
-            std::cout << std::setfill('0') << std::setw(3) << volume_bae.vol << '%' << ' ' << attr_reset;
+            std::cout << std::setfill('0') << std::setw(3) << std::right << volume_bae.vol << '%' << ' ' << attr_reset;
             volume_bae.valid = true;
         },
         5,
@@ -1069,6 +1303,17 @@ namespace temqo
         struct Time : public Action, public ButtonArrayElement{
             long long current_time = 0;
             bool valid = false;
+            bool action_inside = false;
+            char action_ch_seek_fwd = 'c';
+            char action_ch_seek_bwd = 'x';
+
+            void ch_action(int c) override{
+                if(c == action_ch_seek_fwd){
+                    control::seek_rel(std::chrono::seconds(5));
+                }else if (c == action_ch_seek_bwd) {
+                    control::seek_rel(std::chrono::seconds(-5));
+                }
+            }
             void k_action(wm::KEY k) override{
                 if(k == wm::KEY::K_LEFT){
                     control::seek_rel(std::chrono::seconds(-5));
@@ -1079,6 +1324,28 @@ namespace temqo
                     control::seek_rel(std::chrono::seconds(5));
 
                     this->invalidate();
+                }
+            }
+            void m_action(wm::MOUSE_INPUT m) override{
+                auto p = active_button_array->getPosId(this->id);
+                if(p == wm::Position{0,0}){
+                    return;
+                }
+                wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
+                if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
+                    if(m.btn == wm::MOUSE_BTN::M_LEFT){
+                        //alt display type?
+                    }
+                    if(!action_inside){
+                        invalidate();
+                    }
+                    action_inside = true;
+                }
+                else{
+                    if(action_inside)
+                        invalidate();
+
+                    action_inside = false;
                 }
             }
             Time(ButtonArrayElement b) : ButtonArrayElement(b) {};
@@ -1171,10 +1438,16 @@ namespace temqo
                 });
         }
 
-        Controls() = default;
-        Controls(const std::vector<ButtonArrayElement>& v): ButtonArray(v) {};
+        Controls() {
+            ControlButtons::active_button_array = this;
+        };
+        Controls(const std::vector<ButtonArrayElement>& v): ButtonArray(v) {
+            ControlButtons::active_button_array = this;
+        };
 
-        ~Controls() = default;
+        ~Controls() {
+            ControlButtons::active_button_array = nullptr;
+        };
 
     } ctrl(controlButtons);
 
@@ -1709,8 +1982,6 @@ namespace temqo
     }
 
 
-    std::vector<Action*> actions({&p, &progres_bar, &cover_art, &ControlButtons::time_bae});
-    
 
     inline void init(int argc,  char** const argv){
 
@@ -1750,6 +2021,7 @@ namespace temqo
         #endif // MPRIS
         
     }
+    std::vector<Action*> actions({&p, &progres_bar, &cover_art, &ControlButtons::time_bae, &ControlButtons::prev_bae, &ControlButtons::next_bae, &ControlButtons::playpause_bae,  &ControlButtons::shuffle_bae, &ControlButtons::loop_bae, &ControlButtons::volume_bae});    
 
     inline void exec_action_ch(Action* a, int c){
         a->ch_action(c);
@@ -1786,8 +2058,18 @@ namespace temqo
 
 
     inline void deinit(){
+        #if defined(MPRIS)
+        try {
+        s.connection->leaveEventLoop();
+        } catch (const sdbus::Error& er ) {
+            std::cerr << er.getMessage() << '\n' << er.getName() << '\n' << er.what() << std::endl;
+        }
+        #endif // MPRIS
+
         if(audio::stopped())
             return;
+        
+        
     }
 
 } // namespace temqo

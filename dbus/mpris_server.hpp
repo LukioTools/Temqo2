@@ -94,6 +94,7 @@ inline std::string field_to_string(                    Field entry) { return    
 } // namespace detail
 
 class Server {
+public:
     std::string service_name;
     std::unique_ptr<sdbus::IConnection> connection;
     std::unique_ptr<sdbus::IObject> object;

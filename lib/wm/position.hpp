@@ -12,6 +12,10 @@ namespace wm
             return stream;
         };
 
+        bool operator==(const Position& p){
+            return p.x == this->x && p.y == this->y;
+        }
+
         //bool inside(wm::Position){
         //    
         //}

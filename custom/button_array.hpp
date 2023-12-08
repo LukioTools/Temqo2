@@ -30,7 +30,7 @@ public:
 
         for (size_t i = 0; i < this->size(); i++)
         {
-            ButtonArrayElement& e = this->at(i);
+            auto& e = this->at(i);
             if(!e.draw || !e.invalidate || !e.is_valid)
                 continue;
 
@@ -55,7 +55,7 @@ public:
 
         for (size_t i = 0; i < this->size(); i++)
         {
-            ButtonArrayElement e = this->at(i);
+            auto& e = this->at(i);
             if(!e.draw)
                 continue;
 
@@ -80,7 +80,7 @@ public:
 
         for (size_t i = 0; i < this->size(); i++)
         {
-            ButtonArrayElement e = this->at(i);
+            auto& e = this->at(i);
             if(!e.draw)
                 continue;
 
@@ -103,7 +103,7 @@ public:
         }
         for (size_t i = 0; i < this->size(); i++)
         {
-            ButtonArrayElement e = this->at(i);
+            auto& e = this->at(i);
             if(e.group == group)
                 fn(e);
         }
@@ -115,10 +115,33 @@ public:
         }
         for (size_t i = 0; i < this->size(); i++)
         {
-            ButtonArrayElement e = this->at(i);
+            auto& e = this->at(i);
             if(e.id == id)
                 fn(e);
         }
+    }
+        //returns from the first instance
+    wm::Position getPosId(unsigned short id){
+        unsigned int offset = 0;
+        bool found = false;
+        for (size_t i = 0; i < this->size(); i++)
+        {
+            auto& e = this->at(i);
+            if(!e.draw)
+                continue;
+
+            if(e.id == id){
+                found = true;
+                break;
+            }
+
+            offset+=e.alloc; //increment
+        }
+        if(!found){
+            return {0,0};
+        }
+
+        return {static_cast<unsigned short>(pos.x+offset), pos.y};
     }
     
     void invalidateGroup(unsigned short group){
