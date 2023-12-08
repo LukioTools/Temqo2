@@ -1066,10 +1066,23 @@ namespace temqo
         };
 
         #define leading_zero(n) ((n < 10) ? "0" : "") << n
-        struct Time : ButtonArrayElement {
+        struct Time : public Action, public ButtonArrayElement{
             long long current_time = 0;
             bool valid = false;
-        } time_bae = {
+            void k_action(wm::KEY k) override{
+                if(k == wm::KEY::K_LEFT){
+                    control::seek_rel(std::chrono::seconds(-5));
+                    this->invalidate();
+
+                }
+                else if(k == wm::KEY::K_RIGHT){
+                    control::seek_rel(std::chrono::seconds(5));
+
+                    this->invalidate();
+                }
+            }
+            Time(ButtonArrayElement b) : ButtonArrayElement(b) {};
+        } time_bae = ButtonArrayElement{
             [](bool inside, wm::MOUSE_INPUT m){
                 auto ps = audio::position::get<std::ratio<1, 1>>().count();
                 auto ts = audio::duration::get<std::ratio<1, 1>>().count();
@@ -1696,7 +1709,7 @@ namespace temqo
     }
 
 
-    std::vector<Action*> actions({&p, &progres_bar, &cover_art});
+    std::vector<Action*> actions({&p, &progres_bar, &cover_art, &ControlButtons::time_bae});
     
 
     inline void init(int argc,  char** const argv){
@@ -1738,18 +1751,36 @@ namespace temqo
         
     }
 
-    inline void action(int i){
+    inline void exec_action_ch(Action* a, int c){
+        a->ch_action(c);
+    }
+    inline void exec_action_k(Action* a, wm::KEY c){
+        a->k_action(c);
+    }
+    inline void exec_action_m(Action* a, wm::MOUSE_INPUT c){
+        a->m_action(c);
+    }
+
+    inline void action(int i){ //parallell but synchronus
+        std::vector<std::thread> thr;
         for (auto& a : actions)
-            a->ch_action(i);
+            thr.emplace_back(exec_action_ch, a, i);
+        for (auto& t : thr)
+            t.join();
     }
     inline void action(wm::KEY i){
+        std::vector<std::thread> thr;
         for (auto& a : actions)
-            a->k_action(i);
+            thr.emplace_back(exec_action_k, a, i);
+        for (auto& t : thr)
+            t.join();
     }
     inline void action(wm::MOUSE_INPUT i){
-        for (auto& a : actions){
-            a->m_action(i);
-        }
+        std::vector<std::thread> thr;
+        for (auto& a : actions)
+            thr.emplace_back(exec_action_m, a, i);
+        for (auto& t : thr)
+            t.join();
     }
 
 
@@ -1757,8 +1788,6 @@ namespace temqo
     inline void deinit(){
         if(audio::stopped())
             return;
-
-
     }
 
 } // namespace temqo

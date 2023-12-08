@@ -24,25 +24,9 @@ int main(int argc, char** const argv)
         if(is_mouse(ch) && wm::parse_mouse(ch).valid){
             auto m = wm::parse_mouse(ch);
             temqo::mpos = m.pos;
-            //temqo::clog << "mouse input" << std::endl;
             temqo::action(m);
         }
         else if(auto k = wm::is_key(ch)){
-            switch (k)
-            {
-            case wm::KEY::K_LEFT:
-                audio::seek::rel(std::chrono::seconds(-5));
-                temqo::ctrl.invalidateGroup(temqo::GROUPS::TIME);
-                break;
-            case wm::KEY::K_RIGHT:
-                audio::seek::rel(std::chrono::seconds(5));
-                temqo::ctrl.invalidateGroup(temqo::GROUPS::TIME);
-                break;
-            
-            default:
-                break;
-            }
-
             temqo::action(k);
         }
         else{
