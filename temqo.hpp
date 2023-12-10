@@ -47,7 +47,7 @@
 #include "lib/wm/space.hpp"
 #include "clog.hpp"
 
-//#define MPRIS 1
+#define MPRIS 1
 #if defined(MPRIS)
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
@@ -1401,7 +1401,6 @@ namespace temqo
         struct Volume : public ButtonArrayElement, Action{
             int vol = 0;
             bool valid = false;
-            int reset_vol = 100;
             bool action_inside = false;
             char ch_action_char_up = '+';
             char ch_action_char_down = '-';
@@ -1433,7 +1432,7 @@ namespace temqo
                 wm::Space s = {p.x,p.y,this->alloc,0 /*maby 1 idk*/};
                 if(m.pos.y == p.y && m.pos.x >= p.x && m.pos.x < p.x+this->alloc){
                     if(m.btn == wm::MOUSE_BTN::M_LEFT){
-                        control::volume_set(reset_vol);
+                        control::volume_set(volume_reset);
                     }else if(m.btn == wm::MOUSE_BTN::M_SCRL_UP){
                         control::volume_rel(volume_shift);
                     }else if(m.btn == wm::MOUSE_BTN::M_SCRL_DOWN){

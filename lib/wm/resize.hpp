@@ -18,4 +18,5 @@ namespace wm
         HEIGHT = w.ws_row-1;
         resize_event = true;
     }
+    
 } // namespace wm

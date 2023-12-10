@@ -67,8 +67,8 @@ namespace audio
         inline void set(float f){
             if(f < 0)
                 f = 0.f;
-            //else if(f > 100)
-            //    f = 100.f;
+            else if(f > 100)
+                f = 100.f;
             player.setVolume(f);
         }
         inline void shift(float f){
