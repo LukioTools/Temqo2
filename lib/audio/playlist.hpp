@@ -1,11 +1,15 @@
 #pragma once
 
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <optional>
 #include <regex>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 #include <filesystem>
 #include <algorithm>
@@ -16,6 +20,8 @@
 
 #include "scandir.hpp"
 #include "sfml.hpp"
+#include "../../clog.hpp"
+#include "../../custom/stringlite.hpp"
 
 namespace audio
 {
@@ -160,15 +166,62 @@ namespace audio
             return "";
         }
         inline size_t find2(const std::string& thing, size_t find_skips = 0){
+            auto find_lower = boost::to_lower_copy(thing);
             for (size_t i = 0; i < files.size(); i++)
             {
-                if(files[i].find(thing) != std::string::npos){
+                auto str_lower = boost::to_lower_copy(files[i]);
+                if(str_lower.find(find_lower) != std::string::npos){
                     if(find_skips-- == 0)
                         return i;
                 }
             }
-            return 0;            
+            return std::variant_npos;
         }
+        inline size_t find2multiword(const std::string& thing, size_t find_skips = 0){
+            auto find_lower = boost::to_lower_copy(thing);
+            std::vector<std::string> find_items;
+            boost::split(find_items,find_lower, boost::is_any_of(" "));
+            
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                auto file = boost::to_lower_copy(files[i]); 
+                for (auto e : find_items)
+                {
+                    if(file.find(e) == std::variant_npos)
+                        goto continue_;
+                    
+                }
+                if(find_skips-- > 0)
+                    continue;
+                return i;
+                continue_:
+                continue;
+            }
+            return std::variant_npos;
+        }
+        
+        inline void find2allmulti(std::vector<size_t>& vec, const std::string& thing){
+            auto find_lower = boost::to_lower_copy(thing);
+            std::vector<std::string> find_items;
+            boost::split(find_items,find_lower, boost::is_any_of(" "));
+
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                auto file = boost::to_lower_copy(files[i]); 
+                for (auto e : find_items)
+                {
+                    if(file.find(e) == std::variant_npos)
+                        goto continue_;
+                    
+                }
+                vec.push_back(i);
+                continue_:
+                continue;
+            }
+
+        };
+
+
 
         inline std::string find_insensitive(const std::string& thing, size_t* index = nullptr, bool split = true){
             std::vector<std::string> find_shits;

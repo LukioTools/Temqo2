@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <fstream>
 #include <signal.h>
+#include <variant>
 #include <vector>
 #include "custom/stringlite.hpp"
 #include "lib/wm/clip.hpp"
@@ -47,7 +48,7 @@
 #include "lib/wm/space.hpp"
 #include "clog.hpp"
 
-#define MPRIS 1
+//#define MPRIS 1
 #if defined(MPRIS)
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
@@ -523,6 +524,8 @@ namespace temqo
         }
         void k_action(wm::KEY k) override {
             //handle arrow key action
+            if(input_mode != InputMode::COMMON)
+                return;
             if(k == wm::K_DOWN){
                 curs_down();
             }else if(k == wm::K_UP){
@@ -617,7 +620,8 @@ namespace temqo
     public:
 
         unsigned int current_cursor = 0;
-        unsigned int skips = 0;
+        unsigned skips = 0;
+        int displayed_skip = 0;
         StringLite current_input = "";
         InputMode current_drawn_mode = static_cast<InputMode>(-1);
 
@@ -630,9 +634,20 @@ namespace temqo
         Color color_remaining  = {default_normal_fg, default_normal_bg, ""};
         Color color_cursor = {{255,0,255,}, {0,0,0}, ""};
 
+        struct FoundThings : std::vector<size_t>
+        {
+            /* data */
+            size_t& get(size_t index){
+                return at(index%size());
+            }
+        }  found_things;
+
         wm::Element element;
         bool valid = false;
-
+        //enum FindType : unsigned char{
+        //    MULTIWORD,
+        //    STRING_INSENSITIVE,
+        //} findtype = MULTIWORD;
 
 
         void refresh_mode_progress(){
@@ -657,13 +672,12 @@ namespace temqo
             use_attr(attr_reset)
         }
 
-        void ref_str(std::string& str){
-            auto s = element.space;
+        void ref_str(std::string& str, size_t width){
             current_input = input.str();
             current_cursor = input.cursor_offset;
             //wm::pad(str, s.w, wm::PAD_TYPE::PAD_RIGHT);
-            clog << "ProgressBar: " << s << " string lenght: " << str.length() << std::endl;
-            for (size_t i = 0; i < s.width(); i++){
+            clog << "ProgressBar: " << width << " string lenght: " << str.length() << std::endl;
+            for (size_t i = 0; i < width; i++){
                     //cursor is fucked up
                     //maby off set it somehow?
                         //idk man 2 lazy
@@ -681,16 +695,19 @@ namespace temqo
             wm::clip(str, s.width() -1 , wm::SPLICE_TYPE::BEGIN_DOTS);
             mv(s.x, s.y);
             std::cout << ':';
-            ref_str(str);
+            ref_str(str, s.width()-1);
         }
 
         void refresh_mode_search(){
             auto s = element.space;
             std::string str = input.str();
-            wm::clip(str, s.width() -1 , wm::SPLICE_TYPE::BEGIN_DOTS);
             mv(s.x, s.y);
-            std::cout << '/';
-            ref_str(str);
+            displayed_skip = skips;
+            std::string prefix = "(" + std::to_string(found_things.size() ? skips+1 : 0) + "/" + std::to_string(found_things.size()) + ")"+"/";
+            std::cout << prefix;
+            auto w = s.width() - prefix.size();
+            wm::clip(str, w , wm::SPLICE_TYPE::BEGIN_DOTS);
+            ref_str(str, w);
         }
 
         void refresh_mode_unknown(){
@@ -698,7 +715,7 @@ namespace temqo
             std::string str = input.str();
             wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
             mv(s.x, s.y);
-            ref_str(str);
+            ref_str(str, s.width());
         }
 
         bool valid_mode_progress(){
@@ -711,7 +728,7 @@ namespace temqo
             return current_input.get_p() == input.str() && current_cursor == input.cursor_offset;
         }
         bool valid_mode_search(){
-            return current_input.get_p() == input.str() && current_cursor == input.cursor_offset;
+            return current_input.get_p() == input.str() && current_cursor == input.cursor_offset && displayed_skip == skips;
         }
         bool valid_mode_unknown(){
             return true;
@@ -741,6 +758,25 @@ namespace temqo
             }
 
         }
+        
+
+        void refresh_curser(){
+            if (found_things.empty()){
+                clog << "Found was empty" << std::endl;
+                return;
+            }
+            auto& use = found_things.get(skips);
+            clog << "index: " << use << std::endl;
+            p.cursor_offset = p.clamp(use);
+            p.ref_disp_offset();
+            p.invalidate();
+        }
+        void refresh_search(){
+            found_things.clear();
+            p.find2allmulti(found_things, input.str());
+            refresh_curser();
+        }
+        
         void k_action(wm::KEY k) override {
             //handle arrow key action
             if(input_mode == InputMode::COMMAND || input_mode == InputMode::SEARCH){
@@ -750,10 +786,28 @@ namespace temqo
                     input.shift_right();
             }
             if(input_mode == InputMode::SEARCH){
-                if(k == wm::KEY::K_UP)
-                    input.shift_left();
-                else if(k == wm::KEY::K_DOWN)
-                    input.shift_right();
+                if(k == wm::KEY::K_DOWN){
+                    if(!found_things.empty()){
+                        skips++;
+                        if(skips >= found_things.size()){
+                            skips = 0;
+                        }
+                        refresh_curser();
+                        invalidate();
+                        p.invalidate();
+                    }
+                }
+                else if(k == wm::KEY::K_UP){
+                    if(!found_things.empty()){
+                        if(skips == 0){
+                            skips = found_things.size();
+                        }
+                        skips--;
+                        refresh_curser();
+                        invalidate();
+                        p.invalidate();
+                    }
+                }
             }
 
         }
@@ -773,17 +827,20 @@ namespace temqo
                 }
             }
             else if (input_mode == InputMode::SEARCH) {
-                if(c == 127){
-                    input.delete_behind();
-                }else if(c == '\n'){
+                skips = 0; // fuck them kids
+                if(c == '\n'){
                     input.clear();
                     input_mode = InputMode::COMMON;
                     clog << "SET TO COMMON FROM NEWLINE CHARACHER" << std::endl;
+                    p.play_current_cursor();
+                    return;
+                }
+                if(c == 127){
+                    input.delete_behind();
                 }else{
                     input+=c;
-                    auto index = p.find2(input.str(), skips);
-
                 }
+                refresh_search();
             }
 
         }

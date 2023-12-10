@@ -3,5 +3,5 @@
 
 namespace temqo
 {
-    std::ofstream clog("/dev/pts/6");
+    std::ofstream clog("/dev/pts/4");
 } // namespace temqo
