@@ -17,6 +17,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <deque>
+#include <functional>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -75,7 +77,9 @@
 namespace temqo
 {
 
-    ENUM(InputMode, unsigned char, COMMON, COMMAND, SEARCH) input_mode = InputMode::COMMON;
+    enum InputMode : unsigned char{
+        COMMON, COMMAND, SEARCH
+    } input_mode = COMMON;
     //input buffer;
     class Input
     {
@@ -613,8 +617,23 @@ namespace temqo
     public:
 
         unsigned int current_cursor = 0;
+        unsigned int skips = 0;
         StringLite current_input = "";
-        InputMode current_drawn_mode = -1;
+        InputMode current_drawn_mode = static_cast<InputMode>(-1);
+
+        StringLite char_first = "├";
+        StringLite char_last = "┤";
+        StringLite char_center = "─";
+        StringLite char_cursor = "•";
+
+        Color color_played = {default_warn_fg, default_warn_bg, ""};
+        Color color_remaining  = {default_normal_fg, default_normal_bg, ""};
+        Color color_cursor = {{255,0,255,}, {0,0,0}, ""};
+
+        wm::Element element;
+        bool valid = false;
+
+
 
         void refresh_mode_progress(){
             auto d = audio::position::get_d();
@@ -641,28 +660,44 @@ namespace temqo
         void ref_str(std::string& str){
             auto s = element.space;
             current_input = input.str();
+            current_cursor = input.cursor_offset;
             //wm::pad(str, s.w, wm::PAD_TYPE::PAD_RIGHT);
             clog << "ProgressBar: " << s << " string lenght: " << str.length() << std::endl;
-            mv(s.x, s.y);
             for (size_t i = 0; i < s.width(); i++){
-                //this is gonna be tough
-
-
+                    //cursor is fucked up
+                    //maby off set it somehow?
+                        //idk man 2 lazy
+                if(i < str.size()){
+                    std::cout << (i == input.cursor_offset ? underline : "") << str[i] << (i == input.cursor_offset ? underline_reset : "");
+                }else{
+                    std::cout << (i == input.cursor_offset ? underline : "") << ' ' << (i == input.cursor_offset ? underline_reset : "");
+                }
             }
         }
 
         void refresh_mode_command(){
-            std::string str = ':' + input.str();
+            auto s = element.space;
+            std::string str = input.str();
+            wm::clip(str, s.width() -1 , wm::SPLICE_TYPE::BEGIN_DOTS);
+            mv(s.x, s.y);
+            std::cout << ':';
             ref_str(str);
         }
 
         void refresh_mode_search(){
-            std::string str = '/' + input.str();
+            auto s = element.space;
+            std::string str = input.str();
+            wm::clip(str, s.width() -1 , wm::SPLICE_TYPE::BEGIN_DOTS);
+            mv(s.x, s.y);
+            std::cout << '/';
             ref_str(str);
         }
 
         void refresh_mode_unknown(){
+            auto s = element.space;
             std::string str = input.str();
+            wm::clip(str, s.width(), wm::SPLICE_TYPE::BEGIN_DOTS);
+            mv(s.x, s.y);
             ref_str(str);
         }
 
@@ -673,27 +708,14 @@ namespace temqo
             return current_cursor == idx;
         }
         bool valid_mode_command(){
-            return current_input.get_p() == input.str();
+            return current_input.get_p() == input.str() && current_cursor == input.cursor_offset;
         }
         bool valid_mode_search(){
-            return current_input.get_p() == input.str();
+            return current_input.get_p() == input.str() && current_cursor == input.cursor_offset;
         }
         bool valid_mode_unknown(){
             return true;
         }
-
-        StringLite char_first = "├";
-        StringLite char_last = "┤";
-        StringLite char_center = "─";
-        StringLite char_cursor = "•";
-
-        Color color_played = {default_warn_fg, default_warn_bg, ""};
-        Color color_remaining  = {default_normal_fg, default_normal_bg, ""};
-        Color color_cursor = {{255,0,255,}, {0,0,0}, ""};
-
-        bool valid = false;
-
-        wm::Element element;
 
         //MARKER
         void m_action(wm::MOUSE_INPUT m) override {
@@ -719,10 +741,23 @@ namespace temqo
             }
 
         }
-        void k_action(wm::KEY m) override {
+        void k_action(wm::KEY k) override {
             //handle arrow key action
+            if(input_mode == InputMode::COMMAND || input_mode == InputMode::SEARCH){
+                if(k == wm::KEY::K_LEFT)
+                    input.shift_left();
+                else if(k == wm::KEY::K_RIGHT)
+                    input.shift_right();
+            }
+            if(input_mode == InputMode::SEARCH){
+                if(k == wm::KEY::K_UP)
+                    input.shift_left();
+                else if(k == wm::KEY::K_DOWN)
+                    input.shift_right();
+            }
 
         }
+
         void ch_action(int c) override {
             //handle char action
             if(input_mode == InputMode::COMMAND){
@@ -746,17 +781,19 @@ namespace temqo
                     clog << "SET TO COMMON FROM NEWLINE CHARACHER" << std::endl;
                 }else{
                     input+=c;
+                    auto index = p.find2(input.str(), skips);
+
                 }
             }
 
         }
 
         bool is_valid() override{
-            if(!valid || current_drawn_mode.num != input_mode.num)
+            if(!valid || current_drawn_mode != input_mode)
                 return false;
 
                 //valid functions
-            switch (input_mode.num) {
+            switch (input_mode) {
                 case InputMode::COMMON: return valid_mode_progress();
                 case InputMode::COMMAND: return valid_mode_command();
                 case InputMode::SEARCH: return valid_mode_search();
@@ -767,7 +804,7 @@ namespace temqo
         void refresh() override{
             valid = true;
             current_drawn_mode = input_mode;
-            switch (input_mode.num) {
+            switch (input_mode) {
                 case InputMode::COMMON:
                     refresh_mode_progress();
                     break;
@@ -1380,14 +1417,14 @@ namespace temqo
                 }
             }
 
-            void k_action(wm::KEY k) override{
-                if(k == wm::K_UP){
-                    control::volume_rel(volume_shift);
-                }
-                else if(k == wm::K_DOWN){
-                    control::volume_rel(-volume_shift);
-                }
-            }
+            //void k_action(wm::KEY k) override{
+            //    if(k == wm::K_UP){
+            //        control::volume_rel(volume_shift);
+            //    }
+            //    else if(k == wm::K_DOWN){
+            //        control::volume_rel(-volume_shift);
+            //    }
+            //}
             void m_action(wm::MOUSE_INPUT m) override{
                 auto p = active_button_array->getPosId(this->id);
                 if(p == wm::Position{0,0}){
@@ -1464,6 +1501,9 @@ namespace temqo
                 }
             }
             void k_action(wm::KEY k) override{
+                if(input_mode != InputMode::COMMON)
+                    return;
+
                 if(k == wm::KEY::K_LEFT){
                     control::seek_rel(std::chrono::seconds(-5));
                     this->invalidate();

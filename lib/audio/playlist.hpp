@@ -159,6 +159,17 @@ namespace audio
             }
             return "";
         }
+        inline size_t find2(const std::string& thing, size_t find_skips = 0){
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                if(files[i].find(thing) != std::string::npos){
+                    if(find_skips-- == 0)
+                        return i;
+                }
+            }
+            return 0;            
+        }
+
         inline std::string find_insensitive(const std::string& thing, size_t* index = nullptr, bool split = true){
             std::vector<std::string> find_shits;
             split ?  (void) boost::split(find_shits, thing, boost::is_any_of(" ")) : find_shits.push_back(thing);
@@ -167,9 +178,6 @@ namespace audio
             if(index)
                 *index = std::string::npos;
 
-            if(index){
-                *index = std::string::npos;
-            }
             for (size_t i = 0; i < files.size(); i++)
             {
                 for (auto check_shit: find_shits)
