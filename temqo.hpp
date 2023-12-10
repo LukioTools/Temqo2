@@ -48,7 +48,7 @@
 #include "lib/wm/space.hpp"
 #include "clog.hpp"
 
-//#define MPRIS 1
+#define MPRIS 1
 #if defined(MPRIS)
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
