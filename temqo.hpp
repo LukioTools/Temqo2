@@ -53,6 +53,12 @@
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
 
+#define CAPTIONS 1
+#if defined(CAPTIONS)
+#include "custom/lyrics.hpp"
+#endif // CAPTIONS
+
+
 #define clip_n(var, min, max) if(var > max){var = max;}if(var < min){var = max;}
 
 #define default_normal_fg {255,255,255}
@@ -917,6 +923,107 @@ namespace temqo
         #endif
     }
     
+    #if defined(CAPTIONS)
+    
+    class Lyrics: public Valid, public Action
+    {
+    private:
+        
+    public:
+        wm::Element element;
+        std::vector<Lyric> l;
+        std::string current_song;
+        size_t current_lyric;
+        bool valid = false;
+        //in seconds
+        size_t get_valid_index(double time){
+            for (auto i = 0; i< l.size();i++) //linear bcs ez
+            {
+                auto& y = l[i];
+                if(y.end_time > time){
+                    return i;
+                }
+            }
+            return std::variant_npos;
+        }
+
+        bool song_valid(){
+            if(p.current() == current_song)
+                return true;
+            return false;
+        }
+
+        bool time_valid(){
+            if(l.size() > current_lyric+1){
+                auto& y  = l[current_lyric+1];
+                if(audio::position::get<std::milli>().count() >= y.end_time*1000){
+                    //invalid
+                    clog << "Lyrics were invalid by time: " << audio::position::get<std::milli>().count() << ">=" << y.end_time*1000 << std::endl;
+                    return false;
+                }else{
+                    clog << "Lyrics were valid by time: " << audio::position::get<std::milli>().count() << ">=" << y.end_time*1000 << std::endl;
+
+                }
+            }else{
+                clog << "EMERGENCY MEETING" << std::endl;
+            }
+            return true;
+        }
+        void refresh_song(){
+            current_song = p.current();
+            auto path = scan_lyrics(current_song);
+            if(!path.empty()){
+                clog << "Found: " << path;
+                l.clear();
+                parse_lyrics(path, l);
+            }
+
+        }
+
+        void refresh() override{
+            clog << "Lyrics Refresh" << std::endl;
+            if(!song_valid())
+                refresh_song();
+            
+            valid = true;
+            current_lyric = get_valid_index(static_cast<double>(audio::position::get<std::milli>().count())/1000.);
+            if(current_lyric == std::variant_npos){
+                clog << "Npos" << std::endl;
+                return;
+            }
+            if(current_lyric >= l.size()){
+                clog << "Bigger than size" << std::endl;
+                return;
+            }
+            auto y = l[current_lyric];
+            auto s = element.wSpace();
+            wm::clip(y.str, s.width(), wm::SPLICE_TYPE::END_CUT);
+            wm::pad(y.str, s.width(), wm::PAD_TYPE::PAD_CENTER);
+            auto mvstr = mv_str(s.x, s.y);
+            std::string pad;
+            pad.append(s.w, ' ');
+            clog << y.str << std::endl;
+            std::cout << mvstr << pad << mvstr << y.str;
+        }
+
+        void invalidate() override{
+            valid = false;
+        }
+
+        bool is_valid() override{
+            clog << "ISVALID CALLED" << std::endl;
+            return valid && time_valid() && song_valid();
+        }
+
+        
+
+
+        Lyrics(/* args */) {}
+        ~Lyrics() {}
+    } lyrics;
+    
+    #endif // CAPTIONS
+    
 
     class CoverArt: public Valid , public Action{
     public:
@@ -992,7 +1099,6 @@ namespace temqo
                 data.img_valid = false;
             }
 
-            clog << "MVERT: " << playlist_coverart_ratio << std::endl;
             clip_n(playlist_coverart_ratio, 0 ,1);
         }
 
@@ -1814,6 +1920,16 @@ namespace temqo
         inline unsigned int get_useable_height(){
             return (wm::HEIGHT-title.element.space.h-progres_bar.element.space.h);
         }
+
+        inline unsigned short useable_height_start(){
+            #if defined(CAPTIONS)
+            return lyrics.element.space.end().y;
+            #else
+            return title.element.space.end().y;
+            #endif // CAPTIONS
+        }
+
+
         inline unsigned int get_useable_width(){
             return wm::WIDTH;
         }
@@ -1823,7 +1939,7 @@ namespace temqo
             clog << "playlist_coverart_ratio: " << playlist_coverart_ratio << std::endl;
             p.element.space = {
                 0,
-                title.element.space.h, 
+                useable_height_start(),
                 static_cast<unsigned short>(wm::WIDTH*playlist_coverart_ratio),
                 static_cast<unsigned short>(wm::HEIGHT-title.element.space.h - progres_bar.element.space.h)
             };
@@ -1831,7 +1947,7 @@ namespace temqo
 
             cover_art.element.space = {
                 p.element.space.w,
-                title.element.space.h, 
+                useable_height_start(),
                 static_cast<unsigned short>(wm::WIDTH-p.element.space.w+1),
                 static_cast<unsigned short>(wm::HEIGHT-title.element.space.h - progres_bar.element.space.h)
             };
@@ -1844,7 +1960,7 @@ namespace temqo
             auto useable_height = get_useable_height();
             p.element.space = {
                 0,
-                title.element.space.h, 
+                useable_height_start(),
                 static_cast<unsigned short>(wm::WIDTH),
                 static_cast<unsigned short>(useable_height*playlist_coverart_ratio)
             };
@@ -1874,7 +1990,13 @@ namespace temqo
         inline void elements(){
             elements_refresh  = false;
             clog << "ELEMENT RESIZE" << std::endl;
+
             title.element.space = wm::Space(0,0, wm::WIDTH, 1);
+            #if defined(CAPTIONS)
+            
+            lyrics.element = wm::Space(0, title.element.space.end().y, wm::WIDTH, 1);
+            
+            #endif // CAPTIONS
 
             ctrl.pos = {static_cast<unsigned short>(wm::WIDTH - ctrl.width()), static_cast<unsigned short>(wm::HEIGHT)};
             progres_bar.element.space = wm::Space(0, wm::HEIGHT, ctrl.pos.x - 1 , 1);
@@ -1959,6 +2081,12 @@ namespace temqo
             r_title();
             //metadata_r(); //idk why 2 but there are 2 now :3
             coverart();
+            #if defined(CAPTIONS)
+            
+            if(!lyrics.is_valid())
+                lyrics.refresh();
+            #endif // CAPTIONS
+            
             #if defined (MPRIS)
             metadata_r(); //idk why 2 but there are 2 now :3
             #endif

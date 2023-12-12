@@ -15,6 +15,9 @@ namespace path
         auto fname = filename(path);
         return fname.substr(0,fname.find_first_of('.'));
     }
+    inline std::string pathfilebasename(std::string path){
+        return path.substr(0,path.find_first_of('.'));
+    }
     inline std::string fileext(std::string path){ // includes dot
         return path.substr(path.find_last_of('.'));
     }

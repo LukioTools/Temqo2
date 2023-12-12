@@ -67,8 +67,11 @@ namespace audio
             }
             for (auto thr : threads)
             {
-                if(thr)
-                    thr->join();
+                if(thr){
+                    if(thr->joinable())
+                        thr->join();
+                    delete thr;
+                }
             }
             
             free(namelist[n]);
@@ -76,4 +79,78 @@ namespace audio
         free(namelist);
         return EXIT_SUCCESS;
     }
+
+    template<typename FuncFile>
+    inline int scanfnrgxthr(std::string dir, bool recursive, std::regex& rgx, FuncFile append_file){
+        struct dirent **namelist;
+
+        int n = scandir(dir.c_str(), &namelist, NULL, nullptr);
+        if (n == -1) 
+            return EXIT_FAILURE;
+        
+        std::vector<std::thread> threads;
+
+        while (n--) {
+            if(strcmp(namelist[n]->d_name, ".") == 0 || strcmp(namelist[n]->d_name, "..") == 0 ){free(namelist[n]); continue;}
+            auto name = dir+namelist[n]->d_name;
+            std::cout << "Found: " << name << std::endl;
+            if (std::filesystem::is_directory(name) && recursive)
+            {
+                scanfnrgxthr(name+'/', recursive, rgx, append_file);
+                //threads.emplace_back(scanfnrgxthr<FuncFile>, name+'/', recursive, rgx, append_file);
+            }
+            else if(std::regex_match(name, rgx)){
+                threads.emplace_back(append_file, name);
+            }
+
+            free(namelist[n]);
+        }
+
+        for (auto& thr : threads)
+        {
+            if(thr.joinable())
+                thr.join();
+        }
+
+        free(namelist);
+        return EXIT_SUCCESS;
+    }
+
+
+    template<typename FuncBool, typename FuncFile>
+    inline int scanfncfnthr(std::string dir, bool recursive, FuncBool cmp_fn, FuncFile append_file){
+        struct dirent **namelist;
+
+        int n = scandir(dir.c_str(), &namelist, NULL, nullptr);
+        if (n == -1) 
+            return EXIT_FAILURE;
+        
+        std::vector<std::thread> threads;
+
+        while (n--) {
+            if(strcmp(namelist[n]->d_name, ".") == 0 || strcmp(namelist[n]->d_name, "..") == 0 ){free(namelist[n]); continue;}
+            auto name = dir+namelist[n]->d_name;
+            if (std::filesystem::is_directory(name) && recursive)
+            {
+                scanfncfnthr(name+'/', recursive, cmp_fn, append_file);
+                //threads.emplace_back(scanfnrgxthr<FuncFile>, name+'/', recursive, rgx, append_file);
+            }
+            else if(cmp_fn(name)){
+                threads.emplace_back(append_file, name);
+            }
+
+            free(namelist[n]);
+        }
+
+        for (auto& thr : threads)
+        {
+            if(thr.joinable())
+                thr.join();
+        }
+
+        free(namelist);
+        return EXIT_SUCCESS;
+    }
+
+
 } // namespace audio
