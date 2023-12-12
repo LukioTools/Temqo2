@@ -53,7 +53,7 @@
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
 
-
+#define clip_n(var, min, max) if(var > max){var = max;}if(var < min){var = max;}
 
 #define default_normal_fg {255,255,255}
 #define default_normal_bg {0,0,0}
@@ -219,7 +219,6 @@ namespace temqo
         inline void play();
         inline void pause();
         inline void shuffle();
-        inline void sort();
         inline void seek_abs(double);
         template<typename T, typename Rat>
         inline void seek_rel(std::chrono::duration<T, Rat> d);
@@ -422,6 +421,9 @@ namespace temqo
             auto ws = element.wSpace();
             //draw playlist_content
             cursor_offset = clamp(cursor_offset);
+            std::string pstr;
+            pstr.append(ws.w+1, ' ');
+            clog << "ws: " << ws << "W/H" << wm::WIDTH << '/'  << wm::HEIGHT << std::endl;
             for (size_t index = 0; index < ws.h; index++)
             {
                 auto i = clamp(display_offset + index);
@@ -434,7 +436,7 @@ namespace temqo
                 
 
                 auto i_str = std::to_string(i) + ' ';
-                wm::clip(str, ws.width() - i_str.length(), clip_type);
+                wm::clip(str, ws.width() - i_str.length()+1, clip_type);
                 //wm::pad(str, ws.width() - i_str.length(), pad_type);
                 str = i_str + str;
 
@@ -443,8 +445,8 @@ namespace temqo
                 if (i == current_index)
                     use_attr(color_color(colors.hilight));
 
-                mv(ws.x, ws.y + index);
-                std::cout << std::setfill(' ') << std::setw(ws.width()+1) << std::left << str << attr_reset;
+                auto mvstr =  mv_str(ws.x, ws.y + index);
+                std::cout << mvstr << pstr << mvstr << str << attr_reset;
             }
             //clog << "PLAYLIST_LAST: " <<  (*this)[ clamp(display_offset + ws.h-1)];
 
@@ -942,15 +944,17 @@ namespace temqo
 
             clog << "drawing image: " << s << " width: " << wm::WIDTH<< std::endl;
             std::string fpath = data.file_path.get_p();
-            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(fpath, s.width()+1, s.height() + 1);
+            auto w = s.width() + (display_mode.vertical() ? 1 : 0);
+            auto h = s.height() + 1;
+            ascii_img::load_image_t *cover_ansi = audio::extra::getImg(fpath, w, h);
             clog <<  "cover_ansi: x: " <<  cover_ansi->x << " y: " <<  cover_ansi->y << std::endl;
             std::ostringstream out;
-            for (size_t iy = 0; iy <= s.height(); iy++)
+            for (size_t iy = 0; iy < h; iy++)
             {
                 out << mv_str(s.x, s.y + iy);
-                for (size_t ix = 0; ix <= s.width(); ix++)
+                for (size_t ix = 0; ix < w; ix++)
                 {
-                    auto rgb = cover_ansi->get(ix + (s.width()+1) * iy);
+                    auto rgb = cover_ansi->get(ix + w * iy);
 
                     out << color_bg_str(clamp_1(rgb.r), clamp_1(rgb.g), clamp_1(rgb.b)) << ' ' << attr_reset;
                 }
@@ -960,40 +964,73 @@ namespace temqo
                 delete cover_ansi;
             std::cout << out.str();
         };
+
+
         wm::Position drag_resize_start = {65535U, 65535U};
         bool enable_mid_drag_draw = true;
+        void m_vert(wm::MOUSE_INPUT m){
+            //start resize 
+            if(m.pos.y == element.space.y && m.btn == wm::MOUSE_BTN::M_LEFT){
+                drag_resize_start = m.pos;
+            }//midway of resize
+            else if(enable_mid_drag_draw && m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
+                playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
+                elements_refresh = true;
+                invalidate();
+                p.invalidate();
+            } // finalize resize
+            else if(m.btn == wm::MOUSE_BTN::M_RELEASE && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
+                playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
+                clog << "resize  end: " << m.pos << ':' << playlist_coverart_ratio << std::endl;
+                drag_resize_start = {65535U, 65535U};
+                invalidate();
+                p.invalidate();
+
+            } // toggle between override image and album cover
+            else if(element.wSpace().inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
+                data.override = !data.override;
+                data.img_valid = false;
+            }
+
+            clog << "MVERT: " << playlist_coverart_ratio << std::endl;
+            clip_n(playlist_coverart_ratio, 0 ,1);
+        }
+
+        void m_hori(wm::MOUSE_INPUT m){
+            if(m.pos.x == element.space.x && m.btn == wm::MOUSE_BTN::M_LEFT){
+                drag_resize_start = m.pos;
+            }//midway of resize
+            else if(enable_mid_drag_draw && m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
+                playlist_coverart_ratio = m.pos.x / static_cast<double>(wm::WIDTH);
+                elements_refresh = true;
+
+                invalidate();
+                p.invalidate();
+            } // finalize resize
+            else if(m.btn == wm::MOUSE_BTN::M_RELEASE && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
+                playlist_coverart_ratio = m.pos.x / static_cast<double>(wm::WIDTH);
+                drag_resize_start = {65535U, 65535U};
+
+                invalidate();
+                p.invalidate();
+
+            } // toggle between override image and album cover
+            else if(element.wSpace().inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
+                data.override = !data.override;
+                data.img_valid = false;
+            }
+
+            clip_n(playlist_coverart_ratio, 0 ,1);
+        }
+
         void m_action(wm::MOUSE_INPUT m) override {
             if(display_mode.vertical()){
-                if(m.pos.y == element.space.y && m.btn == wm::MOUSE_BTN::M_LEFT){
-                    drag_resize_start = m.pos;
-                }
-                else if(enable_mid_drag_draw && m.btn == wm::MOUSE_BTN::M_LEFT_HILIGHT && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
-                    playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
-                    elements_refresh = true;
-
-                    invalidate();
-                    p.invalidate();
-
-                } else if(m.btn == wm::MOUSE_BTN::M_RELEASE && drag_resize_start.x != 65535U && drag_resize_start.y != 65535U){
-                    playlist_coverart_ratio = m.pos.y / static_cast<double>(wm::HEIGHT);
-                    clog << "resize  end: " << m.pos << ':' << playlist_coverart_ratio << std::endl;
-                    drag_resize_start = {65535U, 65535U};
-
-                    invalidate();
-                    p.invalidate();
-
-                } else if(element.wSpace().inside(m.pos) && m.btn == wm::MOUSE_BTN::M_LEFT){
-                    data.override = !data.override;
-                    clog << "data.override: " << data.override << std::endl; 
-                    data.img_valid = false;
-                }
-                if(playlist_coverart_ratio > 1){
-                    playlist_coverart_ratio = 1;
-                }
-                else if(playlist_coverart_ratio < 0){
-                    playlist_coverart_ratio = 0;
-                }
+                m_vert(m);
             }
+            else if(display_mode.horizontal()){
+                m_hori(m);
+            }
+            
         }
 
         void invalidate() override{
@@ -1302,10 +1339,7 @@ namespace temqo
                 if(inside){
                     use_attr(color_color(colors.hover));
                     if(m.btn == wm::MOUSE_BTN::M_LEFT && p.size()){
-                        if(p.sorted())
-                            control::shuffle();
-                        else
-                            p.sort();
+                        control::shuffle();
                     }
                 }
                 else
@@ -1785,13 +1819,15 @@ namespace temqo
         }
 
         inline void elements_horizontal(){
+            clog << "RESIZE HORIZONTAL:" << std::endl;
+            clog << "playlist_coverart_ratio: " << playlist_coverart_ratio << std::endl;
             p.element.space = {
                 0,
                 title.element.space.h, 
                 static_cast<unsigned short>(wm::WIDTH*playlist_coverart_ratio),
                 static_cast<unsigned short>(wm::HEIGHT-title.element.space.h - progres_bar.element.space.h)
             };
-            p.element.pad = {1, 1, 0, 1};
+            p.element.pad = {1, 0, 0, 1};
 
             cover_art.element.space = {
                 p.element.space.w,
@@ -1898,18 +1934,20 @@ namespace temqo
             if(wm::resize_event){
                 wm::resize_event = false;
 
-                elements();
+                //elements();
 
                 clog << (display_mode.horizontal() ? "HORIZONTAL " : "VERTICAL ") << wm::WIDTH << '/' << wm::HEIGHT << std::endl; 
                 clog << "RESIZE EVENT" << std::endl;
+                elements_refresh = true;
                 p.valid = false;
                 progres_bar.valid = false;
                 cover_art.valid = false;
                 title.valid = false;
-                for(auto& e : ctrl){
-                    if(e.invalidate)
-                        e.invalidate();
-                }
+                ctrl.invalidate_all();
+                //for(auto& e : ctrl){
+                //    if(e.invalidate)
+                //        e.invalidate();
+                //}
                 clear_scr();
             }
             if(elements_refresh)
@@ -2037,20 +2075,18 @@ namespace temqo
         inline void shuffle(){
             if(p.empty())
                 return;
-            if(!p.seed)
-                p.new_seed();
-            p.shuffle();
-            ctrl.invalidateId(IDS::SHUFFLE);
+            if(p.sorted()){
+                if(!p.seed)
+                    p.new_seed();
+                p.shuffle();
+                ctrl.invalidateId(IDS::SHUFFLE);
+            }else{
+                p.sort();
+                ctrl.invalidateId(IDS::SHUFFLE);
+            }
             p.valid = false;
         }
-        inline void sort(){
-            if(p.empty())
-                return;
-            p.sort();
-            ctrl.invalidateId(IDS::SHUFFLE);
-            p.valid = false;
 
-        }
         inline void seek_abs(double d){
             audio::seek::abs(d);
         }
@@ -2061,14 +2097,15 @@ namespace temqo
 
         inline void volume_set(double d){
             audio::volume::set(d);
+            //ctrl.invalidateId(IDS::VOLUME);
             #if defined(MPRIS)
-            s.set_volume(audio::volume::get());
+            s.set_volume(audio::volume::get()/100);
             #endif // MPRIS
         }
         inline void volume_rel(double d){
             audio::volume::shift(d);
             #if defined(MPRIS)
-            s.set_volume(audio::volume::get());
+            s.set_volume(audio::volume::get()/100);
             #endif // MPRIS
         }
 
@@ -2181,17 +2218,13 @@ namespace temqo
             ctrl.invalidateId(IDS::LOOP);
         });
         s.on_shuffle_changed([&] (bool shuffle) {
-            if(shuffle)
-                control::shuffle();
-            else
-                control::sort();
+            control::shuffle();
         });
         s.on_volume_changed([&] (double v) { //because why not :3
             double vol = v*100;
             //clog << "ovc: " << v << "vol: " << audio::volume::get() << std::endl;
             control::volume_set( vol > 100 ? 100 : vol);
-            ctrl.invalidateId(IDS::VOLUME);
-            s.set_volume(audio::volume::get()/100);
+            
         });
         
         s.set_volume(audio::volume::get()/100);
@@ -2249,7 +2282,7 @@ namespace temqo
         auto seek_to = p.use();
         if(p.size()){
             if(p.seed)
-                control::shuffle();
+                p.shuffle();
             
             load::curr();
         }
