@@ -53,6 +53,8 @@
 #include "dbus/mpris_server.hpp"
 #endif // MPRIS
 
+
+//TODO, Add option to swicth and discern different subtitles
 #define CAPTIONS 1
 #if defined(CAPTIONS)
 #include "custom/lyrics.hpp"
@@ -954,22 +956,18 @@ namespace temqo
         }
 
         bool time_valid(){
-            if(l.size() > current_lyric+1){
-                auto& y  = l[current_lyric+1];
-                if(audio::position::get<std::milli>().count() >= y.end_time*1000){
+            if(l.size() > current_lyric){
+                auto& y  = l[current_lyric];
+                if(audio::position::get<std::milli>().count() >= y.end_time){
                     //invalid
-                    clog << "Lyrics were invalid by time: " << audio::position::get<std::milli>().count() << ">=" << y.end_time*1000 << std::endl;
+                    //clog << "Lyrics were invalid by time: " << audio::position::get<std::milli>().count() << ">=" << y.end_time << std::endl;
                     return false;
-                }else{
-                    clog << "Lyrics were valid by time: " << audio::position::get<std::milli>().count() << ">=" << y.end_time*1000 << std::endl;
-
                 }
-            }else{
-                clog << "EMERGENCY MEETING" << std::endl;
             }
             return true;
         }
         void refresh_song(){
+            l.clear();
             current_song = p.current();
             auto path = scan_lyrics(current_song);
             if(!path.empty()){
@@ -980,19 +978,29 @@ namespace temqo
 
         }
 
+        void clear(){
+            auto s = element.wSpace();
+            auto mvstr = mv_str(s.x, s.y);
+            std::string pad;
+            pad.append(s.w, ' ');
+            std::cout << mvstr << pad;
+        }
+
         void refresh() override{
-            clog << "Lyrics Refresh" << std::endl;
+            //clog << "Lyrics Refresh" << std::endl;
             if(!song_valid())
                 refresh_song();
             
             valid = true;
-            current_lyric = get_valid_index(static_cast<double>(audio::position::get<std::milli>().count())/1000.);
+            current_lyric = get_valid_index(audio::position::get<std::milli>().count());
             if(current_lyric == std::variant_npos){
                 clog << "Npos" << std::endl;
+                clear();
                 return;
             }
             if(current_lyric >= l.size()){
                 clog << "Bigger than size" << std::endl;
+                clear();
                 return;
             }
             auto y = l[current_lyric];
@@ -1011,7 +1019,7 @@ namespace temqo
         }
 
         bool is_valid() override{
-            clog << "ISVALID CALLED" << std::endl;
+            //clog << "ISVALID CALLED" << std::endl;
             return valid && time_valid() && song_valid();
         }
 
@@ -1916,63 +1924,45 @@ namespace temqo
 
     namespace refresh
     {
-        //the element size config
-        inline unsigned int get_useable_height(){
-            return (wm::HEIGHT-title.element.space.h-progres_bar.element.space.h);
-        }
 
-        inline unsigned short useable_height_start(){
-            #if defined(CAPTIONS)
-            return lyrics.element.space.end().y;
-            #else
-            return title.element.space.end().y;
-            #endif // CAPTIONS
-        }
-
-
-        inline unsigned int get_useable_width(){
-            return wm::WIDTH;
-        }
-
-        inline void elements_horizontal(){
+        inline void elements_horizontal(wm::Space bounds){
             clog << "RESIZE HORIZONTAL:" << std::endl;
             clog << "playlist_coverart_ratio: " << playlist_coverart_ratio << std::endl;
             p.element.space = {
-                0,
-                useable_height_start(),
-                static_cast<unsigned short>(wm::WIDTH*playlist_coverart_ratio),
-                static_cast<unsigned short>(wm::HEIGHT-title.element.space.h - progres_bar.element.space.h)
+                bounds.start().x,
+                bounds.start().y,
+                static_cast<unsigned short>(bounds.width()*playlist_coverart_ratio),
+                static_cast<unsigned short>(bounds.height())
             };
             p.element.pad = {1, 0, 0, 1};
 
             cover_art.element.space = {
                 p.element.space.w,
-                useable_height_start(),
-                static_cast<unsigned short>(wm::WIDTH-p.element.space.w+1),
-                static_cast<unsigned short>(wm::HEIGHT-title.element.space.h - progres_bar.element.space.h)
+                bounds.start().y,
+                static_cast<unsigned short>(bounds.width()-p.element.space.w),
+                static_cast<unsigned short>(bounds.height())
             };
             cover_art.element.pad = {1, 1, 1, 0};
         }
 
 
 
-        inline void elements_vertical(){
-            auto useable_height = get_useable_height();
+        inline void elements_vertical(wm::Space bounds){
             p.element.space = {
-                0,
-                useable_height_start(),
-                static_cast<unsigned short>(wm::WIDTH),
-                static_cast<unsigned short>(useable_height*playlist_coverart_ratio)
+                bounds.start().x,
+                bounds.start().y,
+                static_cast<unsigned short>(bounds.width()),
+                static_cast<unsigned short>(bounds.height()*playlist_coverart_ratio)
             };
             p.element.pad = {1, 0, 0, 0};
 
             cover_art.element.space = {
                 p.element.space.x,
                 static_cast<unsigned short>(p.element.space.end().y),
-                static_cast<unsigned short>(wm::WIDTH),
-                static_cast<unsigned short>((useable_height-p.element.space.h))
+                static_cast<unsigned short>(bounds.width()),
+                static_cast<unsigned short>(bounds.height()-p.element.space.h)
             };
-            clog << "useable_height:" << useable_height << std::endl;
+            clog << "bounds.height(): " << bounds.height() << std::endl;
             cover_art.element.pad = {1, 1, 0, 0};
             clog << "Playlist[" << p.element << "] CoverArt[" << cover_art.element << "]" << std::endl;
         }
@@ -1993,18 +1983,32 @@ namespace temqo
 
             title.element.space = wm::Space(0,0, wm::WIDTH, 1);
             #if defined(CAPTIONS)
-            
-            lyrics.element = wm::Space(0, title.element.space.end().y, wm::WIDTH, 1);
-            
+            lyrics.element.space = wm::Space(0, title.element.space.end().y, wm::WIDTH, 1);
             #endif // CAPTIONS
+
+
 
             ctrl.pos = {static_cast<unsigned short>(wm::WIDTH - ctrl.width()), static_cast<unsigned short>(wm::HEIGHT)};
             progres_bar.element.space = wm::Space(0, wm::HEIGHT, ctrl.pos.x - 1 , 1);
+
+            wm::Space bounds;
+            bounds.x = 0;
+            bounds.y = 
+            #if defined(CAPTIONS)
+            lyrics.element.space.end().y;
+            #else
+            title.element.space.end().y;
+            #endif // CAPTIONS
+            bounds.w = wm::WIDTH;
+            bounds.h = (wm::HEIGHT - bounds.y) - progres_bar.element.space.h;
+
             
-            if(display_mode.horizontal())
-                elements_horizontal();
-            else if(display_mode.vertical())
-                elements_vertical();
+            if(display_mode.horizontal()){
+                elements_horizontal(bounds);
+            }
+            else if(display_mode.vertical()){
+                elements_vertical(bounds);
+            }
         };
 
         //all the classes that have the refresh thing
@@ -2066,6 +2070,12 @@ namespace temqo
                 cover_art.valid = false;
                 title.valid = false;
                 ctrl.invalidate_all();
+                #if defined(CAPTIONS)
+                
+                lyrics.invalidate();
+                
+                #endif // CAPTIONS
+                
                 //for(auto& e : ctrl){
                 //    if(e.invalidate)
                 //        e.invalidate();
@@ -2377,8 +2387,6 @@ namespace temqo
                 else
                     load::next();
             }
-
-            
             //std::lock_guard lock(drawing);
 
             refresh::all();
