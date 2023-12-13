@@ -24,6 +24,7 @@ inline std::string scan_lyrics(const std::string& song_path){
     std::string song_name =  path::pathfilebasename(song_path);
     std::string dir =  song_path.substr(0, song_path.find_last_of('/')) + '/';
     std::string match;
+
     audio::scanfncfnthr(dir, false, [&](const std::string& str){
         if(path::pathfilebasename(str) == song_name && path::fileext(str) == ".vtt")
                 return true;
