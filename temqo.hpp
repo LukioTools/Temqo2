@@ -1692,8 +1692,8 @@ namespace temqo
             long long current_time = 0;
             bool valid = false;
             bool action_inside = false;
-            char action_ch_seek_fwd = 'c';
-            char action_ch_seek_bwd = 'x';
+            char action_ch_seek_fwd = 'x';
+            char action_ch_seek_bwd = 'z';
 
             void ch_action(int c) override{
                 if(input_mode == InputMode::COMMON){
